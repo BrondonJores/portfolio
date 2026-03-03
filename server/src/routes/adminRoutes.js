@@ -5,6 +5,7 @@ const { getAllAdmin: getArticles, create: createArticle, update: updateArticle, 
 const { getAll: getSkills, create: createSkill, update: updateSkill, remove: deleteSkill } = require('../controllers/skillController')
 const { getAll: getMessages, markAsRead } = require('../controllers/messageController')
 const { getAllAdmin: getTestimonials, create: createTestimonial, update: updateTestimonial, remove: deleteTestimonial } = require('../controllers/testimonialController')
+const { getStats } = require('../controllers/statsController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
 const { createProjectValidator, updateProjectValidator } = require('../validators/projectValidator')
@@ -15,6 +16,9 @@ const router = Router()
 
 /* Toutes les routes admin necessitent une authentification */
 router.use(authenticate)
+
+/* Route des statistiques du tableau de bord */
+router.get('/stats', getStats)
 
 /* Routes des projets admin */
 router.get('/projects', getProjects)
