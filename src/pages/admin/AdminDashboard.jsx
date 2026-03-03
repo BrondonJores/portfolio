@@ -8,11 +8,59 @@ import {
   DocumentTextIcon,
   EnvelopeIcon,
   WrenchScrewdriverIcon,
+  ChartPieIcon,
 } from '@heroicons/react/24/outline'
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
 import { getAdminProjects } from '../../services/projectService.js'
 import { getAdminArticles } from '../../services/articleService.js'
 import { getAdminMessages } from '../../services/messageService.js'
 import { getAdminSkills } from '../../services/skillService.js'
+
+/* Données mock pour les graphiques (6 derniers mois) */
+const MESSAGES_DATA = [
+  { month: 'Oct', messages: 3 },
+  { month: 'Nov', messages: 5 },
+  { month: 'Déc', messages: 2 },
+  { month: 'Jan', messages: 8 },
+  { month: 'Fév', messages: 6 },
+  { month: 'Mar', messages: 11 },
+]
+
+const CONTENT_DATA = [
+  { month: 'Oct', projets: 2, articles: 1 },
+  { month: 'Nov', projets: 3, articles: 2 },
+  { month: 'Déc', projets: 3, articles: 3 },
+  { month: 'Jan', projets: 4, articles: 4 },
+  { month: 'Fév', projets: 5, articles: 5 },
+  { month: 'Mar', projets: 6, articles: 7 },
+]
+
+const PIE_COLORS = ['var(--color-accent)', '#a78bfa', '#f87171', '#4ade80']
+
+const tooltipStyle = {
+  contentStyle: {
+    backgroundColor: 'var(--color-bg-card)',
+    border: '1px solid var(--color-border)',
+    borderRadius: '8px',
+    color: 'var(--color-text-primary)',
+  },
+}
+
+const axisTickStyle = { fill: 'var(--color-text-secondary)', fontSize: 12 }
 
 /* Composant carte de statistique */
 function StatCard({ icon: Icon, label, value, color, to, delay }) {
@@ -142,6 +190,119 @@ export default function AdminDashboard() {
             delay={0.15}
           />
         </div>
+
+        {/* Section Charts */}
+        <section className="mb-10">
+          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+            Analytiques
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Chart 1 : Messages reçus */}
+            <div
+              className="rounded-xl border p-4"
+              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <EnvelopeIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  Messages reçus
+                </h3>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={MESSAGES_DATA}>
+                  <defs>
+                    <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                  <XAxis dataKey="month" tick={axisTickStyle} />
+                  <YAxis tick={axisTickStyle} />
+                  <Tooltip {...tooltipStyle} />
+                  <Area
+                    type="monotone"
+                    dataKey="messages"
+                    stroke="var(--color-accent)"
+                    fill="url(#colorMessages)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Chart 2 : Contenu publié */}
+            <div
+              className="rounded-xl border p-4"
+              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <DocumentTextIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  Contenu publié
+                </h3>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={CONTENT_DATA}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                  <XAxis dataKey="month" tick={axisTickStyle} />
+                  <YAxis tick={axisTickStyle} />
+                  <Tooltip {...tooltipStyle} />
+                  <Legend />
+                  <Bar dataKey="projets" fill="var(--color-accent)" />
+                  <Bar dataKey="articles" fill="#a78bfa" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Chart 3 : Répartition du contenu */}
+            <div
+              className="rounded-xl border p-4"
+              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <ChartPieIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  Répartition
+                </h3>
+              </div>
+              {(() => {
+                const pieData = [
+                  { name: 'Projets', value: stats.projects || 0 },
+                  { name: 'Articles', value: stats.articles || 0 },
+                  { name: 'Compétences', value: stats.skills || 0 },
+                  { name: 'Messages', value: stats.messages || 0 },
+                ]
+                const total = pieData.reduce((sum, d) => sum + d.value, 0)
+                if (total === 0) {
+                  return (
+                    <div className="flex items-center justify-center" style={{ height: 200 }}>
+                      <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        Aucune donnée disponible
+                      </p>
+                    </div>
+                  )
+                }
+                return (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        innerRadius={50}
+                        outerRadius={80}
+                        dataKey="value"
+                      >
+                        {PIE_COLORS.map((color, index) => (
+                          <Cell key={`cell-${index}`} fill={color} />
+                        ))}
+                      </Pie>
+                      <Tooltip {...tooltipStyle} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )
+              })()}
+            </div>
+          </div>
+        </section>
 
         {/* Derniers messages */}
         {stats.recentMessages.length > 0 && (
