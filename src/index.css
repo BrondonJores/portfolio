@@ -5,28 +5,30 @@
 /* Import de Tailwind CSS v4 */
 @import "tailwindcss";
 
-/* Variables CSS du design system "Dark Techy Editorial" - theme sombre par defaut */
+/* Variables CSS du design system "Aurora Noir" - theme sombre par defaut */
 :root {
-  --color-bg-primary: #0a0a0f;
-  --color-bg-secondary: #111118;
-  --color-bg-card: #16161f;
-  --color-accent: #6366f1;
-  --color-accent-light: #a5b4fc;
-  --color-text-primary: #f1f5f9;
-  --color-text-secondary: #94a3b8;
-  --color-border: #1e1e2e;
+  --color-bg-primary:    #060b0f;
+  --color-bg-secondary:  #0a1118;
+  --color-bg-card:       #0f1a22;
+  --color-accent:        #00d4a8;
+  --color-accent-light:  #4df5d0;
+  --color-accent-glow:   rgba(0, 212, 168, 0.20);
+  --color-text-primary:  #e8f4f1;
+  --color-text-secondary:#7a9fa0;
+  --color-border:        #132028;
 }
 
 /* Variables CSS pour le theme clair */
 :root.light {
-  --color-bg-primary: #f8fafc;
-  --color-bg-secondary: #f1f5f9;
-  --color-bg-card: #ffffff;
-  --color-accent: #4f46e5;
-  --color-accent-light: #6366f1;
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-border: #e2e8f0;
+  --color-bg-primary:    #f0faf8;
+  --color-bg-secondary:  #e3f6f2;
+  --color-bg-card:       #ffffff;
+  --color-accent:        #00a688;
+  --color-accent-light:  #00c49a;
+  --color-accent-glow:   rgba(0, 166, 136, 0.12);
+  --color-text-primary:  #0a1f1c;
+  --color-text-secondary:#3d7a72;
+  --color-border:        #b8e0d9;
 }
 
 /* Styles globaux */
@@ -57,4 +59,24 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-accent);
+}
+
+/* Classe utilitaire glow accent */
+.glow-accent {
+  box-shadow: 0 0 20px var(--color-accent-glow);
+}
+
+/* Classe gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animation aurora pour les blobs de fond */
+@keyframes aurora-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.97); }
 }

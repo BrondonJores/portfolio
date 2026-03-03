@@ -5,7 +5,7 @@ const VARIANT_STYLES = {
   default: {
     color: 'var(--color-accent-light)',
     borderColor: 'var(--color-accent)',
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: 'var(--color-accent-glow)',
   },
   solid: {
     color: '#fff',

@@ -1,9 +1,10 @@
 /* Composant bouton extensible via la prop variant (principe Open/Closed) */
+import { useState } from 'react'
 
 /* Styles par variante */
 const VARIANT_STYLES = {
   primary:
-    'bg-[var(--color-accent)] text-white hover:bg-indigo-500 focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-primary)]',
+    'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-light)] focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-primary)]',
   secondary:
     'border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-primary)]',
   ghost:
@@ -27,7 +28,12 @@ export default function Button({
   disabled = false,
   ...props
 }) {
+  const [isHovered, setIsHovered] = useState(false)
   const classes = `${BASE_STYLES} ${VARIANT_STYLES[variant] ?? VARIANT_STYLES.primary} ${className}`
+  const glowStyle =
+    variant === 'primary'
+      ? { boxShadow: isHovered ? '0 0 20px var(--color-accent-glow)' : 'none', transition: 'box-shadow 0.2s ease' }
+      : {}
 
   /* Rendu d'un lien : externe (nouvelle fenetre) ou ancre interne */
   if (href) {
@@ -40,6 +46,9 @@ export default function Button({
           : {})}
         className={classes}
         aria-disabled={disabled}
+        style={glowStyle}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
         {...props}
       >
         {children}
@@ -52,6 +61,9 @@ export default function Button({
       onClick={onClick}
       className={classes}
       disabled={disabled}
+      style={glowStyle}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       {...props}
     >
       {children}

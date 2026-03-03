@@ -35,10 +35,10 @@ export default function Hero() {
         className="absolute inset-0 -z-10"
         animate={{
           background: [
-            'radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.12) 0%, transparent 60%)',
-            'radial-gradient(ellipse at 80% 50%, rgba(99, 102, 241, 0.12) 0%, transparent 60%)',
-            'radial-gradient(ellipse at 50% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 60%)',
-            'radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.12) 0%, transparent 60%)',
+            'radial-gradient(ellipse at 20% 50%, var(--color-accent-glow) 0%, transparent 60%)',
+            'radial-gradient(ellipse at 80% 50%, var(--color-accent-glow) 0%, transparent 60%)',
+            'radial-gradient(ellipse at 50% 20%, var(--color-accent-glow) 0%, transparent 60%)',
+            'radial-gradient(ellipse at 20% 50%, var(--color-accent-glow) 0%, transparent 60%)',
           ],
         }}
         transition={{
@@ -47,6 +47,38 @@ export default function Hero() {
           ease: 'linear',
         }}
         style={{ backgroundColor: 'var(--color-bg-primary)' }}
+      />
+
+      {/* Aurora blobs animes */}
+      <div
+        className="absolute w-96 h-96 rounded-full -z-10 opacity-40"
+        style={{
+          top: '10%',
+          left: '5%',
+          background: 'var(--color-accent-glow)',
+          filter: 'blur(80px)',
+          animation: 'aurora-float 10s ease-in-out infinite',
+        }}
+      />
+      <div
+        className="absolute w-80 h-80 rounded-full -z-10 opacity-30"
+        style={{
+          top: '50%',
+          right: '5%',
+          background: 'rgba(77, 245, 208, 0.08)',
+          filter: 'blur(70px)',
+          animation: 'aurora-float 14s ease-in-out infinite reverse',
+        }}
+      />
+      <div
+        className="absolute w-64 h-64 rounded-full -z-10 opacity-20"
+        style={{
+          bottom: '15%',
+          left: '40%',
+          background: 'var(--color-accent-glow)',
+          filter: 'blur(60px)',
+          animation: 'aurora-float 18s ease-in-out infinite',
+        }}
       />
 
       {/* Contenu principal */}
@@ -63,7 +95,7 @@ export default function Hero() {
               style={{
                 color: 'var(--color-accent-light)',
                 borderColor: 'var(--color-accent)',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                backgroundColor: 'var(--color-accent-glow)',
               }}
             >
               <span
@@ -71,6 +103,33 @@ export default function Hero() {
                 style={{ backgroundColor: 'var(--color-accent)' }}
               />
               Disponible pour des projets
+            </span>
+          </motion.div>
+
+          {/* Nom avec kinetic typography */}
+          <motion.div variants={itemVariants} className="mb-2">
+            <span className="text-3xl sm:text-4xl font-bold gradient-text">
+              {Array.from('Brondon').map((char, i) => (
+                <motion.span
+                  key={`first-${i}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.05 }}
+                >
+                  {char}
+                </motion.span>
+              ))}
+              {' '}
+              {Array.from('Jores').map((char, i) => (
+                <motion.span
+                  key={`last-${i}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + (7 + i) * 0.05 }}
+                >
+                  {char}
+                </motion.span>
+              ))}
             </span>
           </motion.div>
 
@@ -82,7 +141,7 @@ export default function Hero() {
           >
             Developpeur
             <br />
-            <span style={{ color: 'var(--color-accent)' }}>Full Stack</span>
+            <span className="gradient-text">Full Stack</span>
           </motion.h1>
 
           {/* Sous-titre */}
@@ -109,11 +168,11 @@ export default function Hero() {
         </motion.div>
       </div>
 
-      {/* Icone fleche vers le bas avec animation bounce */}
+      {/* Indicateur de scroll */}
       <motion.div
         className="absolute bottom-8 left-1/2 -translate-x-1/2"
-        animate={{ y: [0, 10, 0] }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+        animate={{ y: [0, 8, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
       >
         <ArrowDownIcon
           className="h-6 w-6"
