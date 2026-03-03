@@ -7,6 +7,8 @@ import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Badge from '../../components/ui/Badge.jsx'
+import ImageUploader from '../../components/ui/ImageUploader.jsx'
+import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import {
   getAdminArticles,
   createArticle,
@@ -22,6 +24,15 @@ function toSlug(str) {
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-')
+}
+
+/* Désérialise le contenu en tableau de blocs */
+function parseContent(content) {
+  try {
+    const parsed = JSON.parse(content)
+    if (parsed?.blocks && Array.isArray(parsed.blocks)) return parsed.blocks
+  } catch { /* ignore */ }
+  return content ? [{ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, type: 'paragraph', content }] : []
 }
 
 const EMPTY = {
@@ -46,6 +57,7 @@ export default function AdminArticleForm() {
   const isEdit = !!id
 
   const [form, setForm] = useState(EMPTY)
+  const [blocks, setBlocks] = useState([])
   const [tagInput, setTagInput] = useState('')
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -56,14 +68,16 @@ export default function AdminArticleForm() {
       .then((res) => {
         const article = (res?.data || []).find((a) => String(a.id) === String(id))
         if (article) {
-          setForm({
+          const loadedForm = {
             title: article.title || '',
             excerpt: article.excerpt || '',
             content: article.content || '',
             cover_image: article.cover_image || '',
             published: article.published || false,
             tags: article.tags || [],
-          })
+          }
+          setForm(loadedForm)
+          setBlocks(parseContent(article.content || ''))
         }
       })
       .finally(() => setLoading(false))
@@ -72,6 +86,11 @@ export default function AdminArticleForm() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+  }
+
+  const handleBlocksChange = (newBlocks) => {
+    setBlocks(newBlocks)
+    setForm((prev) => ({ ...prev, content: JSON.stringify({ blocks: newBlocks }) }))
   }
 
   const addTag = () => {
@@ -95,7 +114,7 @@ export default function AdminArticleForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.title.trim() || !form.content.trim()) {
+    if (!form.title.trim() || blocks.length === 0) {
       addToast('Le titre et le contenu sont obligatoires.', 'error')
       return
     }
@@ -190,46 +209,23 @@ export default function AdminArticleForm() {
             />
           </div>
 
-          {/* Contenu */}
+          {/* Contenu par blocs */}
           <div>
             <label
-              htmlFor="af-content"
               className="block text-sm font-medium mb-1.5"
               style={{ color: 'var(--color-text-secondary)' }}
             >
-              Contenu (HTML) <span style={{ color: '#f87171' }}>*</span>
+              Contenu <span style={{ color: '#f87171' }}>*</span>
             </label>
-            <textarea
-              id="af-content"
-              name="content"
-              value={form.content}
-              onChange={handleChange}
-              required
-              rows={12}
-              className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all resize-y font-mono"
-              style={{ ...inputStyle, fontFamily: 'JetBrains Mono Variable, monospace' }}
-            />
+            <BlockEditor blocks={blocks} onChange={handleBlocksChange} />
           </div>
 
           {/* Image de couverture */}
-          <div>
-            <label
-              htmlFor="af-cover"
-              className="block text-sm font-medium mb-1.5"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Image de couverture (URL)
-            </label>
-            <input
-              id="af-cover"
-              name="cover_image"
-              type="url"
-              value={form.cover_image}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-              style={inputStyle}
-            />
-          </div>
+          <ImageUploader
+            label="Image de couverture"
+            value={form.cover_image}
+            onUpload={(url) => setForm((prev) => ({ ...prev, cover_image: url }))}
+          />
 
           {/* Tags */}
           <div>
@@ -307,3 +303,4 @@ export default function AdminArticleForm() {
     </>
   )
 }
+

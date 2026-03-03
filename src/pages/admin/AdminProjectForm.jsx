@@ -7,6 +7,7 @@ import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Badge from '../../components/ui/Badge.jsx'
+import ImageUploader from '../../components/ui/ImageUploader.jsx'
 import {
   getAdminProjects,
   createProject,
@@ -306,24 +307,11 @@ export default function AdminProjectForm() {
           </div>
 
           {/* Image URL */}
-          <div>
-            <label
-              htmlFor="pf-image"
-              className="block text-sm font-medium mb-1.5"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              URL de l&apos;image
-            </label>
-            <input
-              id="pf-image"
-              name="image_url"
-              type="url"
-              value={form.image_url}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-              style={inputStyle}
-            />
-          </div>
+          <ImageUploader
+            label="Image du projet"
+            value={form.image_url}
+            onUpload={(url) => setForm((prev) => ({ ...prev, image_url: url }))}
+          />
 
           {/* Checkboxes */}
           <div className="flex items-center gap-6">
