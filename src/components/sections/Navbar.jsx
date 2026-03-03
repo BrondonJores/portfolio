@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Bars3Icon, XMarkIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline'
 import { useScrollPosition } from '../../hooks/useScrollPosition.jsx'
 import { useTheme } from '../../context/ThemeContext.jsx'
+import { useSettings } from '../../context/SettingsContext.jsx'
 
 /* Definition des liens avec ancre (accueil) et route (pages separees) */
 const NAV_LINKS = [
@@ -20,7 +21,13 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const scrollY = useScrollPosition()
   const { theme, toggleTheme } = useTheme()
+  const { settings } = useSettings()
   const location = useLocation()
+
+  const heroName = settings.hero_name || ''
+  const logoInitials = heroName
+    ? heroName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+    : 'BJ'
 
   /* Sur la page d'accueil, on utilise les ancres pour le scroll fluide */
   const isHome = location.pathname === '/'
@@ -85,7 +92,11 @@ export default function Navbar() {
           style={{ color: 'var(--color-accent)' }}
           aria-label="BrondonJores - Accueil"
         >
-          BJ
+          {settings.logo_url ? (
+            <img src={settings.logo_url} alt="Logo" className="h-8 w-auto" />
+          ) : (
+            logoInitials
+          )}
         </Link>
 
         {/* Liens desktop */}
