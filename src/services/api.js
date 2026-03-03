@@ -1,5 +1,8 @@
 /* Service API central avec gestion des tokens et rafraichissement automatique */
 
+/* Base URL : vide en dev (proxy Vite), URL absolue en prod */
+const API_BASE = import.meta.env.VITE_API_URL || ''
+
 /* Stockage en memoire du token d'acces et du callback de logout */
 let _accessToken = null
 let _refreshTokenFn = null
@@ -33,7 +36,7 @@ async function request(method, path, body, retried = false) {
     options.body = JSON.stringify(body)
   }
 
-  const response = await fetch(`/api${path}`, options)
+  const response = await fetch(`${API_BASE}/api${path}`, options)
 
   /* Tentative de rafraichissement du token si 401 et non encore retente */
   if (response.status === 401 && !retried && _refreshTokenFn) {

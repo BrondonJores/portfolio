@@ -5,6 +5,11 @@ import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import Spinner from './Spinner.jsx'
 import { useAuthContext } from '../../context/AuthContext.jsx'
 
+/* Base URL : vide en dev (proxy Vite), URL absolue en prod */
+const API_BASE = import.meta.env.VITE_API_URL || ''
+/* URL du serveur pour les assets (images uploadées) */
+const SERVER_BASE = import.meta.env.VITE_SERVER_URL || ''
+
 /* Types autorisés */
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_SIZE_MB = 5
@@ -59,7 +64,7 @@ export default function ImageUploader({ value = '', onUpload, label, className =
         headers['Authorization'] = `Bearer ${accessToken}`
       }
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch(`${API_BASE}/api/upload`, {
         method: 'POST',
         headers,
         credentials: 'include',
@@ -121,7 +126,7 @@ export default function ImageUploader({ value = '', onUpload, label, className =
       {value ? (
         <div className="relative inline-block">
           <img
-            src={value}
+            src={value.startsWith('http') ? value : `${SERVER_BASE}${value}`}
             alt="Aperçu"
             className="max-h-48 rounded-lg border object-cover"
             style={{ borderColor: 'var(--color-border)' }}
