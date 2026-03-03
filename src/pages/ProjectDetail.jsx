@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { ArrowLeftIcon, CodeBracketIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, CodeBracketIcon, ArrowTopRightOnSquareIcon, LinkIcon } from '@heroicons/react/24/outline'
 import DOMPurify from 'dompurify'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
@@ -17,6 +17,7 @@ export default function ProjectDetail() {
   const [project, setProject] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     getProjectBySlug(slug)
@@ -24,6 +25,16 @@ export default function ProjectDetail() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [slug])
+
+  /* Copie du lien dans le presse-papiers */
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch(() => {})
+  }
 
   if (loading) {
     return (
@@ -71,6 +82,14 @@ export default function ProjectDetail() {
 
           {/* En-tete */}
           <header className="mb-8">
+            {/* Image du projet */}
+            {project.image_url && (
+              <img
+                src={project.image_url}
+                alt={project.title}
+                className="w-full max-h-72 object-cover rounded-xl mb-6"
+              />
+            )}
             <h1
               className="text-4xl font-bold mb-4"
               style={{ color: 'var(--color-text-primary)' }}
@@ -108,6 +127,17 @@ export default function ProjectDetail() {
                 Voir la demo
               </Button>
             )}
+            {/* Bouton de partage */}
+            <button
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-1.5 text-sm transition-colors focus:outline-none"
+              style={{ color: 'var(--color-text-secondary)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+            >
+              <LinkIcon className="h-4 w-4" aria-hidden="true" />
+              {copied ? 'Lien copié !' : 'Copier le lien'}
+            </button>
           </div>
 
           {/* Contenu principal sanitise */}

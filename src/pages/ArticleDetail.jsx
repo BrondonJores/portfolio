@@ -1,14 +1,15 @@
 /* Page de detail d'un article de blog */
 import { useEffect, useState, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { ArrowLeftIcon, CalendarIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, CalendarIcon, LinkIcon } from '@heroicons/react/24/outline'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import Card from '../components/ui/Card.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
-import { getArticleBySlug } from '../services/articleService.js'
+import { getArticleBySlug, getArticles } from '../services/articleService.js'
 import { useScrollPosition } from '../hooks/useScrollPosition.jsx'
 
 /* Formatage de la date */
@@ -51,6 +52,8 @@ export default function ArticleDetail() {
   const [article, setArticle] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [relatedArticles, setRelatedArticles] = useState([])
 
   useEffect(() => {
     getArticleBySlug(slug)
@@ -58,6 +61,26 @@ export default function ArticleDetail() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [slug])
+
+  useEffect(() => {
+    if (!article) return
+    getArticles({ limit: 4 })
+      .then((res) => {
+        const all = res?.data || []
+        setRelatedArticles(all.filter((a) => a.slug !== article.slug).slice(0, 3))
+      })
+      .catch(() => {})
+  }, [article])
+
+  /* Copie du lien dans le presse-papiers */
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch(() => {})
+  }
 
   if (loading) {
     return (
@@ -103,6 +126,14 @@ export default function ArticleDetail() {
 
           {/* En-tete */}
           <header className="mb-10">
+            {/* Image de couverture */}
+            {article.cover_image && (
+              <img
+                src={article.cover_image}
+                alt={article.title}
+                className="w-full max-w-3xl max-h-72 object-cover rounded-xl mb-6"
+              />
+            )}
             <h1
               className="text-4xl font-bold mb-4 leading-tight"
               style={{ color: 'var(--color-text-primary)' }}
@@ -125,10 +156,54 @@ export default function ArticleDetail() {
                 ))}
               </div>
             )}
+            {/* Bouton de partage */}
+            <button
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-1.5 text-sm mt-4 transition-colors focus:outline-none"
+              style={{ color: 'var(--color-text-secondary)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+            >
+              <LinkIcon className="h-4 w-4" aria-hidden="true" />
+              {copied ? 'Lien copié !' : 'Copier le lien'}
+            </button>
           </header>
 
           {/* Contenu de l'article */}
           <BlockRenderer content={article.content} />
+
+          {/* Articles liés */}
+          {relatedArticles.length > 0 && (
+            <section className="mt-16">
+              <h2
+                className="text-xl font-semibold mb-6"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                Articles liés
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {relatedArticles.map((a) => (
+                  <Link key={a.slug} to={`/blog/${a.slug}`} className="block">
+                    <Card>
+                      <p
+                        className="font-medium text-sm mb-3 leading-snug"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {a.title}
+                      </p>
+                      {Array.isArray(a.tags) && a.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {a.tags.slice(0, 2).map((tag) => (
+                            <Badge key={tag}>{tag}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </main>
       <Footer />
