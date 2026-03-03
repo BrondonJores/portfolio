@@ -2,6 +2,7 @@
 import { Bars3Icon, SunIcon, MoonIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../../hooks/useAuth.jsx'
 import { useTheme } from '../../context/ThemeContext.jsx'
+import NotificationBell from './NotificationBell.jsx'
 
 /**
  * Barre superieure affichant le nom de l'admin et les controles globaux.
@@ -38,6 +39,9 @@ export default function AdminNavbar({ onToggleSidebar }) {
 
       {/* Informations de l'administrateur et toggle theme */}
       <div className="flex items-center gap-4">
+        {/* Cloche de notification */}
+        <NotificationBell />
+
         {/* Toggle theme clair/sombre */}
         <button
           onClick={toggleTheme}
