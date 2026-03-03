@@ -75,7 +75,9 @@ export default function ArticleDetail() {
         setRelatedArticles(all.filter((a) => a.id !== article.id).slice(0, 3))
       })
       .catch(() => {})
-    getCommentsByArticle(article.id).then((res) => setComments(res?.data || [])).catch(() => {})
+    getCommentsByArticle(article.id)
+      .then((res) => setComments(res?.data || []))
+      .catch(() => {})
   }, [article])
 
   /* Copie du lien dans le presse-papiers */
