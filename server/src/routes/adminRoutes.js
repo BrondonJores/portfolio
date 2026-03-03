@@ -8,6 +8,8 @@ const { getAllAdmin: getTestimonials, create: createTestimonial, update: updateT
 const { getAll: getComments, approve: approveComment, remove: deleteComment } = require('../controllers/commentController')
 const { getAll: getSettings, upsert: upsertSettings } = require('../controllers/settingController')
 const { getStats } = require('../controllers/statsController')
+const { getAll: getAllSubscribers, remove: deleteSubscriber } = require('../controllers/subscriberController')
+const { getAll: getAllCampaigns, create: createCampaign, update: updateCampaign, remove: deleteCampaign, send: sendCampaign } = require('../controllers/newsletterController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
 const { createProjectValidator, updateProjectValidator } = require('../validators/projectValidator')
@@ -58,5 +60,16 @@ router.delete('/comments/:id', deleteComment)
 /* Routes des parametres admin */
 router.get('/settings', getSettings)
 router.put('/settings', upsertSettings)
+
+/* Routes newsletter admin */
+router.get('/newsletter', getAllCampaigns)
+router.post('/newsletter', createCampaign)
+router.put('/newsletter/:id', updateCampaign)
+router.delete('/newsletter/:id', deleteCampaign)
+router.post('/newsletter/:id/send', sendCampaign)
+
+/* Routes abonnes admin */
+router.get('/subscribers', getAllSubscribers)
+router.delete('/subscribers/:id', deleteSubscriber)
 
 module.exports = router

@@ -13,6 +13,7 @@ const TABS = [
   { id: 'contact', label: 'Contact' },
   { id: 'seo', label: 'SEO' },
   { id: 'appearance', label: 'Apparence' },
+  { id: 'newsletter', label: 'Newsletter' },
 ]
 
 const inputStyle = {
@@ -208,6 +209,14 @@ export default function AdminSettings() {
                   Mode maintenance
                 </span>
               </label>
+            </>
+          )}
+
+          {activeTab === 'newsletter' && (
+            <>
+              <FieldInput label="Nom de l'expediteur" fieldKey="newsletter_from_name" settings={settings} onChange={handleChange} />
+              <FieldInput label="Email de l'expediteur" fieldKey="newsletter_from_email" settings={settings} onChange={handleChange} />
+              <FieldInput label="Texte du pied de campagne" fieldKey="newsletter_footer_text" settings={settings} onChange={handleChange} textarea />
             </>
           )}
         </div>
