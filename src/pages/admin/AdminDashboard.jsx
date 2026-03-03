@@ -29,25 +29,7 @@ import { getAdminProjects } from '../../services/projectService.js'
 import { getAdminArticles } from '../../services/articleService.js'
 import { getAdminMessages } from '../../services/messageService.js'
 import { getAdminSkills } from '../../services/skillService.js'
-
-/* Données mock pour les graphiques (6 derniers mois) */
-const MESSAGES_DATA = [
-  { month: 'Oct', messages: 3 },
-  { month: 'Nov', messages: 5 },
-  { month: 'Déc', messages: 2 },
-  { month: 'Jan', messages: 8 },
-  { month: 'Fév', messages: 6 },
-  { month: 'Mar', messages: 11 },
-]
-
-const CONTENT_DATA = [
-  { month: 'Oct', projets: 2, articles: 1 },
-  { month: 'Nov', projets: 3, articles: 2 },
-  { month: 'Déc', projets: 3, articles: 3 },
-  { month: 'Jan', projets: 4, articles: 4 },
-  { month: 'Fév', projets: 5, articles: 5 },
-  { month: 'Mar', projets: 6, articles: 7 },
-]
+import { getAdminStats } from '../../services/statsService.js'
 
 const PIE_COLORS = ['var(--color-accent)', '#a78bfa', '#f87171', '#4ade80']
 
@@ -111,6 +93,7 @@ export default function AdminDashboard() {
     skills: null,
     unreadMessages: null,
     recentMessages: [],
+    chartData: [],
   })
 
   useEffect(() => {
@@ -120,11 +103,13 @@ export default function AdminDashboard() {
       getAdminArticles(),
       getAdminMessages(),
       getAdminSkills(),
-    ]).then(([projects, articles, messages, skills]) => {
+      getAdminStats(),
+    ]).then(([projects, articles, messages, skills, statsResult]) => {
       const projectsData = projects.value?.data || []
       const articlesData = articles.value?.data || []
       const messagesData = messages.value?.data || []
       const skillsData = skills.value?.data || {}
+      const chartData = statsResult.value?.data || []
 
       const publishedProjects = projectsData.filter((p) => p.published).length
       const publishedArticles = articlesData.filter((a) => a.published).length
@@ -138,6 +123,7 @@ export default function AdminDashboard() {
         skills: skillCount,
         unreadMessages: unread,
         recentMessages: messagesData.slice(0, 3),
+        chartData,
       })
     })
   }, [])
@@ -209,7 +195,7 @@ export default function AdminDashboard() {
                 </h3>
               </div>
               <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={MESSAGES_DATA}>
+                <AreaChart data={stats.chartData}>
                   <defs>
                     <linearGradient id="colorMessages" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.3} />
@@ -242,7 +228,7 @@ export default function AdminDashboard() {
                 </h3>
               </div>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={CONTENT_DATA}>
+                <BarChart data={stats.chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                   <XAxis dataKey="month" tick={axisTickStyle} />
                   <YAxis tick={axisTickStyle} />
