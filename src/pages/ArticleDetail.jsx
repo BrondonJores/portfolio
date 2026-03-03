@@ -1,15 +1,16 @@
 /* Page de detail d'un article de blog */
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { ArrowLeftIcon, CalendarIcon, LinkIcon } from '@heroicons/react/24/outline'
+import { motion } from 'framer-motion'
+import { ArrowLeftIcon, CalendarIcon, LinkIcon, ShareIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
 import Badge from '../components/ui/Badge.jsx'
-import Card from '../components/ui/Card.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
 import { getArticleBySlug, getArticles } from '../services/articleService.js'
+import { getCommentsByArticle, postComment } from '../services/commentService.js'
 import { useScrollPosition } from '../hooks/useScrollPosition.jsx'
 
 /* Formatage de la date */
@@ -54,6 +55,10 @@ export default function ArticleDetail() {
   const [notFound, setNotFound] = useState(false)
   const [copied, setCopied] = useState(false)
   const [relatedArticles, setRelatedArticles] = useState([])
+  const [comments, setComments] = useState([])
+  const [commentForm, setCommentForm] = useState({ author_name: '', content: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
 
   useEffect(() => {
     getArticleBySlug(slug)
@@ -67,8 +72,11 @@ export default function ArticleDetail() {
     getArticles({ limit: 4 })
       .then((res) => {
         const all = res?.data || []
-        setRelatedArticles(all.filter((a) => a.slug !== article.slug).slice(0, 3))
+        setRelatedArticles(all.filter((a) => a.id !== article.id).slice(0, 3))
       })
+      .catch(() => {})
+    getCommentsByArticle(article.id)
+      .then((res) => setComments(res?.data || []))
       .catch(() => {})
   }, [article])
 
@@ -172,34 +180,275 @@ export default function ArticleDetail() {
           {/* Contenu de l'article */}
           <BlockRenderer content={article.content} />
 
-          {/* Articles liés */}
+          {/* Barre de partage */}
+          <div
+            className="flex flex-wrap items-center gap-3 mt-10 pt-6 border-t"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <button
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors focus:outline-none"
+              style={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-secondary)',
+                backgroundColor: 'var(--color-bg-card)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+            >
+              <LinkIcon className="h-4 w-4" aria-hidden="true" />
+              {copied ? 'Copié !' : 'Copier le lien'}
+            </button>
+            <a
+              href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(article.title)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors"
+              style={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-secondary)',
+                backgroundColor: 'var(--color-bg-card)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+            >
+              <ShareIcon className="h-4 w-4" aria-hidden="true" />
+              Twitter/X
+            </a>
+            <a
+              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors"
+              style={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-secondary)',
+                backgroundColor: 'var(--color-bg-card)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+            >
+              <ShareIcon className="h-4 w-4" aria-hidden="true" />
+              LinkedIn
+            </a>
+          </div>
+
+          {/* Section commentaires */}
+          <section className="mt-12">
+            <h2
+              className="text-xl font-semibold mb-6"
+              style={{ color: 'var(--color-text-primary)' }}
+            >
+              Commentaires ({comments.length})
+            </h2>
+
+            {/* Liste des commentaires */}
+            {comments.length > 0 && (
+              <div className="space-y-4 mb-8">
+                {comments.map((c) => (
+                  <motion.div
+                    key={c.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-xl border"
+                    style={{
+                      backgroundColor: 'var(--color-bg-card)',
+                      borderColor: 'var(--color-border)',
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="font-semibold text-sm"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {c.author_name}
+                      </span>
+                      <span
+                        className="text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {c.created_at
+                          ? new Date(c.created_at).toLocaleDateString('fr-FR', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })
+                          : ''}
+                      </span>
+                    </div>
+                    <p
+                      className="text-sm leading-relaxed"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      {c.content}
+                    </p>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {/* Formulaire d'ajout de commentaire */}
+            <div
+              className="p-6 rounded-xl border"
+              style={{
+                backgroundColor: 'var(--color-bg-card)',
+                borderColor: 'var(--color-border)',
+              }}
+            >
+              <h3
+                className="text-base font-medium mb-4"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                Laisser un commentaire
+              </h3>
+              {submitSuccess ? (
+                <p
+                  className="text-sm"
+                  style={{ color: 'var(--color-accent)' }}
+                >
+                  Commentaire soumis ! Il apparaîtra après modération.
+                </p>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault()
+                    setSubmitting(true)
+                    try {
+                      await postComment({
+                        article_id: article.id,
+                        author_name: commentForm.author_name,
+                        content: commentForm.content,
+                      })
+                      setSubmitSuccess(true)
+                      setCommentForm({ author_name: '', content: '' })
+                    } catch {
+                      /* Echec silencieux */
+                    } finally {
+                      setSubmitting(false)
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <input
+                    type="text"
+                    placeholder="Votre nom"
+                    value={commentForm.author_name}
+                    onChange={(e) => setCommentForm((prev) => ({ ...prev, author_name: e.target.value }))}
+                    required
+                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                    style={{
+                      backgroundColor: 'var(--color-bg-primary)',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                  />
+                  <textarea
+                    placeholder="Votre commentaire..."
+                    value={commentForm.content}
+                    onChange={(e) => setCommentForm((prev) => ({ ...prev, content: e.target.value }))}
+                    required
+                    rows={4}
+                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-none"
+                    style={{
+                      backgroundColor: 'var(--color-bg-primary)',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
+                    style={{
+                      backgroundColor: 'var(--color-accent)',
+                      color: '#fff',
+                    }}
+                  >
+                    {submitting ? 'Envoi...' : 'Publier le commentaire'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </section>
+
+          {/* Articles similaires */}
           {relatedArticles.length > 0 && (
             <section className="mt-16">
               <h2
                 className="text-xl font-semibold mb-6"
                 style={{ color: 'var(--color-text-primary)' }}
               >
-                Articles liés
+                Articles similaires
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {relatedArticles.map((a) => (
-                  <Link key={a.slug} to={`/blog/${a.slug}`} className="block">
-                    <Card>
-                      <p
-                        className="font-medium text-sm mb-3 leading-snug"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
-                        {a.title}
-                      </p>
-                      {Array.isArray(a.tags) && a.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {a.tags.slice(0, 2).map((tag) => (
-                            <Badge key={tag}>{tag}</Badge>
-                          ))}
+                  <motion.div
+                    key={a.slug}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    className="min-h-[320px]"
+                  >
+                    <Link
+                      to={`/blog/${a.slug}`}
+                      className="block h-full rounded-xl overflow-hidden border"
+                      style={{
+                        backgroundColor: 'var(--color-bg-card)',
+                        borderColor: 'var(--color-border)',
+                      }}
+                    >
+                      {a.cover_image ? (
+                        <img
+                          src={a.cover_image}
+                          alt={a.title}
+                          className="w-full h-48 object-cover"
+                        />
+                      ) : (
+                        <div
+                          className="w-full h-48 flex items-center justify-center"
+                          style={{ backgroundColor: 'var(--color-bg-secondary)' }}
+                        >
+                          <DocumentTextIcon
+                            className="h-12 w-12"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                            aria-hidden="true"
+                          />
                         </div>
                       )}
-                    </Card>
-                  </Link>
+                      <div className="p-4">
+                        <p
+                          className="font-semibold text-sm mb-2 line-clamp-2"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {a.title}
+                        </p>
+                        {a.excerpt && (
+                          <p
+                            className="text-sm mb-3 line-clamp-2"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {a.excerpt}
+                          </p>
+                        )}
+                        {Array.isArray(a.tags) && a.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {a.tags.slice(0, 3).map((tag) => (
+                              <Badge key={tag}>{tag}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        {a.published_at && (
+                          <div
+                            className="flex items-center gap-1 text-xs"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                            <time dateTime={a.published_at}>{formatDate(a.published_at)}</time>
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  </motion.div>
                 ))}
               </div>
             </section>

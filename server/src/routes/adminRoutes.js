@@ -5,6 +5,8 @@ const { getAllAdmin: getArticles, create: createArticle, update: updateArticle, 
 const { getAll: getSkills, create: createSkill, update: updateSkill, remove: deleteSkill } = require('../controllers/skillController')
 const { getAll: getMessages, markAsRead } = require('../controllers/messageController')
 const { getAllAdmin: getTestimonials, create: createTestimonial, update: updateTestimonial, remove: deleteTestimonial } = require('../controllers/testimonialController')
+const { getAll: getComments, approve: approveComment, remove: deleteComment } = require('../controllers/commentController')
+const { getAll: getSettings, upsert: upsertSettings } = require('../controllers/settingController')
 const { getStats } = require('../controllers/statsController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
@@ -47,5 +49,14 @@ router.get('/testimonials', getTestimonials)
 router.post('/testimonials', createTestimonial)
 router.put('/testimonials/:id', updateTestimonial)
 router.delete('/testimonials/:id', deleteTestimonial)
+
+/* Routes des commentaires admin */
+router.get('/comments', getComments)
+router.put('/comments/:id/approve', approveComment)
+router.delete('/comments/:id', deleteComment)
+
+/* Routes des parametres admin */
+router.get('/settings', getSettings)
+router.put('/settings', upsertSettings)
 
 module.exports = router
