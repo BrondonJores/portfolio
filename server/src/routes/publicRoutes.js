@@ -5,6 +5,8 @@ const { getAllPublic: getArticles, getBySlug: getArticleBySlug } = require('../c
 const { getAll: getSkills } = require('../controllers/skillController')
 const { create: createMessage } = require('../controllers/messageController')
 const { getAllPublic: getTestimonials } = require('../controllers/testimonialController')
+const { getByArticleId, create: createComment } = require('../controllers/commentController')
+const { getAll: getSettingsPublic } = require('../controllers/settingController')
 const { validate } = require('../middleware/validateMiddleware')
 const { createMessageValidator } = require('../validators/messageValidator')
 
@@ -17,5 +19,8 @@ router.get('/articles/:slug', getArticleBySlug)
 router.get('/skills', getSkills)
 router.post('/messages', validate(createMessageValidator), createMessage)
 router.get('/testimonials', getTestimonials)
+router.get('/comments/:articleId', getByArticleId)
+router.post('/comments', createComment)
+router.get('/settings', getSettingsPublic)
 
 module.exports = router

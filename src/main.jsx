@@ -31,6 +31,8 @@ const AdminArticleForm = lazy(() => import('./pages/admin/AdminArticleForm.jsx')
 const AdminSkills = lazy(() => import('./pages/admin/AdminSkills.jsx'))
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages.jsx'))
 const AdminTestimonials = lazy(() => import('./pages/admin/AdminTestimonials.jsx'))
+const AdminComments = lazy(() => import('./pages/admin/AdminComments.jsx'))
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings.jsx'))
 
 /* Fallback de chargement pour Suspense */
 function LoadingFallback() {
@@ -89,6 +91,8 @@ const router = createBrowserRouter([
       { path: 'competences', element: <Suspense fallback={<LoadingFallback />}><AdminSkills /></Suspense> },
       { path: 'messages', element: <Suspense fallback={<LoadingFallback />}><AdminMessages /></Suspense> },
       { path: 'temoignages', element: <Suspense fallback={<LoadingFallback />}><AdminTestimonials /></Suspense> },
+      { path: 'commentaires', element: <Suspense fallback={<LoadingFallback />}><AdminComments /></Suspense> },
+      { path: 'parametres', element: <Suspense fallback={<LoadingFallback />}><AdminSettings /></Suspense> },
     ],
   },
 ])

@@ -8,6 +8,8 @@ import {
   EnvelopeIcon,
   ChatBubbleLeftRightIcon,
   ArrowRightOnRectangleIcon,
+  ChatBubbleLeftIcon,
+  Cog6ToothIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../hooks/useAuth.jsx'
 
@@ -19,6 +21,8 @@ const NAV_ITEMS = [
   { to: '/admin/competences', label: 'Competences', icon: WrenchScrewdriverIcon },
   { to: '/admin/messages', label: 'Messages', icon: EnvelopeIcon },
   { to: '/admin/temoignages', label: 'Temoignages', icon: ChatBubbleLeftRightIcon },
+  { to: '/admin/commentaires', label: 'Commentaires', icon: ChatBubbleLeftIcon },
+  { to: '/admin/parametres', label: 'Parametres', icon: Cog6ToothIcon },
 ]
 
 /**

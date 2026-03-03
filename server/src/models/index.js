@@ -6,5 +6,7 @@ const Article = require('./Article')
 const Skill = require('./Skill')
 const Message = require('./Message')
 const Testimonial = require('./Testimonial')
+const Comment = require('./Comment')
+const Setting = require('./Setting')
 
-module.exports = { sequelize, Admin, Project, Article, Skill, Message, Testimonial }
+module.exports = { sequelize, Admin, Project, Article, Skill, Message, Testimonial, Comment, Setting }
