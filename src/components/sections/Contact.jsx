@@ -4,18 +4,7 @@ import AnimatedSection from '../ui/AnimatedSection.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Button from '../ui/Button.jsx'
 import { useContactForm } from '../../hooks/useContactForm.jsx'
-
-/* Liens sociaux */
-const SOCIAL_LINKS = [
-  {
-    label: 'GitHub',
-    href: 'https://github.com/BrondonJores',
-  },
-  {
-    label: 'LinkedIn',
-    href: 'https://linkedin.com/in/brondonjores',
-  },
-]
+import { useSettings } from '../../context/SettingsContext.jsx'
 
 /* Style commun des inputs */
 const inputStyle = {
@@ -26,6 +15,16 @@ const inputStyle = {
 
 export default function Contact() {
   const { fields, handleChange, handleSubmit, status } = useContactForm()
+  const { settings } = useSettings()
+
+  const socialLinks = [
+    settings.github_url && { label: 'GitHub', href: settings.github_url },
+    settings.linkedin_url && { label: 'LinkedIn', href: settings.linkedin_url },
+    settings.twitter_url && { label: 'Twitter', href: settings.twitter_url },
+  ].filter(Boolean)
+
+  const contactEmail = settings.contact_email || 'contact@brondonjores.dev'
+  const contactLocation = settings.contact_location || 'France'
 
   return (
     <AnimatedSection
@@ -61,7 +60,7 @@ export default function Contact() {
                   className="text-sm"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  contact@brondonjores.dev
+                  {contactEmail}
                 </span>
               </div>
               <div className="flex items-center gap-3">
@@ -74,14 +73,14 @@ export default function Contact() {
                   className="text-sm"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  France
+                  {contactLocation}
                 </span>
               </div>
             </div>
 
             {/* Liens sociaux */}
             <div className="flex gap-4">
-              {SOCIAL_LINKS.map((link) => (
+              {socialLinks.map((link) => (
                 <a
                   key={link.label}
                   href={link.href}

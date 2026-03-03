@@ -11,6 +11,7 @@ import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
 import { useContactForm } from '../hooks/useContactForm.jsx'
 import { getTestimonials } from '../services/testimonialService.js'
+import { useSettings } from '../context/SettingsContext.jsx'
 
 /* Style commun des inputs */
 const inputStyle = {
@@ -21,7 +22,17 @@ const inputStyle = {
 
 export default function ContactPage() {
   const { fields, handleChange, handleSubmit, status } = useContactForm()
+  const { settings } = useSettings()
   const [testimonials, setTestimonials] = useState([])
+
+  const socialLinks = [
+    settings.github_url && { label: 'GitHub', href: settings.github_url },
+    settings.linkedin_url && { label: 'LinkedIn', href: settings.linkedin_url },
+    settings.twitter_url && { label: 'Twitter', href: settings.twitter_url },
+  ].filter(Boolean)
+
+  const contactEmail = settings.contact_email || 'contact@brondonjores.dev'
+  const contactLocation = settings.contact_location || 'France'
 
   useEffect(() => {
     getTestimonials()
@@ -60,7 +71,7 @@ export default function ContactPage() {
                     aria-hidden="true"
                   />
                   <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    contact@brondonjores.dev
+                  {contactEmail}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -70,15 +81,12 @@ export default function ContactPage() {
                     aria-hidden="true"
                   />
                   <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    France
+                  {contactLocation}
                   </span>
                 </div>
               </div>
               <div className="flex gap-4">
-                {[
-                  { label: 'GitHub', href: 'https://github.com/BrondonJores' },
-                  { label: 'LinkedIn', href: 'https://linkedin.com/in/brondonjores' },
-                ].map((link) => (
+                {socialLinks.map((link) => (
                   <a
                     key={link.label}
                     href={link.href}
