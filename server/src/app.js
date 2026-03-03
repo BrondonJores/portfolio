@@ -1,6 +1,7 @@
 /* Application Express principale */
 require('dotenv').config()
 const express = require('express')
+const path = require('path')
 const helmet = require('helmet')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
@@ -43,6 +44,9 @@ const globalLimiter = rateLimit({
   legacyHeaders: false,
 })
 app.use(globalLimiter)
+
+/* Fichiers statiques : images uploadees */
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')))
 
 /* Montage des routes sur /api */
 app.use('/api', routes)

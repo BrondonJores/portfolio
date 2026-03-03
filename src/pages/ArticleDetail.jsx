@@ -3,11 +3,11 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { ArrowLeftIcon, CalendarIcon } from '@heroicons/react/24/outline'
-import DOMPurify from 'dompurify'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
+import BlockRenderer from '../components/ui/BlockRenderer.jsx'
 import { getArticleBySlug } from '../services/articleService.js'
 import { useScrollPosition } from '../hooks/useScrollPosition.jsx'
 
@@ -78,8 +78,7 @@ export default function ArticleDetail() {
     )
   }
 
-  /* Sanitisation du contenu HTML */
-  const safeContent = DOMPurify.sanitize(article.content || '')
+  /* Sanitisation du contenu HTML (conservee pour retrocompatibilite dans BlockRenderer) */
 
   return (
     <>
@@ -128,12 +127,8 @@ export default function ArticleDetail() {
             )}
           </header>
 
-          {/* Contenu sanitise */}
-          <div
-            className="prose max-w-none leading-relaxed"
-            style={{ color: 'var(--color-text-secondary)' }}
-            dangerouslySetInnerHTML={{ __html: safeContent }}
-          />
+          {/* Contenu de l'article */}
+          <BlockRenderer content={article.content} />
         </div>
       </main>
       <Footer />
