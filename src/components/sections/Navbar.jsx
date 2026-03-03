@@ -1,7 +1,10 @@
-/* Barre de navigation fixe avec menu hamburger mobile */
+/* Barre de navigation fixe avec menu hamburger mobile et toggle theme */
 import { useState } from 'react'
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Bars3Icon, XMarkIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline'
 import { useScrollPosition } from '../../hooks/useScrollPosition.jsx'
+import { useTheme } from '../../context/ThemeContext.jsx'
 
 /* Liens de navigation avec ancres */
 const NAV_LINKS = [
@@ -9,12 +12,14 @@ const NAV_LINKS = [
   { href: '#about', label: 'A propos' },
   { href: '#skills', label: 'Competences' },
   { href: '#projects', label: 'Projets' },
+  { href: '#blog', label: 'Blog' },
   { href: '#contact', label: 'Contact' },
 ]
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const scrollY = useScrollPosition()
+  const { theme, toggleTheme } = useTheme()
 
   /* Opacite augmentee apres defilement */
   const isScrolled = scrollY > 20
@@ -67,20 +72,38 @@ export default function Navbar() {
           ))}
         </ul>
 
-        {/* Bouton hamburger mobile */}
-        <button
-          className="md:hidden p-2 rounded-lg transition-colors"
-          style={{ color: 'var(--color-text-secondary)' }}
-          onClick={toggleMenu}
-          aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-          aria-expanded={menuOpen}
-        >
-          {menuOpen ? (
-            <XMarkIcon className="h-6 w-6" />
-          ) : (
-            <Bars3Icon className="h-6 w-6" />
-          )}
-        </button>
+        {/* Actions : toggle theme + hamburger mobile */}
+        <div className="flex items-center gap-2">
+          {/* Bouton toggle theme */}
+          <motion.button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+            style={{ color: 'var(--color-text-secondary)' }}
+            whileTap={{ scale: 0.9 }}
+            aria-label={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+          >
+            {theme === 'dark' ? (
+              <SunIcon className="h-5 w-5" />
+            ) : (
+              <MoonIcon className="h-5 w-5" />
+            )}
+          </motion.button>
+
+          {/* Bouton hamburger mobile */}
+          <button
+            className="md:hidden p-2 rounded-lg transition-colors"
+            style={{ color: 'var(--color-text-secondary)' }}
+            onClick={toggleMenu}
+            aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? (
+              <XMarkIcon className="h-6 w-6" />
+            ) : (
+              <Bars3Icon className="h-6 w-6" />
+            )}
+          </button>
+        </div>
       </nav>
 
       {/* Menu mobile deroulant */}
@@ -109,6 +132,23 @@ export default function Navbar() {
               </li>
             ))}
           </ul>
+          {/* Lien discret vers l'espace admin */}
+          <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+            <Link
+              to="/admin/login"
+              className="text-xs transition-colors duration-200"
+              style={{ color: 'var(--color-border)' }}
+              onClick={closeMenu}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = 'var(--color-text-secondary)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--color-border)'
+              }}
+            >
+              Administration
+            </Link>
+          </div>
         </div>
       )}
     </header>

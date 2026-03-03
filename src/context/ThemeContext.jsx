@@ -6,14 +6,21 @@ const ThemeContext = createContext(null)
 /* Fournisseur du contexte de theme */
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
-    /* Lecture de la preference sauvegardee en localStorage */
-    return localStorage.getItem('theme') ?? 'dark'
+    /* Lecture de la preference sauvegardee ou detection de la preference systeme */
+    const saved = localStorage.getItem('portfolio_theme')
+    if (saved) return saved
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
   })
 
   useEffect(() => {
     /* Persistance de la preference dans localStorage */
-    localStorage.setItem('theme', theme)
-    document.documentElement.dataset.theme = theme
+    localStorage.setItem('portfolio_theme', theme)
+    /* Application de la classe sur l'element racine HTML */
+    if (theme === 'light') {
+      document.documentElement.classList.add('light')
+    } else {
+      document.documentElement.classList.remove('light')
+    }
   }, [theme])
 
   const toggleTheme = () => {
@@ -31,7 +38,7 @@ export function ThemeProvider({ children }) {
 export function useTheme() {
   const context = useContext(ThemeContext)
   if (!context) {
-    throw new Error('useTheme doit etre utilise a l\'interieur de ThemeProvider')
+    throw new Error("useTheme doit etre utilise a l'interieur de ThemeProvider")
   }
   return context
 }
