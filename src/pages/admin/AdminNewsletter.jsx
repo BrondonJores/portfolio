@@ -1,34 +1,22 @@
 /* Page de gestion des campagnes newsletter admin */
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { TrashIcon, PaperAirplaneIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, PaperAirplaneIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
 import {
   getNewsletterCampaigns,
-  createCampaign,
-  updateCampaign,
   deleteCampaign,
   sendCampaign,
 } from '../../services/newsletterService.js'
 
-const inputStyle = {
-  backgroundColor: 'var(--color-bg-primary)',
-  borderColor: 'var(--color-border)',
-  color: 'var(--color-text-primary)',
-}
-
-const EMPTY_FORM = { subject: '', body_html: '' }
-
 export default function AdminNewsletter() {
   const addToast = useAdminToast()
+  const navigate = useNavigate()
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editItem, setEditItem] = useState(null)
-  const [form, setForm] = useState(EMPTY_FORM)
-  const [saving, setSaving] = useState(false)
   const [confirmingId, setConfirmingId] = useState(null)
 
   const loadCampaigns = () => {
@@ -40,44 +28,6 @@ export default function AdminNewsletter() {
   }
 
   useEffect(loadCampaigns, [])
-
-  const openNew = () => {
-    setEditItem(null)
-    setForm(EMPTY_FORM)
-    setShowForm(true)
-  }
-
-  const openEdit = (campaign) => {
-    setEditItem(campaign)
-    setForm({ subject: campaign.subject, body_html: campaign.body_html })
-    setShowForm(true)
-  }
-
-  const closeForm = () => {
-    setShowForm(false)
-    setEditItem(null)
-    setForm(EMPTY_FORM)
-  }
-
-  const handleSave = async (e) => {
-    e.preventDefault()
-    setSaving(true)
-    try {
-      if (editItem) {
-        await updateCampaign(editItem.id, form)
-        addToast('Campagne mise a jour.', 'success')
-      } else {
-        await createCampaign(form)
-        addToast('Brouillon enregistre.', 'success')
-      }
-      closeForm()
-      loadCampaigns()
-    } catch (err) {
-      addToast(err.message || 'Erreur.', 'error')
-    } finally {
-      setSaving(false)
-    }
-  }
 
   const handleDelete = async (id) => {
     try {
@@ -118,68 +68,11 @@ export default function AdminNewsletter() {
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             Newsletter
           </h1>
-          <Button variant="primary" onClick={openNew}>
+          <Button variant="primary" onClick={() => navigate('/admin/newsletter/new')}>
             <PlusIcon className="h-4 w-4" aria-hidden="true" />
             Nouvelle campagne
           </Button>
         </div>
-
-        {/* Formulaire inline */}
-        {showForm && (
-          <div
-            className="mb-6 p-6 rounded-xl border"
-            style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                {editItem ? 'Modifier le brouillon' : 'Nouvelle campagne'}
-              </h2>
-              <button
-                onClick={closeForm}
-                className="p-1 rounded focus:outline-none"
-                style={{ color: 'var(--color-text-secondary)' }}
-                aria-label="Fermer le formulaire"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                  Sujet <span style={{ color: '#f87171' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.subject}
-                  onChange={(e) => setForm((prev) => ({ ...prev, subject: e.target.value }))}
-                  required
-                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                  style={inputStyle}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                  Contenu HTML <span style={{ color: '#f87171' }}>*</span>
-                </label>
-                <textarea
-                  value={form.body_html}
-                  onChange={(e) => setForm((prev) => ({ ...prev, body_html: e.target.value }))}
-                  required
-                  rows={10}
-                  placeholder="<h1>Bonjour !</h1><p>Votre contenu HTML ici...</p>"
-                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-y font-mono"
-                  style={inputStyle}
-                />
-              </div>
-              <div className="flex items-center justify-end gap-3">
-                <Button type="button" variant="ghost" onClick={closeForm}>Annuler</Button>
-                <Button type="submit" variant="primary" disabled={saving}>
-                  {saving ? 'Enregistrement...' : 'Enregistrer le brouillon'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        )}
 
         {loading ? (
           <div className="flex justify-center py-20">
@@ -228,7 +121,7 @@ export default function AdminNewsletter() {
                         {c.status === 'draft' && (
                           <>
                             <button
-                              onClick={() => openEdit(c)}
+                              onClick={() => navigate(`/admin/newsletter/${c.id}/edit`)}
                               className="p-1.5 rounded-lg text-xs transition-colors focus:outline-none"
                               style={{ color: 'var(--color-text-secondary)' }}
                               aria-label={`Modifier la campagne ${c.subject}`}

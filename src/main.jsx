@@ -35,6 +35,7 @@ const AdminTestimonials = lazy(() => import('./pages/admin/AdminTestimonials.jsx
 const AdminComments = lazy(() => import('./pages/admin/AdminComments.jsx'))
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings.jsx'))
 const AdminNewsletter = lazy(() => import('./pages/admin/AdminNewsletter.jsx'))
+const AdminCampaignForm = lazy(() => import('./pages/admin/AdminCampaignForm.jsx'))
 const AdminSubscribers = lazy(() => import('./pages/admin/AdminSubscribers.jsx'))
 
 /* Fallback de chargement pour Suspense */
@@ -96,6 +97,8 @@ const router = createBrowserRouter([
       { path: 'temoignages', element: <Suspense fallback={<LoadingFallback />}><AdminTestimonials /></Suspense> },
       { path: 'commentaires', element: <Suspense fallback={<LoadingFallback />}><AdminComments /></Suspense> },
       { path: 'parametres', element: <Suspense fallback={<LoadingFallback />}><AdminSettings /></Suspense> },
+      { path: 'newsletter/new', element: <Suspense fallback={<LoadingFallback />}><AdminCampaignForm /></Suspense> },
+      { path: 'newsletter/:id/edit', element: <Suspense fallback={<LoadingFallback />}><AdminCampaignForm /></Suspense> },
       { path: 'newsletter', element: <Suspense fallback={<LoadingFallback />}><AdminNewsletter /></Suspense> },
       { path: 'subscribers', element: <Suspense fallback={<LoadingFallback />}><AdminSubscribers /></Suspense> },
     ],
