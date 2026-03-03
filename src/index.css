@@ -1,0 +1,47 @@
+/* Import des polices self-hosted via Fontsource */
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+/* Import de Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* Variables CSS du design system "Dark Techy Editorial" */
+:root {
+  --color-bg-primary: #0a0a0f;
+  --color-bg-secondary: #111118;
+  --color-bg-card: #16161f;
+  --color-accent: #6366f1;
+  --color-accent-light: #a5b4fc;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-border: #1e1e2e;
+}
+
+/* Styles globaux */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: "Inter Variable", sans-serif;
+}
+
+/* Scrollbar personnalisee style sombre */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent);
+}
