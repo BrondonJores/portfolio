@@ -5,13 +5,16 @@ import { motion } from 'framer-motion'
 import Navbar from './components/sections/Navbar.jsx'
 
 /* Politique de securite du contenu */
+const apiOrigin = import.meta.env.VITE_API_URL || ''
+const serverOrigin = import.meta.env.VITE_SERVER_URL || ''
+
 const CSP_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https:",
+  ["img-src 'self' data: https:", serverOrigin].filter(Boolean).join(' '),
   "font-src 'self'",
-  "connect-src 'self'",
+  ["connect-src 'self' https://api.resend.com", apiOrigin].filter(Boolean).join(' '),
 ].join('; ')
 
 /* Layout public avec Navbar */
