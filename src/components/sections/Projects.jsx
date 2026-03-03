@@ -39,7 +39,7 @@ export default function Projects() {
 
   useEffect(() => {
     getProjects({ featured: true, limit: 3 })
-      .then((data) =>setProjects(data.data))
+      .then((data) => setProjects(data.data))
       .catch((err) => {
         console.error('Erreur lors du chargement des projets :', err)
         setProjects([])
@@ -87,87 +87,115 @@ export default function Projects() {
         >
           {projects.map((project) => (
             <motion.div key={project.id} variants={cardVariants}>
-              <Card className="h-full flex flex-col">
-                {/* En-tete de la carte */}
-                <div className="flex items-start justify-between mb-4">
-                  <FolderOpenIcon
-                    className="h-8 w-8"
-                    style={{ color: 'var(--color-accent)' }}
-                    aria-hidden="true"
-                  />
-                  {project.featured && (
-                    <span
-                      className="text-xs font-medium px-2 py-0.5 rounded"
-                      style={{
-                        color: 'var(--color-accent-light)',
-                        backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                      }}
-                    >
-                      Mis en avant
-                    </span>
-                  )}
-                </div>
-
-                {/* Titre et description */}
-                <h3
-                  className="text-lg font-bold mb-2"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  {project.title}
-                </h3>
-                <p
-                  className="text-sm leading-relaxed mb-4 flex-grow"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  {project.description}
-                </p>
-
-                {/* Tags technologies */}
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {(project.tags || []).map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-xs font-mono px-2 py-0.5 rounded border"
-                      style={{
-                        color: 'var(--color-text-secondary)',
-                        borderColor: 'var(--color-border)',
-                        fontFamily: 'JetBrains Mono Variable, monospace',
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Boutons d'action */}
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    href={project.github_url}
-                    aria-label={`Voir le code source de ${project.title} sur GitHub`}
+              <Card className="h-full flex flex-col overflow-hidden !p-0">
+                {/* Image du projet */}
+                {project.image_url ? (
+                  <div className="w-full h-48 overflow-hidden flex-shrink-0">
+                    <img
+                      src={project.image_url}
+                      alt={project.title}
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      loading="lazy"
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="w-full h-48 flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: 'var(--color-bg-primary)' }}
                   >
-                    <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
-                    GitHub
-                  </Button>
-                  {project.demo_url ? (
-                    <Button
-                      variant="secondary"
-                      href={project.demo_url}
-                      aria-label={`Voir la demo de ${project.title}`}
-                    >
-                      <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
-                      Demo
-                    </Button>
-                  ) : (
+                    <FolderOpenIcon
+                      className="h-10 w-10"
+                      style={{ color: 'var(--color-accent)', opacity: 0.3 }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                )}
+
+                {/* Contenu de la carte */}
+                <div className="flex flex-col flex-grow p-5">
+                  {/* En-tete de la carte */}
+                  <div className="flex items-start justify-between mb-4">
+                    {!project.image_url && (
+                      <FolderOpenIcon
+                        className="h-8 w-8"
+                        style={{ color: 'var(--color-accent)' }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    {project.featured && (
+                      <span
+                        className="ml-auto text-xs font-medium px-2 py-0.5 rounded"
+                        style={{
+                          color: 'var(--color-accent-light)',
+                          backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                        }}
+                      >
+                        Mis en avant
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Titre et description */}
+                  <h3
+                    className="text-lg font-bold mb-2"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {project.title}
+                  </h3>
+                  <p
+                    className="text-sm leading-relaxed mb-4 flex-grow"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    {project.description}
+                  </p>
+
+                  {/* Tags technologies */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {(project.tags || []).map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-xs font-mono px-2 py-0.5 rounded border"
+                        style={{
+                          color: 'var(--color-text-secondary)',
+                          borderColor: 'var(--color-border)',
+                          fontFamily: 'JetBrains Mono Variable, monospace',
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Boutons d'action */}
+                  <div className="flex items-center gap-3">
                     <Button
                       variant="ghost"
-                      disabled
-                      aria-label="Demo non disponible"
+                      href={project.github_url}
+                      aria-label={`Voir le code source de ${project.title} sur GitHub`}
                     >
-                      <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
-                      Demo
+                      <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
+                      GitHub
                     </Button>
-                  )}
+                    {project.demo_url ? (
+                      <Button
+                        variant="secondary"
+                        href={project.demo_url}
+                        aria-label={`Voir la demo de ${project.title}`}
+                      >
+                        <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
+                        Demo
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        disabled
+                        aria-label="Demo non disponible"
+                      >
+                        <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
+                        Demo
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Card>
             </motion.div>

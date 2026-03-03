@@ -1,5 +1,5 @@
 /* Page liste de tous les projets avec filtres et pagination */
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { FolderOpenIcon, CodeBracketIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
@@ -88,62 +88,90 @@ export default function ProjectsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: i * 0.05, ease: 'easeOut' }}
                   >
-                    <Card className="h-full flex flex-col">
-                      <div className="flex items-start justify-between mb-3">
-                        <FolderOpenIcon
-                          className="h-7 w-7"
-                          style={{ color: 'var(--color-accent)' }}
-                          aria-hidden="true"
-                        />
-                        {project.featured && (
-                          <Badge>Mis en avant</Badge>
-                        )}
-                      </div>
-                      <h2
-                        className="text-base font-bold mb-2"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
-                        <Link
-                          to={`/projets/${project.slug}`}
-                          className="hover:text-[var(--color-accent)] transition-colors"
+                    <Card className="h-full flex flex-col overflow-hidden !p-0">
+                      {/* Image du projet */}
+                      {project.image_url ? (
+                        <div className="w-full h-44 overflow-hidden flex-shrink-0">
+                          <img
+                            src={project.image_url}
+                            alt={project.title}
+                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          className="w-full h-44 flex items-center justify-center flex-shrink-0"
+                          style={{ backgroundColor: 'var(--color-bg-secondary)' }}
                         >
-                          {project.title}
-                        </Link>
-                      </h2>
-                      <p
-                        className="text-sm leading-relaxed mb-4 flex-grow line-clamp-3"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        {project.description}
-                      </p>
-                      {Array.isArray(project.tags) && project.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mb-4">
-                          {project.tags.map((tag) => (
-                            <Badge key={tag}>{tag}</Badge>
-                          ))}
+                          <FolderOpenIcon
+                            className="h-10 w-10"
+                            style={{ color: 'var(--color-accent)', opacity: 0.3 }}
+                            aria-hidden="true"
+                          />
                         </div>
                       )}
-                      <div className="flex items-center gap-3 mt-auto">
-                        {project.github_url && (
-                          <Button
-                            variant="ghost"
-                            href={project.github_url}
-                            aria-label={`Voir le code de ${project.title}`}
+
+                      {/* Contenu de la carte */}
+                      <div className="flex flex-col flex-grow p-5">
+                        <div className="flex items-start justify-between mb-3">
+                          {!project.image_url && (
+                            <FolderOpenIcon
+                              className="h-7 w-7"
+                              style={{ color: 'var(--color-accent)' }}
+                              aria-hidden="true"
+                            />
+                          )}
+                          {project.featured && (
+                            <Badge className="ml-auto">Mis en avant</Badge>
+                          )}
+                        </div>
+                        <h2
+                          className="text-base font-bold mb-2"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          <Link
+                            to={`/projets/${project.slug}`}
+                            className="hover:text-[var(--color-accent)] transition-colors"
                           >
-                            <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
-                            GitHub
-                          </Button>
+                            {project.title}
+                          </Link>
+                        </h2>
+                        <p
+                          className="text-sm leading-relaxed mb-4 flex-grow line-clamp-3"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {project.description}
+                        </p>
+                        {Array.isArray(project.tags) && project.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-4">
+                            {project.tags.map((tag) => (
+                              <Badge key={tag}>{tag}</Badge>
+                            ))}
+                          </div>
                         )}
-                        {project.demo_url && (
-                          <Button
-                            variant="secondary"
-                            href={project.demo_url}
-                            aria-label={`Demo de ${project.title}`}
-                          >
-                            <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
-                            Demo
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-3 mt-auto">
+                          {project.github_url && (
+                            <Button
+                              variant="ghost"
+                              href={project.github_url}
+                              aria-label={`Voir le code de ${project.title}`}
+                            >
+                              <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
+                              GitHub
+                            </Button>
+                          )}
+                          {project.demo_url && (
+                            <Button
+                              variant="secondary"
+                              href={project.demo_url}
+                              aria-label={`Demo de ${project.title}`}
+                            >
+                              <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
+                              Demo
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </Card>
                   </motion.div>

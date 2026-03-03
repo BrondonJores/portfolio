@@ -42,33 +42,61 @@ export default function Blog() {
               transition={{ duration: 0.4, delay: i * 0.1, ease: 'easeOut' }}
             >
               <Link to={`/blog/${article.slug}`} className="block h-full">
-                <Card className="h-full flex flex-col hover:border-[var(--color-accent)] transition-colors">
-                  <DocumentTextIcon
-                    className="h-6 w-6 mb-3 flex-shrink-0"
-                    style={{ color: 'var(--color-accent)' }}
-                    aria-hidden="true"
-                  />
-                  <h3
-                    className="text-base font-bold mb-2 line-clamp-2 flex-grow"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    {article.title}
-                  </h3>
-                  {article.excerpt && (
-                    <p
-                      className="text-sm leading-relaxed mb-3 line-clamp-2"
-                      style={{ color: 'var(--color-text-secondary)' }}
+                <Card className="h-full flex flex-col hover:border-[var(--color-accent)] transition-colors overflow-hidden !p-0">
+                  {/* Image de couverture */}
+                  {article.cover_image ? (
+                    <div className="w-full h-40 overflow-hidden flex-shrink-0">
+                      <img
+                        src={article.cover_image}
+                        alt={article.title}
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="w-full h-40 flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: 'var(--color-bg-secondary)' }}
                     >
-                      {article.excerpt}
-                    </p>
-                  )}
-                  {Array.isArray(article.tags) && article.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-auto">
-                      {article.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag}>{tag}</Badge>
-                      ))}
+                      <DocumentTextIcon
+                        className="h-8 w-8"
+                        style={{ color: 'var(--color-accent)', opacity: 0.3 }}
+                        aria-hidden="true"
+                      />
                     </div>
                   )}
+
+                  {/* Contenu */}
+                  <div className="flex flex-col flex-grow p-5">
+                    {!article.cover_image && (
+                      <DocumentTextIcon
+                        className="h-6 w-6 mb-3 flex-shrink-0"
+                        style={{ color: 'var(--color-accent)' }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    <h3
+                      className="text-base font-bold mb-2 line-clamp-2 flex-grow"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      {article.title}
+                    </h3>
+                    {article.excerpt && (
+                      <p
+                        className="text-sm leading-relaxed mb-3 line-clamp-2"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {article.excerpt}
+                      </p>
+                    )}
+                    {Array.isArray(article.tags) && article.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-auto">
+                        {article.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag}>{tag}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </Card>
               </Link>
             </motion.div>

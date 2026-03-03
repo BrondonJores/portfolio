@@ -30,19 +30,20 @@ export default function Skills() {
   const [skillGroups, setSkillGroups] = useState([])
   const [loading, setLoading] = useState(true)
 
- useEffect(() => {
+  useEffect(() => {
     getSkills()
-      .then((skills) => {
-        /* Groupement du tableau plat par categorie */
-        const grouped = skills.reduce((acc, skill) => {
-          const existing = acc.find((g) => g.category === skill.category)
-          if (existing) {
-            existing.items.push(skill.name)
-          } else {
-            acc.push({ category: skill.category, items: [skill.name] })
-          }
-          return acc
-        }, [])
+      .then((res) => {
+        
+        const skillsByCategory = res.data || {}
+
+        // Transformation en tableau pour mapper dans JSX
+        const grouped = Object.entries(skillsByCategory).map(
+          ([category, skills]) => ({
+            category,
+            items: skills.map((skill) => skill.name), // récupère uniquement le nom
+          })
+        )
+
         setSkillGroups(grouped)
       })
       .catch((err) => {

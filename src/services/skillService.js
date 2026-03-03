@@ -4,7 +4,7 @@ import { api } from './api.js'
 /* Fonction publique */
 export const getSkills = async () => {
   const res = await api.get('/skills')
-  return res.data.data   
+  return res 
 }
 
 /* Fonctions admin */

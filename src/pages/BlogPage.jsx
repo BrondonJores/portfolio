@@ -74,44 +74,72 @@ export default function BlogPage() {
                     transition={{ duration: 0.4, delay: i * 0.05, ease: 'easeOut' }}
                   >
                     <Link to={`/blog/${article.slug}`} className="block h-full">
-                      <Card className="h-full flex flex-col">
-                        <DocumentTextIcon
-                          className="h-6 w-6 mb-3"
-                          style={{ color: 'var(--color-accent)' }}
-                          aria-hidden="true"
-                        />
-                        <h2
-                          className="text-base font-bold mb-2 line-clamp-2"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          {article.title}
-                        </h2>
-                        {article.excerpt && (
-                          <p
-                            className="text-sm leading-relaxed mb-3 line-clamp-3 flex-grow"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                          >
-                            {article.excerpt}
-                          </p>
-                        )}
-                        {article.published_at && (
+                      <Card className="h-full flex flex-col overflow-hidden !p-0">
+                        {/* Image de couverture */}
+                        {article.cover_image ? (
+                          <div className="w-full h-44 overflow-hidden flex-shrink-0">
+                            <img
+                              src={article.cover_image}
+                              alt={article.title}
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                          </div>
+                        ) : (
                           <div
-                            className="flex items-center gap-1.5 text-xs mb-3"
-                            style={{ color: 'var(--color-text-secondary)' }}
+                            className="w-full h-44 flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: 'var(--color-bg-secondary)' }}
                           >
-                            <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                            <time dateTime={article.published_at}>
-                              {formatDate(article.published_at)}
-                            </time>
+                            <DocumentTextIcon
+                              className="h-10 w-10"
+                              style={{ color: 'var(--color-accent)', opacity: 0.4 }}
+                              aria-hidden="true"
+                            />
                           </div>
                         )}
-                        {Array.isArray(article.tags) && article.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-auto">
-                            {article.tags.slice(0, 3).map((tag) => (
-                              <Badge key={tag}>{tag}</Badge>
-                            ))}
-                          </div>
-                        )}
+
+                        {/* Contenu de la carte */}
+                        <div className="flex flex-col flex-grow p-5">
+                          {!article.cover_image && (
+                            <DocumentTextIcon
+                              className="h-6 w-6 mb-3"
+                              style={{ color: 'var(--color-accent)' }}
+                              aria-hidden="true"
+                            />
+                          )}
+                          <h2
+                            className="text-base font-bold mb-2 line-clamp-2"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            {article.title}
+                          </h2>
+                          {article.excerpt && (
+                            <p
+                              className="text-sm leading-relaxed mb-3 line-clamp-3 flex-grow"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              {article.excerpt}
+                            </p>
+                          )}
+                          {article.published_at && (
+                            <div
+                              className="flex items-center gap-1.5 text-xs mb-3"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                              <time dateTime={article.published_at}>
+                                {formatDate(article.published_at)}
+                              </time>
+                            </div>
+                          )}
+                          {Array.isArray(article.tags) && article.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-auto">
+                              {article.tags.slice(0, 3).map((tag) => (
+                                <Badge key={tag}>{tag}</Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </Card>
                     </Link>
                   </motion.div>
