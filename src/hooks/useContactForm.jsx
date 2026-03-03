@@ -1,7 +1,7 @@
 /* Hook de gestion du formulaire de contact */
 import { useState } from 'react'
 import { sanitizeInput } from '../utils/sanitize.js'
-import { sendContactMessage } from '../services/contactService.js'
+import { sendMessage } from '../services/messageService.js'
 
 const INITIAL_FIELDS = { name: '', email: '', message: '' }
 const INITIAL_STATUS = { loading: false, success: false, error: null }
@@ -32,13 +32,16 @@ export function useContactForm() {
       message: sanitizeInput(fields.message),
     }
 
-    const result = await sendContactMessage(sanitizedFields)
-
-    if (result.success) {
+    try {
+      await sendMessage(sanitizedFields)
       setStatus({ loading: false, success: true, error: null })
       setFields(INITIAL_FIELDS)
-    } else {
-      setStatus({ loading: false, success: false, error: result.error })
+    } catch (err) {
+      setStatus({
+        loading: false,
+        success: false,
+        error: err.message || 'Echec de l\'envoi du message. Veuillez reessayer.',
+      })
     }
   }
 

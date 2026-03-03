@@ -1,4 +1,4 @@
-/* Composant racine de l'application avec CSP et routing */
+/* Composant racine avec CSP et layout de base */
 import { Helmet } from 'react-helmet-async'
 import { Outlet } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -11,9 +11,10 @@ const CSP_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
   "font-src 'self'",
-  "connect-src 'self' https://api.resend.com",
+  "connect-src 'self'",
 ].join('; ')
 
+/* Layout public avec Navbar */
 export default function App() {
   return (
     <>

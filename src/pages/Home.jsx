@@ -3,6 +3,7 @@ import Hero from '../components/sections/Hero.jsx'
 import About from '../components/sections/About.jsx'
 import Skills from '../components/sections/Skills.jsx'
 import Projects from '../components/sections/Projects.jsx'
+import Blog from '../components/sections/Blog.jsx'
 import Contact from '../components/sections/Contact.jsx'
 import Footer from '../components/sections/Footer.jsx'
 
@@ -17,6 +18,7 @@ export default function Home() {
       <About />
       <Skills />
       <Projects />
+      <Blog />
       <Contact />
       <Footer />
     </>
