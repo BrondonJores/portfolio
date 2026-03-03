@@ -7,8 +7,10 @@ const { create: createMessage } = require('../controllers/messageController')
 const { getAllPublic: getTestimonials } = require('../controllers/testimonialController')
 const { getByArticleId, create: createComment } = require('../controllers/commentController')
 const { getAll: getSettingsPublic } = require('../controllers/settingController')
+const { subscribe, unsubscribe } = require('../controllers/subscriberController')
 const { validate } = require('../middleware/validateMiddleware')
 const { createMessageValidator } = require('../validators/messageValidator')
+const { subscribeValidator } = require('../validators/subscriberValidator')
 
 const router = Router()
 
@@ -22,5 +24,7 @@ router.get('/testimonials', getTestimonials)
 router.get('/comments/:articleId', getByArticleId)
 router.post('/comments', createComment)
 router.get('/settings', getSettingsPublic)
+router.post('/subscribe', validate(subscribeValidator), subscribe)
+router.get('/unsubscribe/:token', unsubscribe)
 
 module.exports = router

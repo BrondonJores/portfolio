@@ -8,5 +8,7 @@ const Message = require('./Message')
 const Testimonial = require('./Testimonial')
 const Comment = require('./Comment')
 const Setting = require('./Setting')
+const Subscriber = require('./Subscriber')
+const NewsletterCampaign = require('./NewsletterCampaign')
 
-module.exports = { sequelize, Admin, Project, Article, Skill, Message, Testimonial, Comment, Setting }
+module.exports = { sequelize, Admin, Project, Article, Skill, Message, Testimonial, Comment, Setting, Subscriber, NewsletterCampaign }

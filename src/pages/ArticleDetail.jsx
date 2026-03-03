@@ -12,6 +12,8 @@ import {
   EyeIcon,
   HeartIcon,
   ChevronUpIcon,
+  EnvelopeIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
@@ -20,6 +22,7 @@ import Spinner from '../components/ui/Spinner.jsx'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
 import { getArticleBySlug, getArticles } from '../services/articleService.js'
 import { getCommentsByArticle, postComment } from '../services/commentService.js'
+import { subscribe } from '../services/subscriberService.js'
 import { useScrollPosition } from '../hooks/useScrollPosition.jsx'
 
 /* Formatage de la date */
@@ -332,7 +335,20 @@ function AuthorCard({ article }) {
 /* Newsletter CTA inline */
 function NewsletterCTA() {
   const [email, setEmail] = useState('')
-  const [subscribed, setSubscribed] = useState(false)
+  const [status, setStatus] = useState('idle') // idle | loading | success | error
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setStatus('loading')
+    try {
+      await subscribe(email)
+      setStatus('success')
+    } catch {
+      setStatus('error')
+      setErrorMsg('Une erreur est survenue. Veuillez reessayer.')
+    }
+  }
 
   return (
     <motion.div
@@ -342,28 +358,32 @@ function NewsletterCTA() {
       className="p-6 rounded-xl border mt-10"
       style={{
         backgroundColor: 'var(--color-bg-secondary)',
-        borderColor: 'var(--color-accent-light)',
+        borderColor: 'var(--color-accent)',
       }}
     >
-      {subscribed ? (
-        <p className="text-sm font-medium" style={{ color: 'var(--color-accent)' }}>
-          Merci ! 🎉 Vous êtes abonné(e).
-        </p>
+      {status === 'success' ? (
+        <div className="flex items-center gap-2">
+          <CheckCircleIcon className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+          <p className="text-sm font-medium" style={{ color: 'var(--color-accent)' }}>
+            Merci ! Vous etes desormais abonne(e).
+          </p>
+        </div>
       ) : (
         <>
-          <p className="text-sm font-medium mb-3" style={{ color: 'var(--color-text-primary)' }}>
-            📬 Vous aimez ce contenu ? Abonnez-vous pour ne rien manquer.
-          </p>
-          <form
-            onSubmit={(e) => { e.preventDefault(); setSubscribed(true) }}
-            className="flex flex-col sm:flex-row gap-2"
-          >
+          <div className="flex items-center gap-2 mb-3">
+            <EnvelopeIcon className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+            <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+              Vous aimez ce contenu ? Abonnez-vous pour ne rien manquer.
+            </p>
+          </div>
+          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="votre@email.com"
+              disabled={status === 'loading'}
               className="flex-1 px-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
               style={{
                 backgroundColor: 'var(--color-bg-primary)',
@@ -373,12 +393,16 @@ function NewsletterCTA() {
             />
             <button
               type="submit"
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none"
+              disabled={status === 'loading'}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
               style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
             >
-              S&apos;abonner
+              {status === 'loading' ? 'Envoi...' : "S'abonner"}
             </button>
           </form>
+          {status === 'error' && (
+            <p className="text-xs mt-2" style={{ color: '#f87171' }}>{errorMsg}</p>
+          )}
         </>
       )}
     </motion.div>
