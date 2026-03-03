@@ -1,15 +1,19 @@
 /* Section Projets avec grille de cartes animees */
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   CodeBracketIcon,
   ArrowTopRightOnSquareIcon,
   FolderOpenIcon,
+  ArrowRightIcon,
 } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Button from '../ui/Button.jsx'
-import { projects } from '../../data/projects.js'
+import Spinner from '../ui/Spinner.jsx'
+import { getProjects } from '../../services/projectService.js'
 
 /* Variants pour l'animation staggeree des cartes */
 const containerVariants = {
@@ -30,6 +34,37 @@ const cardVariants = {
 }
 
 export default function Projects() {
+  const [projects, setProjects] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getProjects({ featured: true, limit: 3 })
+      .then((data) => setProjects(data))
+      .catch((err) => {
+        console.error('Erreur lors du chargement des projets :', err)
+        setProjects([])
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <AnimatedSection
+        id="projects"
+        className="py-24 px-4 sm:px-6 lg:px-8"
+        style={{ backgroundColor: 'var(--color-bg-secondary)' }}
+      >
+        <div className="max-w-6xl mx-auto flex justify-center">
+          <Spinner size="lg" />
+        </div>
+      </AnimatedSection>
+    )
+  }
+
+  if (projects.length === 0) {
+    return null
+  }
+
   return (
     <AnimatedSection
       id="projects"
@@ -89,7 +124,7 @@ export default function Projects() {
 
                 {/* Tags technologies */}
                 <div className="flex flex-wrap gap-2 mb-6">
-                  {project.tags.map((tag) => (
+                  {(project.tags || []).map((tag) => (
                     <span
                       key={tag}
                       className="text-xs font-mono px-2 py-0.5 rounded border"
@@ -108,16 +143,16 @@ export default function Projects() {
                 <div className="flex items-center gap-3">
                   <Button
                     variant="ghost"
-                    href={project.github}
+                    href={project.github_url}
                     aria-label={`Voir le code source de ${project.title} sur GitHub`}
                   >
                     <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
                     GitHub
                   </Button>
-                  {project.demo ? (
+                  {project.demo_url ? (
                     <Button
                       variant="secondary"
-                      href={project.demo}
+                      href={project.demo_url}
                       aria-label={`Voir la demo de ${project.title}`}
                     >
                       <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
@@ -138,6 +173,18 @@ export default function Projects() {
             </motion.div>
           ))}
         </motion.div>
+
+        {/* Lien vers tous les projets */}
+        <div className="mt-10 flex justify-center">
+          <Link
+            to="/projets"
+            className="inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200"
+            style={{ color: 'var(--color-accent)' }}
+          >
+            Voir tous mes projets
+            <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
       </div>
     </AnimatedSection>
   )
