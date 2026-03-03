@@ -2,7 +2,10 @@
 import { api } from './api.js'
 
 /* Fonction publique */
-export const getSkills = () => api.get('/skills')
+export const getSkills = async () => {
+  const res = await api.get('/skills')
+  return res.data.data   
+}
 
 /* Fonctions admin */
 export const getAdminSkills = () => api.get('/admin/skills')

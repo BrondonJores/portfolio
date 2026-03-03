@@ -16,11 +16,11 @@ const createProjectValidator = [
     .isArray()
     .withMessage('Les tags doivent etre un tableau.'),
   body('github_url')
-    .optional()
+    .optional({ checkFalsy: true })
     .isURL()
     .withMessage('URL GitHub invalide.'),
   body('demo_url')
-    .optional()
+    .optional({ checkFalsy: true })
     .isURL()
     .withMessage('URL de demo invalide.'),
 ]
@@ -38,11 +38,11 @@ const updateProjectValidator = [
     .isArray()
     .withMessage('Les tags doivent etre un tableau.'),
   body('github_url')
-    .optional()
+    .optional({ checkFalsy: true })
     .isURL()
     .withMessage('URL GitHub invalide.'),
   body('demo_url')
-    .optional()
+    .optional({ checkFalsy: true })
     .isURL()
     .withMessage('URL de demo invalide.'),
 ]

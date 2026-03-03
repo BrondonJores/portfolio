@@ -39,7 +39,7 @@ export default function Projects() {
 
   useEffect(() => {
     getProjects({ featured: true, limit: 3 })
-      .then((data) => setProjects(data))
+      .then((data) =>setProjects(data.data))
       .catch((err) => {
         console.error('Erreur lors du chargement des projets :', err)
         setProjects([])
