@@ -1,4 +1,6 @@
 /* Composant de rendu public des blocs d'article */
+import { useState } from 'react'
+import { ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
 import DOMPurify from 'dompurify'
 
 /**
@@ -27,11 +29,23 @@ function ParagraphBlock({ block }) {
   )
 }
 
+/* Génère un id ancre depuis un texte de titre */
+function slugifyHeading(text) {
+  if (!text) return undefined
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+}
+
 /* Rendu d'un bloc titre */
 function HeadingBlock({ block }) {
   const Tag = `h${block.level ?? 2}`
+  const id = (block.level === 2 || block.level === 3) ? slugifyHeading(block.content) : undefined
   return (
     <Tag
+      id={id}
       className="font-bold mb-3 mt-6 leading-snug"
       style={{
         color: 'var(--color-text-primary)',
@@ -66,11 +80,22 @@ function ImageBlock({ block }) {
   )
 }
 
-/* Rendu d'un bloc code */
+/* Rendu d'un bloc code avec bouton copier */
 function CodeBlock({ block }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(block.content || '')
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch(() => {})
+  }
+
   return (
     <pre
-      className={`mb-4 p-4 rounded-lg overflow-x-auto text-sm language-${block.language ?? 'text'}`}
+      className={`relative mb-4 p-4 rounded-lg overflow-x-auto text-sm language-${block.language ?? 'text'}`}
       style={{
         backgroundColor: 'var(--color-bg-secondary)',
         borderColor: 'var(--color-border)',
@@ -79,6 +104,21 @@ function CodeBlock({ block }) {
         border: '1px solid var(--color-border)',
       }}
     >
+      <button
+        onClick={handleCopy}
+        className="absolute top-2 right-2 p-1.5 rounded text-xs transition-colors focus:outline-none"
+        style={{
+          backgroundColor: 'rgba(255,255,255,0.08)',
+          color: copied ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+        }}
+        title={copied ? 'Copié !' : 'Copier le code'}
+        aria-label={copied ? 'Code copié' : 'Copier le code'}
+      >
+        {copied
+          ? <ClipboardDocumentCheckIcon className="h-4 w-4" aria-hidden="true" />
+          : <ClipboardIcon className="h-4 w-4" aria-hidden="true" />
+        }
+      </button>
       <code className={`language-${block.language ?? 'text'}`}>{block.content}</code>
     </pre>
   )
