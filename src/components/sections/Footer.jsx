@@ -1,7 +1,12 @@
 /* Pied de page minimal */
+import { useSettings } from '../../context/SettingsContext.jsx'
 
 export default function Footer() {
   const year = new Date().getFullYear()
+  const { settings } = useSettings()
+
+  const footerText = settings.footer_text || `© ${year} BrondonJores. Tous droits reserves.`
+  const footerCredits = settings.footer_credits || 'Construit avec React, Tailwind CSS et Heroicons'
 
   return (
     <footer
@@ -12,13 +17,13 @@ export default function Footer() {
         className="text-sm mb-1"
         style={{ color: 'var(--color-text-secondary)' }}
       >
-        &copy; {year} BrondonJores. Tous droits reserves.
+        {footerText}
       </p>
       <p
         className="text-xs"
         style={{ color: 'var(--color-text-secondary)', opacity: 0.7 }}
       >
-        Construit avec React, Tailwind CSS et Heroicons
+        {footerCredits}
       </p>
     </footer>
   )

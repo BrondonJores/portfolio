@@ -9,6 +9,7 @@ import ProtectedRoute from './components/admin/ProtectedRoute.jsx'
 import Spinner from './components/ui/Spinner.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { SettingsProvider } from './context/SettingsContext.jsx'
 import './index.css'
 
 /* Chargement paresseux de toutes les pages pour le code splitting */
@@ -102,7 +103,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <HelmetProvider>
       <ThemeProvider>
         <AuthProvider>
-          <RouterProvider router={router} />
+          <SettingsProvider>
+            <RouterProvider router={router} />
+          </SettingsProvider>
         </AuthProvider>
       </ThemeProvider>
     </HelmetProvider>

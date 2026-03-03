@@ -2,6 +2,7 @@
 import { motion } from 'framer-motion'
 import { ArrowDownIcon } from '@heroicons/react/24/outline'
 import Button from '../ui/Button.jsx'
+import { useSettings } from '../../context/SettingsContext.jsx'
 
 /* Variants pour l'animation staggeree des elements texte */
 const containerVariants = {
@@ -25,6 +26,19 @@ const itemVariants = {
 }
 
 export default function Hero() {
+  const { settings } = useSettings()
+
+  const heroNameRaw = settings.hero_name || 'Brondon Jores'
+  const nameParts = heroNameRaw.split(' ')
+  const firstName = nameParts[0] || 'Brondon'
+  const lastName = nameParts.slice(1).join(' ') || 'Jores'
+
+  const heroTitleRaw = settings.hero_title || 'Developpeur\nFull Stack'
+  const titleLines = heroTitleRaw.includes('\n') ? heroTitleRaw.split('\n') : [heroTitleRaw]
+
+  const bio = settings.bio || 'Je construis des applications web modernes, performantes et securisees.'
+  const availability = settings.contact_availability || 'Disponible pour des projets'
+
   return (
     <section
       id="hero"
@@ -102,14 +116,13 @@ export default function Hero() {
                 className="w-2 h-2 rounded-full animate-pulse"
                 style={{ backgroundColor: 'var(--color-accent)' }}
               />
-              Disponible pour des projets
-            </span>
+              {availability}</span>
           </motion.div>
 
           {/* Nom avec kinetic typography */}
           <motion.div variants={itemVariants} className="mb-2">
             <span className="text-3xl sm:text-4xl font-bold gradient-text">
-              {Array.from('Brondon').map((char, i) => (
+              {Array.from(firstName).map((char, i) => (
                 <motion.span
                   key={`first-${i}`}
                   initial={{ opacity: 0, y: 20 }}
@@ -120,12 +133,12 @@ export default function Hero() {
                 </motion.span>
               ))}
               {' '}
-              {Array.from('Jores').map((char, i) => (
+              {Array.from(lastName).map((char, i) => (
                 <motion.span
                   key={`last-${i}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + (7 + i) * 0.05 }}
+                  transition={{ delay: 0.3 + (firstName.length + 1 + i) * 0.05 }}
                 >
                   {char}
                 </motion.span>
@@ -139,9 +152,15 @@ export default function Hero() {
             className="text-5xl sm:text-7xl font-black mb-6 leading-none tracking-tight"
             style={{ color: 'var(--color-text-primary)' }}
           >
-            Developpeur
-            <br />
-            <span className="gradient-text">Full Stack</span>
+            {titleLines.length > 1 ? (
+              <>
+                {titleLines[0]}
+                <br />
+                <span className="gradient-text">{titleLines[1]}</span>
+              </>
+            ) : (
+              titleLines[0]
+            )}
           </motion.h1>
 
           {/* Sous-titre */}
@@ -150,7 +169,7 @@ export default function Hero() {
             className="text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
             style={{ color: 'var(--color-text-secondary)' }}
           >
-            Je construis des applications web modernes, performantes et securisees.
+            {bio}
           </motion.p>
 
           {/* Boutons CTA */}
