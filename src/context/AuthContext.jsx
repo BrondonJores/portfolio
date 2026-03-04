@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const restore = async () => {
       try {
-        const response = await fetch('/api/auth/refresh', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/refresh`, {
           method: 'POST',
           credentials: 'include',
         })
@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
           const data = await response.json()
           setAccessToken(data.accessToken)
           /* Recuperation des informations de l'utilisateur */
-          const meResponse = await fetch('/api/auth/me', {
+          const meResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
             headers: { Authorization: `Bearer ${data.accessToken}` },
           })
           if (meResponse.ok) {
@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
 
   /* Connexion avec email et mot de passe */
   const login = useCallback(async (email, password) => {
-    const response = await fetch('/api/auth/login', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -65,7 +65,7 @@ export function AuthProvider({ children }) {
   /* Deconnexion et suppression du cookie refresh token */
   const logout = useCallback(async () => {
     try {
-      await fetch('/api/auth/logout', {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       })
@@ -78,7 +78,7 @@ export function AuthProvider({ children }) {
 
   /* Rafraichissement du token d'acces */
   const refreshToken = useCallback(async () => {
-    const response = await fetch('/api/auth/refresh', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
     })
