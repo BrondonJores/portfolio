@@ -21,7 +21,7 @@ module.exports = {
         type: Sequelize.TEXT,
       },
       content: {
-        type: Sequelize.TEXT('long'),
+        type: Sequelize.TEXT,
         allowNull: false,
       },
       cover_image: {
@@ -29,7 +29,7 @@ module.exports = {
       },
       tags: {
         type: Sequelize.JSON,
-        defaultValue: '[]',
+        defaultValue: [],
       },
       published: {
         type: Sequelize.BOOLEAN,

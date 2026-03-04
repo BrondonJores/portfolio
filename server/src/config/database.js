@@ -10,7 +10,7 @@ const sequelize = new Sequelize(
   {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
-    dialect: 'mysql',
+    dialect: 'postgre',
     logging: process.env.NODE_ENV === 'production' ? false : console.log,
     pool: {
       max: 10,
