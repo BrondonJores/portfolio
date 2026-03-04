@@ -34,6 +34,7 @@ export default function App() {
         <Navbar />
         <main>
           <Outlet />
+          <SpeedInsights />
         </main>
       </motion.div>
     </>

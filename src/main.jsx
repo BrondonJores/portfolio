@@ -10,6 +10,7 @@ import Spinner from './components/ui/Spinner.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { SettingsProvider } from './context/SettingsContext.jsx'
+import { SpeedInsights } from "@vercel/speed-insights/react"
 import './index.css'
 
 /* Chargement paresseux de toutes les pages pour le code splitting */
