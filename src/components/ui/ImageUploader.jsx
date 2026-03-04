@@ -1,16 +1,14 @@
-/* Composant de sélection, compression et upload d'image */
+/* Composant de sélection, compression et upload d'image vers Cloudinary */
 import { useRef, useState } from 'react'
 import imageCompression from 'browser-image-compression'
 import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import Spinner from './Spinner.jsx'
 import { useAuthContext } from '../../context/AuthContext.jsx'
 
-/* Base URL : vide en dev (proxy Vite), URL absolue en prod */
+/* Base URL du backend pour l'upload */
 const API_BASE = import.meta.env.VITE_API_URL || ''
-/* URL du serveur pour les assets (images uploadées) */
-const SERVER_BASE = import.meta.env.VITE_SERVER_URL || ''
 
-/* Types autorisés */
+/* Types autorisés et taille max */
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_SIZE_MB = 5
 
@@ -37,6 +35,7 @@ export default function ImageUploader({ value = '', onUpload, label, className =
   const [error, setError] = useState('')
   const { accessToken } = useAuthContext()
 
+  /* Upload du fichier après compression */
   const handleFile = async (file) => {
     setError('')
 
@@ -59,11 +58,11 @@ export default function ImageUploader({ value = '', onUpload, label, className =
       const formData = new FormData()
       formData.append('image', compressed, file.name)
 
+      /* Headers avec token si connecté */
       const headers = {}
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`
-      }
+      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
 
+      /* Upload vers ton backend qui redirige vers Cloudinary */
       const response = await fetch(`${API_BASE}/api/upload`, {
         method: 'POST',
         headers,
@@ -76,12 +75,12 @@ export default function ImageUploader({ value = '', onUpload, label, className =
         try {
           const data = await response.json()
           msg = data.error || msg
-        } catch { /* ignore */ }
+        } catch {}
         throw new Error(msg)
       }
 
       const data = await response.json()
-      if (onUpload) onUpload(data.url)
+      if (onUpload) onUpload(data.url) // URL Cloudinary complète
     } catch (err) {
       setError(err.message || "Erreur lors de l'upload.")
     } finally {
@@ -89,23 +88,23 @@ export default function ImageUploader({ value = '', onUpload, label, className =
     }
   }
 
+  /* Gestion input file */
   const handleInputChange = (e) => {
     const file = e.target.files?.[0]
     if (file) handleFile(file)
-    /* Reset pour permettre de re-sélectionner le même fichier */
-    e.target.value = ''
+    e.target.value = '' // reset pour pouvoir re-sélectionner le même fichier
   }
 
+  /* Drag & drop */
   const handleDrop = (e) => {
     e.preventDefault()
     const file = e.dataTransfer.files?.[0]
     if (file) handleFile(file)
   }
 
-  const handleDragOver = (e) => {
-    e.preventDefault()
-  }
+  const handleDragOver = (e) => e.preventDefault()
 
+  /* Suppression image */
   const handleRemove = () => {
     setError('')
     if (onUpload) onUpload('')
@@ -114,21 +113,18 @@ export default function ImageUploader({ value = '', onUpload, label, className =
   return (
     <div className={className}>
       {label && (
-        <p
-          className="block text-sm font-medium mb-1.5"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
+        <p className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
           {label}
         </p>
       )}
 
-      {/* Prévisualisation si une image est déjà sélectionnée */}
+      {/* Preview si image présente */}
       {value ? (
         <div className="relative inline-block">
           <img
-            src={value.startsWith('http') ? value : `${SERVER_BASE}${value}`}
+            src={value}
             alt="Aperçu"
-            className="max-h-48 rounded-lg border object-cover"
+            className={`max-h-48 rounded-lg border object-cover ${uploading ? 'opacity-50 animate-pulse' : ''}`}
             style={{ borderColor: 'var(--color-border)' }}
           />
           <button
@@ -172,17 +168,17 @@ export default function ImageUploader({ value = '', onUpload, label, className =
         </div>
       )}
 
-      {/* Input fichier caché */}
+      {/* Input caché */}
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
+        accept={ALLOWED_TYPES.join(',')}
         className="hidden"
         onChange={handleInputChange}
         aria-hidden="true"
       />
 
-      {/* Spinner d'upload quand image déjà présente et re-upload en cours */}
+      {/* Spinner pendant re-upload */}
       {uploading && value && (
         <div className="mt-2 flex items-center gap-2">
           <Spinner size="sm" />
@@ -199,4 +195,3 @@ export default function ImageUploader({ value = '', onUpload, label, className =
     </div>
   )
 }
-

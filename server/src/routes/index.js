@@ -7,9 +7,9 @@ const uploadRoutes = require('./uploadRoutes')
 
 const router = Router()
 
-router.use('/auth', authRoutes)
-router.use('/', publicRoutes)
-router.use('/admin', adminRoutes)
-router.use('/upload', uploadRoutes)
+router.use('/auth', authRoutes)      // Routes d'authentification
+router.use('/', publicRoutes)        // Routes publiques
+router.use('/admin', adminRoutes)    // Routes admin
+router.use('/upload', uploadRoutes)  // Routes upload d'images Cloudinary
 
 module.exports = router

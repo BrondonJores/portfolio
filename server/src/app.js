@@ -1,13 +1,11 @@
 /* Application Express principale */
 require('dotenv').config()
 const express = require('express')
-const path = require('path')
 const helmet = require('helmet')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
 const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
-
 const routes = require('./routes')
 const { errorHandler } = require('./middleware/errorMiddleware')
 
@@ -45,15 +43,13 @@ const globalLimiter = rateLimit({
 })
 app.use(globalLimiter)
 
-/* Fichiers statiques : images uploadees */
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')))
-
 /* Montage des routes sur /api */
 app.use('/api', routes)
 
 /* Middleware de gestion des erreurs globales */
 app.use(errorHandler)
 
+/* Demarrage serveur */
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log(`Serveur demarre sur le port ${PORT}`)

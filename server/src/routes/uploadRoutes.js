@@ -1,6 +1,5 @@
 /* Routes d'upload d'images */
 const { Router } = require('express')
-const path = require('path')
 const multer = require('multer')
 const { authenticate } = require('../middleware/authMiddleware')
 const { uploadImage } = require('../controllers/uploadController')
@@ -8,12 +7,12 @@ const { uploadImage } = require('../controllers/uploadController')
 /* Types MIME autorises */
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
-/* Configuration du stockage Multer */
+/* Configuration Multer : stockage temporaire avant upload Cloudinary */
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '../../public/uploads'),
+  destination: 'tmp', // dossier temporaire pour Multer (sera supprimé après Cloudinary)
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase()
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`)
+    const ext = file.originalname.split('.').pop()
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`)
   },
 })
 
@@ -32,8 +31,8 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
 })
 
+/* POST /api/upload : Authentification requise + Multer */
 const router = Router()
-
 router.post('/', authenticate, upload.single('image'), uploadImage)
 
 module.exports = router
