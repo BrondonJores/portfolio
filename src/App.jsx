@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async'
 import { Outlet } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import Navbar from './components/sections/Navbar.jsx'
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 /* Politique de securite du contenu */
 const apiOrigin = import.meta.env.VITE_API_URL || ''
