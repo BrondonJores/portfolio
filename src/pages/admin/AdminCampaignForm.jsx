@@ -13,8 +13,8 @@ import {
   updateCampaign,
   sendCampaign,
 } from '../../services/newsletterService.js'
+import { getArticles } from '../../services/articleService.js'
 
-/* Serialise les blocs en HTML pour l'envoi par email */
 function blocksToHtml(blocks) {
   return blocks
     .map((block) => {
@@ -38,23 +38,20 @@ function blocksToHtml(blocks) {
     .join('\n')
 }
 
-/* Deserialise le contenu en tableau de blocs */
 function parseContent(content) {
   try {
     const parsed = JSON.parse(content)
     if (parsed?.blocks && Array.isArray(parsed.blocks)) return parsed.blocks
-  } catch { /* ignore */ }
+  } catch {}
   return content
     ? [{ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, type: 'paragraph', content }]
     : []
 }
 
-const EMPTY = { subject: '', body_html: '' }
-
-const inputStyle = {
-  backgroundColor: 'var(--color-bg-primary)',
-  borderColor: 'var(--color-border)',
-  color: 'var(--color-text-primary)',
+const EMPTY = {
+  subject: '',
+  body_html: '',
+  articles: [],
 }
 
 export default function AdminCampaignForm() {
@@ -70,13 +67,25 @@ export default function AdminCampaignForm() {
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
 
+  const [availableArticles, setAvailableArticles] = useState([])
+
+  useEffect(() => {
+    getArticles().then((res) => {
+      setAvailableArticles(res?.data || [])
+    })
+  }, [])
+
   useEffect(() => {
     if (!isEdit) return
     getNewsletterCampaigns()
       .then((res) => {
         const campaign = (res?.data || []).find((c) => String(c.id) === String(id))
         if (campaign) {
-          setForm({ subject: campaign.subject || '', body_html: campaign.body_html || '' })
+          setForm({
+            subject: campaign.subject || '',
+            body_html: campaign.body_html || '',
+            articles: campaign.articles || [],
+          })
           setStatus(campaign.status || 'draft')
           setBlocks(parseContent(campaign.body_html || ''))
         }
@@ -84,14 +93,39 @@ export default function AdminCampaignForm() {
       .finally(() => setLoading(false))
   }, [id, isEdit])
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
-  }
-
   const handleBlocksChange = (newBlocks) => {
     setBlocks(newBlocks)
-    setForm((prev) => ({ ...prev, body_html: blocksToHtml(newBlocks) }))
+    setForm((prev) => ({
+      ...prev,
+      body_html: blocksToHtml(newBlocks),
+    }))
+  }
+
+  const handleArticleToggle = (article) => {
+    setForm((prev) => {
+      const exists = prev.articles.find((a) => a.id === article.id)
+
+      if (exists) {
+        return {
+          ...prev,
+          articles: prev.articles.filter((a) => a.id !== article.id),
+        }
+      }
+
+      const formatted = {
+        title: article.title,
+        slug: article.slug,
+        excerpt: article.excerpt,
+        cover_image: article.cover_image,
+        published_at: article.published_at,
+        tags: article.tags || [],
+      }
+
+      return {
+        ...prev,
+        articles: [...prev.articles, formatted],
+      }
+    })
   }
 
   const handleSubmit = async (e) => {
@@ -100,15 +134,18 @@ export default function AdminCampaignForm() {
       addToast('Le sujet est obligatoire.', 'error')
       return
     }
+
     setSaving(true)
+
     try {
       if (isEdit) {
         await updateCampaign(id, form)
-        addToast('Campagne mise a jour.', 'success')
+        addToast('Campagne mise à jour.', 'success')
       } else {
         await createCampaign(form)
-        addToast('Brouillon enregistre.', 'success')
+        addToast('Brouillon enregistré.', 'success')
       }
+
       navigate('/admin/newsletter')
     } catch (err) {
       addToast(err.message || 'Erreur lors de la sauvegarde.', 'error')
@@ -118,10 +155,12 @@ export default function AdminCampaignForm() {
   }
 
   const handleSend = async () => {
+    if (!window.confirm('Envoyer cette campagne à tous les abonnés confirmés ?')) return
+
     setSending(true)
     try {
       await sendCampaign(id)
-      addToast('Campagne envoyee avec succes.', 'success')
+      addToast('Campagne envoyée avec succès.', 'success')
       navigate('/admin/newsletter')
     } catch (err) {
       addToast(err.message || "Erreur lors de l'envoi.", 'error')
@@ -143,92 +182,77 @@ export default function AdminCampaignForm() {
   return (
     <>
       <Helmet>
-        <title>
-          {isEdit ? 'Modifier la campagne' : 'Nouvelle campagne'} - Administration
-        </title>
+        <title>{isEdit ? 'Modifier la campagne' : 'Nouvelle campagne'} - Administration</title>
       </Helmet>
-      <div className="max-w-2xl">
-        <h1
-          className="text-2xl font-bold mb-8"
-          style={{ color: 'var(--color-text-primary)' }}
-        >
+
+      <div className="max-w-3xl">
+        <h1 className="text-2xl font-bold mb-8">
           {isEdit ? 'Modifier la campagne' : 'Nouvelle campagne'}
         </h1>
 
-        {isSent && (
-          <div
-            className="mb-4 px-4 py-2 rounded-lg text-sm"
-            style={{ backgroundColor: 'rgba(74,222,128,0.1)', color: '#4ade80' }}
-          >
-            Cette campagne a deja ete envoyee et ne peut plus etre modifiee.
-          </div>
-        )}
+        <form onSubmit={handleSubmit} className="space-y-6">
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Sujet */}
           <div>
-            <label
-              htmlFor="cf-subject"
-              className="block text-sm font-medium mb-1.5"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Sujet <span style={{ color: '#f87171' }}>*</span>
+            <label className="block text-sm font-medium mb-2">
+              Sujet *
             </label>
             <input
-              id="cf-subject"
-              name="subject"
               type="text"
               value={form.subject}
-              onChange={handleChange}
-              required
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, subject: e.target.value }))
+              }
               disabled={isSent}
-              className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-              style={inputStyle}
+              className="w-full px-4 py-2 border rounded-lg"
             />
           </div>
 
-          {/* Contenu par blocs */}
           {!isSent && (
             <div>
-              <label
-                className="block text-sm font-medium mb-1.5"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Contenu <span style={{ color: '#f87171' }}>*</span>
+              <label className="block text-sm font-medium mb-2">
+                Contenu *
               </label>
               <BlockEditor blocks={blocks} onChange={handleBlocksChange} />
             </div>
           )}
 
-          {/* Statut en lecture seule */}
-          {isEdit && (
+          {!isSent && (
             <div>
-              <label
-                className="block text-sm font-medium mb-1.5"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Statut
+              <label className="block text-sm font-medium mb-3">
+                Sélectionner des articles
               </label>
-              <span
-                className="text-xs px-2 py-0.5 rounded"
-                style={
-                  isSent
-                    ? { color: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)' }
-                    : { color: 'var(--color-text-secondary)', backgroundColor: 'var(--color-bg-primary)' }
-                }
-              >
-                {isSent ? 'Envoyee' : 'Brouillon'}
-              </span>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
+                {availableArticles.map((article) => {
+                  const selected = form.articles.some(
+                    (a) => a.slug === article.slug
+                  )
+
+                  return (
+                    <label
+                      key={article.id}
+                      className="flex items-center gap-3 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => handleArticleToggle(article)}
+                      />
+                      <span>{article.title}</span>
+                    </label>
+                  )
+                })}
+              </div>
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex items-center gap-3">
             {!isSent && (
               <Button type="submit" variant="primary" disabled={saving}>
-                {saving ? <Spinner size="sm" /> : isEdit ? 'Enregistrer' : 'Creer le brouillon'}
+                {saving ? <Spinner size="sm" /> : 'Enregistrer'}
               </Button>
             )}
+
             {isEdit && !isSent && (
               <Button
                 type="button"
@@ -236,22 +260,19 @@ export default function AdminCampaignForm() {
                 onClick={handleSend}
                 disabled={sending}
               >
-                {sending ? (
-                  <Spinner size="sm" />
-                ) : (
-                  <>
-                    <PaperAirplaneIcon className="h-4 w-4" />
-                    Envoyer maintenant
-                  </>
-                )}
+                {sending ? <Spinner size="sm" /> : <>
+                  <PaperAirplaneIcon className="h-4 w-4" />
+                  Envoyer
+                </>}
               </Button>
             )}
+
             <Button
               type="button"
               variant="ghost"
               onClick={() => navigate('/admin/newsletter')}
             >
-              {isSent ? 'Retour' : 'Annuler'}
+              Retour
             </Button>
           </div>
         </form>

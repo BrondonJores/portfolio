@@ -1,7 +1,7 @@
 /* Service d'envoi d'emails via nodemailer */
 const nodemailer = require('nodemailer')
+const { generateNewsletterHtml } = require('../templates/newsletterTemplate')
 
-/* Cree le transport SMTP a partir des variables d'environnement */
 function createTransport() {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -14,27 +14,52 @@ function createTransport() {
   })
 }
 
-/* Envoi d'un email simple */
 async function sendMail({ from, to, subject, html }) {
   const transporter = createTransport()
-  try {
-    await transporter.sendMail({ from, to, subject, html })
-  } catch (err) {
-    console.error('[mailerService] sendMail error:', err.message)
-    throw new Error('Erreur lors de l\'envoi de l\'email.')
-  }
+
+  await transporter.verify()
+
+  return transporter.sendMail({
+    from,
+    to,
+    subject,
+    html,
+  })
 }
 
-/* Envoi de la campagne newsletter a tous les abonnes */
-async function sendNewsletter({ campaign, subscribers, fromName, fromEmail, footerText }) {
+async function sendNewsletter({
+  campaign,
+  subscribers,
+  fromName,
+  fromEmail,
+  settings = {},
+}) {
   const transporter = createTransport()
-  const appUrl = process.env.APP_URL || process.env.VITE_API_URL || ''
+  await transporter.verify()
+
+  const appUrl =
+    settings.site_url ||
+    process.env.APP_URL ||
+    process.env.VITE_API_URL ||
+    ''
+
   const errors = []
 
   for (const subscriber of subscribers) {
     const unsubscribeLink = `${appUrl}/api/unsubscribe/${subscriber.unsubscribe_token}`
-    const footer = `<p style="font-size:12px;color:#888;">${footerText || ''} <a href="${unsubscribeLink}">Se desabonner</a></p>`
-    const html = `${campaign.body_html}${footer}`
+
+    const templatePayload = {
+      subject: campaign.subject,
+      preheader: campaign.preheader,
+      body_html: campaign.body_html,
+      cta_label: campaign.cta_label,
+      cta_url: campaign.cta_url,
+      articles: campaign.articles,
+      unsubscribe_url: unsubscribeLink,
+    }
+
+    const html = generateNewsletterHtml(settings, templatePayload)
+
     try {
       await transporter.sendMail({
         from: `"${fromName || 'Newsletter'}" <${fromEmail}>`,
@@ -43,13 +68,14 @@ async function sendNewsletter({ campaign, subscribers, fromName, fromEmail, foot
         html,
       })
     } catch (err) {
-      console.error(`[mailerService] sendNewsletter error for ${subscriber.email}:`, err.message)
       errors.push(subscriber.email)
     }
   }
 
-  if (errors.length > 0) {
-    console.warn(`[mailerService] ${errors.length} email(s) failed to send.`)
+  return {
+    success: subscribers.length - errors.length,
+    failed: errors.length,
+    failedEmails: errors,
   }
 }
 

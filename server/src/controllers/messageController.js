@@ -7,7 +7,6 @@ async function create(req, res, next) {
     const { name, email, message } = req.body
 
     const newMessage = await Message.create({ name, email, message })
-
     return res.status(201).json({ message: 'Message envoye avec succes.' })
   } catch (err) {
     next(err)

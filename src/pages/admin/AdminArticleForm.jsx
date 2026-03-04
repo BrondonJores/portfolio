@@ -93,6 +93,8 @@ export default function AdminArticleForm() {
     setForm((prev) => ({ ...prev, content: JSON.stringify({ blocks: newBlocks }) }))
   }
 
+  /* Ajout d'un tag */
+
   const addTag = () => {
     const tag = tagInput.trim()
     if (tag && !form.tags.includes(tag)) {
@@ -101,6 +103,7 @@ export default function AdminArticleForm() {
     setTagInput('')
   }
 
+  /* Suppression d'un tag */
   const removeTag = (tag) => {
     setForm((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tag) }))
   }
@@ -179,6 +182,7 @@ export default function AdminArticleForm() {
               className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
               style={inputStyle}
             />
+            {/* Slug en lecture seule */}
             {form.title && (
               <p
                 className="text-xs mt-1 font-mono"

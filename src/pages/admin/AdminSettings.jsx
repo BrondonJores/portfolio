@@ -138,9 +138,11 @@ export default function AdminSettings() {
           {activeTab === 'identity' && (
             <>
               <FieldInput label="Nom du site" fieldKey="site_name" settings={settings} onChange={handleChange} />
+              <FieldInput label="Url du site" fieldKey="site_url" settings={settings} onChange={handleChange} />
               <FieldInput label="Accroche" fieldKey="tagline" settings={settings} onChange={handleChange} />
               <FieldInput label="Nom hero" fieldKey="hero_name" settings={settings} onChange={handleChange} />
               <FieldInput label="Titre hero" fieldKey="hero_title" settings={settings} onChange={handleChange} />
+              <FieldInput label="Hero bio" fieldKey="hero_bio" settings={settings} onChange={handleChange} textarea />
               <FieldInput label="Bio" fieldKey="bio" settings={settings} onChange={handleChange} textarea />
               <ImageUploader
                 label="Avatar"

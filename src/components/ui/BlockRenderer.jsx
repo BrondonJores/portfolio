@@ -147,6 +147,47 @@ function QuoteBlock({ block }) {
   )
 }
 
+/* Rendu d'un bloc liste avec sous-listes */
+function ListBlock({ block }) {
+  if (!block.items || !block.items.length) return null
+
+  const renderItems = (items, level = 0) => {
+    return (
+      <ul
+        className="mb-4 list-disc list-inside"
+        style={{ paddingLeft: `${level * 1.25}rem` }}
+      >
+        {items.map((item, i) => {
+          if (typeof item === 'string') {
+            return (
+              <li
+                key={i}
+                style={{ color: 'var(--color-text-secondary)', lineHeight: '1.6' }}
+              >
+                {item}
+              </li>
+            )
+          } else if (typeof item === 'object' && item.content) {
+            return (
+              <li
+                key={i}
+                style={{ color: 'var(--color-text-secondary)', lineHeight: '1.6' }}
+              >
+                {item.content}
+                {item.items && item.items.length > 0 && renderItems(item.items, level + 1)}
+              </li>
+            )
+          } else {
+            return null
+          }
+        })}
+      </ul>
+    )
+  }
+
+  return renderItems(block.items)
+}
+
 /* Rendu d'un bloc selon son type */
 function Block({ block }) {
   switch (block.type) {
@@ -160,6 +201,8 @@ function Block({ block }) {
       return <CodeBlock block={block} />
     case 'quote':
       return <QuoteBlock block={block} />
+    case 'list':
+      return <ListBlock block={block} />
     default:
       return null
   }

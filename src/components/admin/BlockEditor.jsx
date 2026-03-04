@@ -10,6 +10,7 @@ import {
   PhotoIcon,
   CodeBracketIcon,
   ChatBubbleLeftIcon,
+  ListBulletIcon,
 } from '@heroicons/react/24/outline'
 import ImageUploader from '../ui/ImageUploader.jsx'
 
@@ -35,7 +36,7 @@ function ParagraphBlock({ block, onChange }) {
     <textarea
       value={block.content}
       onChange={(e) => onChange({ ...block, content: e.target.value })}
-      rows={3}
+      rows={6}
       placeholder="Contenu du paragraphe…"
       className={`${inputClass} resize-y`}
       style={inputStyle}
@@ -107,7 +108,7 @@ function CodeBlock({ block, onChange }) {
       <textarea
         value={block.content}
         onChange={(e) => onChange({ ...block, content: e.target.value })}
-        rows={6}
+        rows={8}
         placeholder="Code…"
         className={`${inputClass} resize-y font-mono`}
         style={{ ...inputStyle, fontFamily: 'JetBrains Mono Variable, monospace' }}
@@ -138,6 +139,94 @@ function QuoteBlock({ block, onChange }) {
       />
     </div>
   )
+}
+
+/* --- Nouveau bloc Liste --- */
+function ListBlock({ block, onChange }) {
+  const updateItem = (path, val) => {
+    const newItems = JSON.parse(JSON.stringify(block.items)) // clone profond
+    let ref = newItems
+    for (let i = 0; i < path.length - 1; i++) ref = ref[path[i]].items
+    ref[path[path.length - 1]] = val
+    onChange({ ...block, items: newItems })
+  }
+
+  const addItem = (path) => {
+    const newItems = JSON.parse(JSON.stringify(block.items))
+    let ref = newItems
+    for (let i = 0; i < path.length; i++) {
+      if (typeof ref[path[i]] === 'string') {
+        // si c'est une string, transforme en objet avec content et items
+        ref[path[i]] = { content: ref[path[i]], items: [] }
+      } else if (!ref[path[i]].items) {
+        ref[path[i]].items = []
+      }
+      ref = ref[path[i]].items
+    }
+    ref.push('') // ajoute un nouvel item vide
+    onChange({ ...block, items: newItems })
+  }
+
+  const removeItem = (path) => {
+    const newItems = JSON.parse(JSON.stringify(block.items))
+    let ref = newItems
+    for (let i = 0; i < path.length - 1; i++) ref = ref[path[i]].items
+    ref.splice(path[path.length - 1], 1)
+    onChange({ ...block, items: newItems })
+  }
+
+  const moveItem = (path, dir) => {
+    const newItems = JSON.parse(JSON.stringify(block.items))
+    let ref = newItems
+    for (let i = 0; i < path.length - 1; i++) ref = ref[path[i]].items
+    const t = path[path.length - 1] + dir
+    if (t < 0 || t >= ref.length) return
+    ;[ref[path[path.length - 1]], ref[t]] = [ref[t], ref[path[path.length - 1]]]
+    onChange({ ...block, items: newItems })
+  }
+
+  const renderItem = (item, path = []) => {
+    const currentPath = [...path]
+    return (
+      <div key={currentPath.join('-')} className="ml-0 space-y-1">
+        <div className="flex gap-2 items-center">
+          <input
+            type="text"
+            value={typeof item === 'string' ? item : item.content}
+            onChange={(e) => {
+              if (typeof item === 'string') updateItem(currentPath, e.target.value)
+              else updateItem(currentPath, { ...item, content: e.target.value })
+            }}
+            placeholder={`Élément…`}
+            className={`${inputClass} flex-1`}
+            style={inputStyle}
+          />
+          <div className="flex gap-1">
+            <button type="button" onClick={() => moveItem(currentPath, -1)} disabled={currentPath[currentPath.length-1]===0} className="p-1 rounded disabled:opacity-30 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]">
+              <ChevronUpIcon className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={() => moveItem(currentPath, 1)} className="p-1 rounded disabled:opacity-30 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]">
+              <ChevronDownIcon className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={() => removeItem(currentPath)} className="p-1 rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] text-red-400">
+              <TrashIcon className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={() => addItem(currentPath)} className="p-1 rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] text-green-400">
+              <PlusIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        {/* Sous-items */}
+        {item.items && item.items.length > 0 && (
+          <div className="ml-6 border-l border-dashed border-gray-400 pl-2">
+            {item.items.map((sub, i) => renderItem(sub, [...currentPath, i]))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return <div className="space-y-2">{block.items.map((item, i) => renderItem(item, [i]))}</div>
 }
 
 /* Définition des types de blocs disponibles */
@@ -172,6 +261,12 @@ const BLOCK_TYPES = [
     Icon: ChatBubbleLeftIcon,
     defaultData: () => ({ id: genId(), type: 'quote', content: '', author: '' }),
   },
+  {
+    type: 'list',
+    label: 'Liste',
+    Icon: ListBulletIcon,
+    defaultData: () => ({ id: genId(), type: 'list', items: [''] }),
+  },
 ]
 
 /* Rendu du bon sous-composant selon le type de bloc */
@@ -187,6 +282,8 @@ function BlockContent({ block, onChange }) {
       return <CodeBlock block={block} onChange={onChange} />
     case 'quote':
       return <QuoteBlock block={block} onChange={onChange} />
+    case 'list':
+      return <ListBlock block={block} onChange={onChange} />
     default:
       return null
   }

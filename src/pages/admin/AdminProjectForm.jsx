@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import ImageUploader from '../../components/ui/ImageUploader.jsx'
+import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import {
   getAdminProjects,
   createProject,
@@ -23,6 +24,15 @@ function toSlug(str) {
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-')
+}
+
+/* Désérialise le contenu en tableau de blocs */
+function parseContent(content) {
+  try {
+    const parsed = JSON.parse(content)
+    if (parsed?.blocks && Array.isArray(parsed.blocks)) return parsed.blocks
+  } catch { /* ignore */ }
+  return content ? [{ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, type: 'paragraph', content }] : []
 }
 
 const EMPTY = {
@@ -45,15 +55,16 @@ const inputStyle = {
 }
 
 export default function AdminProjectForm() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const addToast = useAdminToast()
-  const isEdit = !!id
-
-  const [form, setForm] = useState(EMPTY)
-  const [tagInput, setTagInput] = useState('')
-  const [loading, setLoading] = useState(isEdit)
-  const [saving, setSaving] = useState(false)
+    const { id } = useParams()
+    const navigate = useNavigate()
+    const addToast = useAdminToast()
+    const isEdit = !!id
+  
+    const [form, setForm] = useState(EMPTY)
+    const [blocks, setBlocks] = useState([])
+    const [tagInput, setTagInput] = useState('')
+    const [loading, setLoading] = useState(isEdit)
+    const [saving, setSaving] = useState(false)
 
   /* Chargement du projet en mode edition */
   useEffect(() => {
@@ -61,8 +72,8 @@ export default function AdminProjectForm() {
     getAdminProjects()
       .then((res) => {
         const project = (res?.data || []).find((p) => String(p.id) === String(id))
-        if (project) {
-          setForm({
+        if (project) {   
+          const loadedForm = {
             title: project.title || '',
             description: project.description || '',
             content: project.content || '',
@@ -72,7 +83,9 @@ export default function AdminProjectForm() {
             featured: project.featured || false,
             published: project.published !== false,
             tags: project.tags || [],
-          })
+          }
+          setForm(loadedForm)
+          setBlocks(parseContent(project.content || ''))
         }
       })
       .finally(() => setLoading(false))
@@ -81,6 +94,11 @@ export default function AdminProjectForm() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+  }
+
+  const handleBlocksChange = (newBlocks) => {
+    setBlocks(newBlocks)
+    setForm((prev) => ({ ...prev, content: JSON.stringify({ blocks: newBlocks }) }))
   }
 
   /* Ajout d'un tag */
@@ -202,24 +220,15 @@ export default function AdminProjectForm() {
             />
           </div>
 
-          {/* Contenu */}
+          {/* Contenu par block */}
           <div>
-            <label
-              htmlFor="pf-content"
-              className="block text-sm font-medium mb-1.5"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Contenu (HTML)
-            </label>
-            <textarea
-              id="pf-content"
-              name="content"
-              value={form.content}
-              onChange={handleChange}
-              rows={8}
-              className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all resize-y font-mono"
-              style={{ ...inputStyle, fontFamily: 'JetBrains Mono Variable, monospace' }}
-            />
+              <label
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Contenu <span style={{ color: '#f87171' }}>*</span>
+              </label>
+              <BlockEditor blocks={blocks} onChange={handleBlocksChange} />
           </div>
 
           {/* Tags */}

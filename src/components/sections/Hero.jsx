@@ -36,7 +36,7 @@ export default function Hero() {
   const heroTitleRaw = settings.hero_title || 'Developpeur\nFull Stack'
   const titleLines = heroTitleRaw.includes('\n') ? heroTitleRaw.split('\n') : [heroTitleRaw]
 
-  const bio = settings.bio || 'Je construis des applications web modernes, performantes et securisees.'
+  const bio = settings.hero_bio || 'Je construis des applications web modernes, performantes et securisees.'
   const availability = settings.contact_availability || 'Disponible pour des projets'
 
   return (

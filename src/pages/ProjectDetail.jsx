@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { ArrowLeftIcon, CodeBracketIcon, ArrowTopRightOnSquareIcon, LinkIcon } from '@heroicons/react/24/outline'
-import DOMPurify from 'dompurify'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Button from '../components/ui/Button.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
+import BlockRenderer from '../components/ui/BlockRenderer.jsx'
 import { getProjectBySlug } from '../services/projectService.js'
 
 export default function ProjectDetail() {
@@ -54,11 +54,6 @@ export default function ProjectDetail() {
       </>
     )
   }
-
-  /* Sanitisation du contenu HTML avant affichage */
-  const safeContent = project.content
-    ? DOMPurify.sanitize(project.content)
-    : null
 
   return (
     <>
@@ -140,14 +135,8 @@ export default function ProjectDetail() {
             </button>
           </div>
 
-          {/* Contenu principal sanitise */}
-          {safeContent && (
-            <div
-              className="prose max-w-none text-sm leading-relaxed"
-              style={{ color: 'var(--color-text-secondary)' }}
-              dangerouslySetInnerHTML={{ __html: safeContent }}
-            />
-          )}
+          {/* Contenu de l'article */}
+          <BlockRenderer content={project.content} />
         </div>
       </main>
       <Footer />

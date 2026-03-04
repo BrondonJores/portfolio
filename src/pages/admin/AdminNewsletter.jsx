@@ -15,6 +15,7 @@ import {
 export default function AdminNewsletter() {
   const addToast = useAdminToast()
   const navigate = useNavigate()
+
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(true)
   const [confirmingId, setConfirmingId] = useState(null)
@@ -27,12 +28,14 @@ export default function AdminNewsletter() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(loadCampaigns, [])
+  useEffect(() => {
+    loadCampaigns()
+  }, [])
 
   const handleDelete = async (id) => {
     try {
       await deleteCampaign(id)
-      addToast('Campagne supprimee.', 'success')
+      addToast('Campagne supprimée.', 'success')
       setConfirmingId(null)
       loadCampaigns()
     } catch (err) {
@@ -43,18 +46,20 @@ export default function AdminNewsletter() {
   const handleSend = async (id) => {
     try {
       await sendCampaign(id)
-      addToast('Campagne envoyee avec succes.', 'success')
+      addToast('Campagne envoyée avec succès.', 'success')
       setConfirmingId(null)
       loadCampaigns()
     } catch (err) {
-      addToast(err.message || 'Erreur lors de l\'envoi.', 'error')
+      addToast(err.message || "Erreur lors de l'envoi.", 'error')
     }
   }
 
   const formatDate = (dateString) => {
     if (!dateString) return '-'
     return new Date(dateString).toLocaleDateString('fr-FR', {
-      year: 'numeric', month: 'short', day: 'numeric',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     })
   }
 
@@ -63,12 +68,20 @@ export default function AdminNewsletter() {
       <Helmet>
         <title>Newsletter - Administration</title>
       </Helmet>
+
       <div>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: 'var(--color-text-primary)' }}
+          >
             Newsletter
           </h1>
-          <Button variant="primary" onClick={() => navigate('/admin/newsletter/new')}>
+
+          <Button
+            variant="primary"
+            onClick={() => navigate('/admin/newsletter/new')}
+          >
             <PlusIcon className="h-4 w-4" aria-hidden="true" />
             Nouvelle campagne
           </Button>
@@ -79,115 +92,134 @@ export default function AdminNewsletter() {
             <Spinner size="lg" />
           </div>
         ) : campaigns.length === 0 ? (
-          <p style={{ color: 'var(--color-text-secondary)' }}>Aucune campagne.</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>
+            Aucune campagne.
+          </p>
         ) : (
-          <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+          <div
+            className="rounded-xl border overflow-hidden"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
             <table className="w-full text-sm">
-              <thead style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}>
+              <thead
+                style={{
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">Sujet</th>
-                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Statut</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Date d'envoi</th>
+                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">
+                    Statut
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">
+                    Articles
+                  </th>
+                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">
+                    Date d'envoi
+                  </th>
                   <th className="text-right px-4 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 {campaigns.map((c, i) => (
                   <tr
                     key={c.id}
                     style={{
-                      backgroundColor: i % 2 === 0 ? 'var(--color-bg-card)' : 'var(--color-bg-secondary)',
+                      backgroundColor:
+                        i % 2 === 0
+                          ? 'var(--color-bg-card)'
+                          : 'var(--color-bg-secondary)',
                       borderTop: '1px solid var(--color-border)',
                     }}
                   >
-                    <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                    <td
+                      className="px-4 py-3 font-medium"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
                       {c.subject}
+                      {c.cta_label && (
+                        <span className="ml-2 text-xs text-indigo-400">
+                          CTA
+                        </span>
+                      )}
                     </td>
+
                     <td className="px-4 py-3 hidden sm:table-cell">
                       <span
                         className="text-xs px-2 py-0.5 rounded"
-                        style={c.status === 'sent'
-                          ? { color: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)' }
-                          : { color: 'var(--color-text-secondary)', backgroundColor: 'var(--color-bg-primary)' }}
+                        style={
+                          c.status === 'sent'
+                            ? {
+                                color: '#4ade80',
+                                backgroundColor:
+                                  'rgba(74,222,128,0.1)',
+                              }
+                            : {
+                                color: 'var(--color-text-secondary)',
+                                backgroundColor:
+                                  'var(--color-bg-primary)',
+                              }
+                        }
                       >
-                        {c.status === 'sent' ? 'Envoyee' : 'Brouillon'}
+                        {c.status === 'sent'
+                          ? `Envoyée le ${formatDate(c.sent_at)}`
+                          : 'Brouillon'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 hidden md:table-cell text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+
+                    <td
+                      className="px-4 py-3 hidden lg:table-cell text-xs"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      {Array.isArray(c.articles)
+                        ? c.articles.length
+                        : 0}
+                    </td>
+
+                    <td
+                      className="px-4 py-3 hidden md:table-cell text-xs"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
                       {formatDate(c.sent_at)}
                     </td>
+
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
                         {c.status === 'draft' && (
                           <>
                             <button
-                              onClick={() => navigate(`/admin/newsletter/${c.id}/edit`)}
+                              onClick={() =>
+                                navigate(`/admin/newsletter/${c.id}/edit`)
+                              }
                               className="p-1.5 rounded-lg text-xs transition-colors focus:outline-none"
-                              style={{ color: 'var(--color-text-secondary)' }}
-                              aria-label={`Modifier la campagne ${c.subject}`}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+                              style={{
+                                color: 'var(--color-text-secondary)',
+                              }}
                             >
                               Modifier
                             </button>
-                            {confirmingId === `send-${c.id}` ? (
-                              <span className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleSend(c.id)}
-                                  className="text-xs px-2 py-1 rounded focus:outline-none"
-                                  style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
-                                >
-                                  Confirmer
-                                </button>
-                                <button
-                                  onClick={() => setConfirmingId(null)}
-                                  className="text-xs px-2 py-1 rounded focus:outline-none"
-                                  style={{ color: 'var(--color-text-secondary)' }}
-                                >
-                                  Annuler
-                                </button>
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => setConfirmingId(`send-${c.id}`)}
-                                className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                                style={{ color: 'var(--color-text-secondary)' }}
-                                aria-label={`Envoyer la campagne ${c.subject}`}
-                                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
-                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                              >
-                                <PaperAirplaneIcon className="h-4 w-4" />
-                              </button>
-                            )}
-                            {confirmingId === `del-${c.id}` ? (
-                              <span className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handleDelete(c.id)}
-                                  className="text-xs px-2 py-1 rounded focus:outline-none"
-                                  style={{ backgroundColor: '#f87171', color: '#fff' }}
-                                >
-                                  Confirmer
-                                </button>
-                                <button
-                                  onClick={() => setConfirmingId(null)}
-                                  className="text-xs px-2 py-1 rounded focus:outline-none"
-                                  style={{ color: 'var(--color-text-secondary)' }}
-                                >
-                                  Annuler
-                                </button>
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => setConfirmingId(`del-${c.id}`)}
-                                className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                                style={{ color: 'var(--color-text-secondary)' }}
-                                aria-label={`Supprimer la campagne ${c.subject}`}
-                                onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
-                                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                              >
-                                <TrashIcon className="h-4 w-4" />
-                              </button>
-                            )}
+
+                            <button
+                              onClick={() => handleSend(c.id)}
+                              className="p-1.5 rounded-lg transition-colors focus:outline-none"
+                              style={{
+                                color: 'var(--color-text-secondary)',
+                              }}
+                            >
+                              <PaperAirplaneIcon className="h-4 w-4" />
+                            </button>
+
+                            <button
+                              onClick={() => handleDelete(c.id)}
+                              className="p-1.5 rounded-lg transition-colors focus:outline-none"
+                              style={{
+                                color: 'var(--color-text-secondary)',
+                              }}
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
                           </>
                         )}
                       </div>

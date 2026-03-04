@@ -131,7 +131,7 @@ function generateNewsletterHtml(settings, payload) {
 
     articlesHtml = `
       <div style="background:#111118;padding:0 24px 32px;">
-        <div style="font-size:18px;font-weight:700;color:#f1f5f9;margin-bottom:16px;">📖 Articles récents</div>
+        <div style="font-size:18px;font-weight:700;color:#f1f5f9;margin-bottom:16px;"> Articles récents</div>
         ${articleCards}
       </div>`
   }
