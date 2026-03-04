@@ -18,14 +18,16 @@ function generateRefreshToken(payload) {
 
 /* Options du cookie HTTP-only pour le refresh token */
 function getRefreshCookieOptions() {
+  const isProd = process.env.NODE_ENV === 'production'
+
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: isProd,                 // obligatoire en prod
+    sameSite: isProd ? 'none' : 'lax', 
     maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
   }
 }
-
 /* Connexion administrateur */
 async function login(req, res, next) {
   try {
