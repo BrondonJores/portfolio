@@ -1,52 +1,55 @@
-/* Controleur des statistiques du tableau de bord */
+/* Controleur des statistiques du tableau de bord - compatible Postgres */
 const { Op, fn, col, literal } = require('sequelize')
 const { Message, Project, Article } = require('../models')
 
-async function getStats(req, res, next) {
+async function getStats(req, res) {
   try {
-    /* Calcul de la date de debut : 6 mois en arriere */
+    // Date de début : 6 mois en arrière
     const since = new Date()
     since.setMonth(since.getMonth() - 5)
     since.setDate(1)
     since.setHours(0, 0, 0, 0)
 
-    /* Agregation des messages par mois */
+    // Fonction helper pour Postgres : format YYYY-MM
+    const formatMonth = (field) => fn('to_char', col(field), 'YYYY-MM')
+
+    // Messages par mois
     const messagesRaw = await Message.findAll({
       attributes: [
-        [fn('DATE_FORMAT', col('created_at'), '%Y-%m'), 'month'],
+        [formatMonth('created_at'), 'month'],
         [fn('COUNT', col('id')), 'count'],
       ],
       where: { created_at: { [Op.gte]: since } },
-      group: [fn('DATE_FORMAT', col('created_at'), '%Y-%m')],
+      group: [literal('month')],
       order: [[literal('month'), 'ASC']],
       raw: true,
     })
 
-    /* Agregation des projets publies par mois (created_at) */
+    // Projets publiés par mois
     const projectsRaw = await Project.findAll({
       attributes: [
-        [fn('DATE_FORMAT', col('created_at'), '%Y-%m'), 'month'],
+        [formatMonth('created_at'), 'month'],
         [fn('COUNT', col('id')), 'count'],
       ],
       where: { published: true, created_at: { [Op.gte]: since } },
-      group: [fn('DATE_FORMAT', col('created_at'), '%Y-%m')],
+      group: [literal('month')],
       order: [[literal('month'), 'ASC']],
       raw: true,
     })
 
-    /* Agregation des articles publies par mois (published_at) */
+    // Articles publiés par mois
     const articlesRaw = await Article.findAll({
       attributes: [
-        [fn('DATE_FORMAT', col('published_at'), '%Y-%m'), 'month'],
+        [formatMonth('published_at'), 'month'],
         [fn('COUNT', col('id')), 'count'],
       ],
       where: { published: true, published_at: { [Op.gte]: since } },
-      group: [fn('DATE_FORMAT', col('published_at'), '%Y-%m')],
+      group: [literal('month')],
       order: [[literal('month'), 'ASC']],
       raw: true,
     })
 
-    /* Construire un tableau de 6 mois avec des 0 par defaut */
+    // Tableau de 6 mois avec 0 par défaut
     const months = []
     for (let i = 5; i >= 0; i--) {
       const d = new Date()
@@ -56,7 +59,6 @@ async function getStats(req, res, next) {
       months.push({ key, label })
     }
 
-    /* Mapper les donnees brutes sur les mois */
     const toMap = (raw) => Object.fromEntries(raw.map((r) => [r.month, parseInt(r.count, 10)]))
     const msgMap = toMap(messagesRaw)
     const projMap = toMap(projectsRaw)
@@ -71,7 +73,8 @@ async function getStats(req, res, next) {
 
     return res.json({ data })
   } catch (err) {
-    next(err)
+    console.error('Erreur /admin/stats:', err)
+    res.status(500).json({ error: err.message })
   }
 }
 
