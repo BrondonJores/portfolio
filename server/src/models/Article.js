@@ -28,6 +28,10 @@ const Article = sequelize.define(
     cover_image: {
       type: DataTypes.STRING(255),
     },
+    likes: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
     tags: {
       type: DataTypes.JSON,
       defaultValue: [],

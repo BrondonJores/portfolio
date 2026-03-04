@@ -131,7 +131,7 @@ async function send(req, res, next) {
       subscribers,
       fromName: settings.newsletter_from_name || 'Newsletter',
       fromEmail:
-        settings.newsletter_from_email || process.env.SMTP_USER,
+        settings.newsletter_from_email || '<no-reply-newsletter@brondonjores.me>',
       settings,
     })
 

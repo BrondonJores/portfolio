@@ -5,7 +5,7 @@ module.exports = {
       id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
       subject: { type: Sequelize.STRING(200), allowNull: false },
       preheader: { type: Sequelize.STRING(255), allowNull: true },     
-      body_html: { type: Sequelize.TEXT('long'), allowNull: false },
+      body_html: { type: Sequelize.TEXT, allowNull: false },
 
       cta_label: { type: Sequelize.STRING(100), allowNull: true },    
       cta_url: { type: Sequelize.STRING(500), allowNull: true },       

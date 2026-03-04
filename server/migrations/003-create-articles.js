@@ -27,6 +27,9 @@ module.exports = {
       cover_image: {
         type: Sequelize.STRING(255),
       },
+      likes: {
+        type: Sequelize.INTEGER,
+      },
       tags: {
         type: Sequelize.JSON,
         defaultValue: [],
