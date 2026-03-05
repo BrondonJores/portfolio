@@ -1,47 +1,14 @@
-/* Service d'envoi d'emails via Brevo SMTP ou API (fallback) */
-const nodemailer = require('nodemailer')
-const dns = require('dns')
+/* Service d'envoi d'emails via Brevo API */
 const { generateNewsletterHtml } = require('../templates/newsletterTemplate')
 
-const SMTP_DEBUG = String(process.env.SMTP_DEBUG || '').toLowerCase() === 'true'
-
-function debug(...args) {
-  if (SMTP_DEBUG) console.log('[mailer]', ...args)
+function requireEnv(name) {
+  const v = process.env[name]
+  if (!v) throw new Error(`${name} manquant`)
+  return v
 }
 
-function createTransport() {
-  const host = process.env.SMTP_HOST
-  const port = Number(process.env.SMTP_PORT) || 587
-  const secure = String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true'
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-
-    requireTLS: !secure,
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 30000,
-    dnsTimeout: 10000,
-
-    lookup: (hostname, options, cb) => dns.lookup(hostname, { family: 4 }, cb),
-  })
-}
-
-function isTimeoutError(err) {
-  const msg = err?.message || ''
-  return err?.code === 'ETIMEDOUT' || /timeout/i.test(msg)
-}
-
-/* Brevo API */
 async function brevoSendEmail({ fromName, fromEmail, toEmail, subject, html }) {
-  const apiKey = process.env.BREVO_API_KEY
-  if (!apiKey) throw new Error('BREVO_API_KEY manquant')
+  const apiKey = requireEnv('BREVO_API_KEY')
 
   const payload = {
     sender: { name: fromName || 'Newsletter', email: fromEmail },
@@ -68,62 +35,29 @@ async function brevoSendEmail({ fromName, fromEmail, toEmail, subject, html }) {
   return resp.json().catch(() => ({}))
 }
 
-/* Envoi mail simple */
 async function sendMail({ from, to, subject, html }) {
-  const transporter = createTransport()
+  const m = /"([^"]+)"\s*<([^>]+)>/.exec(from || '')
+  const fromName = m?.[1] || 'Newsletter'
+  const fromEmail = m?.[2] || requireEnv('BREVO_SENDER_EMAIL')
 
-  if (SMTP_DEBUG) {
-    debug('smtp:verify:start', { host: process.env.SMTP_HOST, port: process.env.SMTP_PORT })
-    await transporter.verify()
-    debug('smtp:verify:ok')
-  }
-
-  try {
-    return await transporter.sendMail({ from, to, subject, html })
-  } catch (err) {
-    // Fallback API si timeout réseau sur Render
-    if (isTimeoutError(err)) {
-      debug('smtp:timeout -> fallback brevo api', { to })
-      const m = /"([^"]+)"\s*<([^>]+)>/.exec(from || '')
-      const fromName = m?.[1] || 'Newsletter'
-      const fromEmail = m?.[2] || process.env.SMTP_USER
-      return brevoSendEmail({ fromName, fromEmail, toEmail: to, subject, html })
-    }
-    throw err
-  }
+  return brevoSendEmail({
+    fromName,
+    fromEmail,
+    toEmail: to,
+    subject,
+    html,
+  })
 }
 
 async function sendNewsletter({ campaign, subscribers, fromName, fromEmail, settings = {} }) {
-  const appUrl =
-    settings.site_url ||
-    process.env.APP_URL ||
-    process.env.VITE_API_URL ||
-    ''
+  const appUrl = settings.site_url || process.env.APP_URL || ''
+
+  const senderEmail = fromEmail || settings.newsletter_from_email || process.env.BREVO_SENDER_EMAIL
+  if (!senderEmail) throw new Error('Email expéditeur manquant (newsletter_from_email ou BREVO_SENDER_EMAIL)')
 
   const errors = []
-  const t0 = Date.now()
 
-  debug('newsletter:start', {
-    campaignId: campaign?.id,
-    subscribers: subscribers?.length || 0,
-    smtpHost: process.env.SMTP_HOST,
-    smtpPort: process.env.SMTP_PORT,
-  })
-
-  // Option: tente SMTP verify une seule fois (et fallback API si timeout)
-  let smtpOk = true
-  const transporter = createTransport()
-  try {
-    if (SMTP_DEBUG) debug('smtp:verify:start')
-    await transporter.verify()
-    if (SMTP_DEBUG) debug('smtp:verify:ok')
-  } catch (err) {
-    smtpOk = false
-    debug('smtp:verify:failed', { message: err.message, code: err.code })
-  }
-
-  for (let i = 0; i < subscribers.length; i++) {
-    const subscriber = subscribers[i]
+  for (const subscriber of subscribers) {
     const unsubscribeLink = `${appUrl}/api/unsubscribe/${subscriber.unsubscribe_token}`
 
     const templatePayload = {
@@ -139,35 +73,17 @@ async function sendNewsletter({ campaign, subscribers, fromName, fromEmail, sett
     const html = generateNewsletterHtml(settings, templatePayload)
 
     try {
-      if (smtpOk) {
-        await transporter.sendMail({
-          from: `"${fromName || 'Newsletter'}" <${fromEmail}>`,
-          to: subscriber.email,
-          subject: campaign.subject,
-          html,
-        })
-      } else {
-        await brevoSendEmail({
-          fromName: fromName || 'Newsletter',
-          fromEmail,
-          toEmail: subscriber.email,
-          subject: campaign.subject,
-          html,
-        })
-      }
-
-      debug('newsletter:sent', { i: i + 1, to: subscriber.email })
+      await brevoSendEmail({
+        fromName: fromName || settings.newsletter_from_name || 'Newsletter',
+        fromEmail: senderEmail,
+        toEmail: subscriber.email,
+        subject: campaign.subject,
+        html,
+      })
     } catch (err) {
-      debug('newsletter:fail', { i: i + 1, to: subscriber.email, message: err.message, code: err.code })
       errors.push(subscriber.email)
     }
   }
-
-  debug('newsletter:done', {
-    ms: Date.now() - t0,
-    success: subscribers.length - errors.length,
-    failed: errors.length,
-  })
 
   return {
     success: subscribers.length - errors.length,
