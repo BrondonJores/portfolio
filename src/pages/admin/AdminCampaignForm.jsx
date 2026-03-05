@@ -71,12 +71,15 @@ export default function AdminCampaignForm() {
       .finally(() => setLoading(false))
   }, [id, isEdit])
 
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+  }
+
+
   const handleBlocksChange = (newBlocks) => {
     setBlocks(newBlocks)
-    setForm((prev) => ({
-      ...prev,
-      body_html: blocksToHtml(newBlocks),
-    }))
+    setForm((prev) => ({ ...prev, content: JSON.stringify({ blocks: newBlocks }) }))
   }
 
   const handleArticleToggle = (article) => {
