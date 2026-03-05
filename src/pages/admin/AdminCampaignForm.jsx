@@ -15,28 +15,6 @@ import {
 } from '../../services/newsletterService.js'
 import { getArticles } from '../../services/articleService.js'
 
-function blocksToHtml(blocks) {
-  return blocks
-    .map((block) => {
-      switch (block.type) {
-        case 'paragraph':
-          return `<p>${block.content || ''}</p>`
-        case 'heading':
-          return `<h${block.level || 2}>${block.content || ''}</h${block.level || 2}>`
-        case 'image':
-          return block.url
-            ? `<figure><img src="${block.url}" alt="${block.caption || ''}" style="max-width:100%" />${block.caption ? `<figcaption>${block.caption}</figcaption>` : ''}</figure>`
-            : ''
-        case 'code':
-          return `<pre><code class="language-${block.language || 'js'}">${block.content || ''}</code></pre>`
-        case 'quote':
-          return `<blockquote><p>${block.content || ''}</p>${block.author ? `<cite>${block.author}</cite>` : ''}</blockquote>`
-        default:
-          return ''
-      }
-    })
-    .join('\n')
-}
 
 function parseContent(content) {
   try {
@@ -155,8 +133,6 @@ export default function AdminCampaignForm() {
   }
 
   const handleSend = async () => {
-    if (!window.confirm('Envoyer cette campagne à tous les abonnés confirmés ?')) return
-
     setSending(true)
     try {
       await sendCampaign(id)
@@ -207,6 +183,7 @@ export default function AdminCampaignForm() {
             />
           </div>
 
+          {/* Contenu par blocs */}
           {!isSent && (
             <div>
               <label className="block text-sm font-medium mb-2">
