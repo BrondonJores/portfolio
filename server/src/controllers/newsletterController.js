@@ -2,6 +2,20 @@
 const { NewsletterCampaign, Subscriber, Setting } = require('../models')
 const { sendNewsletter } = require('../services/mailerService')
 
+const SMTP_DEBUG = String(process.env.SMTP_DEBUG || '').toLowerCase() === 'true'
+
+function debug(...args) {
+  if (SMTP_DEBUG) console.log('[newsletter]', ...args)
+}
+
+function sanitizeError(err) {
+  return {
+    error: err?.message || 'Erreur',
+    code: err?.code,
+    stack: SMTP_DEBUG ? err?.stack : undefined,
+  }
+}
+
 async function getAll(req, res, next) {
   try {
     const campaigns = await NewsletterCampaign.findAll({
@@ -98,6 +112,8 @@ async function remove(req, res, next) {
 }
 
 async function send(req, res, next) {
+  const t0 = Date.now()
+
   try {
     const { id } = req.params
     const campaign = await NewsletterCampaign.findByPk(id)
@@ -120,28 +136,50 @@ async function send(req, res, next) {
         .json({ error: 'Aucun abonné confirmé.' })
 
     const settingRows = await Setting.findAll()
-
     const settings = {}
     settingRows.forEach((row) => {
       settings[row.key] = row.value
     })
 
-    await sendNewsletter({
+    debug('send:start', {
+      campaignId: campaign.id,
+      subscribers: subscribers.length,
+      smtpHost: process.env.SMTP_HOST,
+      smtpPort: process.env.SMTP_PORT,
+      smtpSecure: process.env.SMTP_SECURE,
+    })
+
+    // Envoi synchronisé (comme ton code), mais logs + erreurs plus explicites
+    const result = await sendNewsletter({
       campaign,
       subscribers,
       fromName: settings.newsletter_from_name || 'Newsletter',
-      fromEmail:
-        settings.newsletter_from_email || process.env.SMTP_USER,
+      fromEmail: settings.newsletter_from_email || process.env.SMTP_USER,
       settings,
     })
+
+    debug('send:mailerResult', result)
 
     await campaign.update({
       status: 'sent',
       sent_at: new Date(),
     })
 
-    return res.json({ data: campaign })
+    debug('send:done', { ms: Date.now() - t0 })
+
+    return res.json({ data: campaign, mailer: result })
   } catch (err) {
+    debug('send:error', sanitizeError(err))
+
+    // Si c'est un timeout SMTP, on renvoie un message clair
+    const msg = err?.message || ''
+    if (/Connection timeout/i.test(msg) || /timeout/i.test(msg)) {
+      return res.status(502).json({
+        error: 'Connection timeout (SMTP). Le serveur ne parvient pas à joindre le relay SMTP.',
+        details: SMTP_DEBUG ? sanitizeError(err) : undefined,
+      })
+    }
+
     next(err)
   }
 }
