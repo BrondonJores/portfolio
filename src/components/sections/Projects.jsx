@@ -93,7 +93,7 @@ export default function Projects() {
           variants={containerVariants}
           initial={canAnimate ? 'hidden' : false}
           whileInView={canAnimate ? 'visible' : false}
-          viewport={{ once: true }}
+          viewport={{ once: animationConfig.sectionOnce }}
         >
           {projects.map((project) => (
             <motion.div

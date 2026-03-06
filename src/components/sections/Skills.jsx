@@ -102,7 +102,7 @@ export default function Skills() {
             variants={containerVariants}
             initial={canAnimate ? 'hidden' : false}
             whileInView={canAnimate ? 'visible' : false}
-            viewport={{ once: true }}
+            viewport={{ once: animationConfig.sectionOnce }}
           >
             {skillGroups.map((skillGroup) => (
               <motion.div

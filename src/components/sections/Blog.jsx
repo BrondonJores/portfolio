@@ -48,7 +48,7 @@ export default function Blog() {
               key={article.id}
               initial={canAnimate ? { opacity: 0, y: 20 } : false}
               whileInView={canAnimate ? { opacity: 1, y: 0 } : false}
-              viewport={{ once: true }}
+              viewport={{ once: animationConfig.sectionOnce }}
               transition={{
                 duration: 0.4 * animationConfig.durationScale,
                 delay: i * 0.1 * animationConfig.durationScale,
