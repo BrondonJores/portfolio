@@ -44,7 +44,12 @@ function resolveDeliveryMode() {
     return explicitMode
   }
 
-  if (process.env.NODE_ENV !== 'production' && (process.env.DEV_SMTP_HOST || process.env.SMTP_HOST)) {
+  const hasBrevo = Boolean(process.env.BREVO_API_KEY) && Boolean(process.env.BREVO_SENDER_EMAIL)
+  if (hasBrevo) {
+    return 'brevo'
+  }
+
+  if (process.env.DEV_SMTP_HOST || process.env.SMTP_HOST) {
     return 'smtp'
   }
 
