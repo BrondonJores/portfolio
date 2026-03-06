@@ -6,6 +6,7 @@ import { useMemo } from 'react'
 import Navbar from './components/sections/Navbar.jsx'
 import { SpeedInsights } from "@vercel/speed-insights/react"
 import ScrollProgressBar from './components/ui/ScrollProgressBar.jsx'
+import AnimatedSpriteSystem from './components/ui/AnimatedSpriteSystem.jsx'
 import { useSettings } from './context/SettingsContext.jsx'
 import { getAnimationConfig } from './utils/animationSettings.js'
 
@@ -44,6 +45,7 @@ export default function App() {
         transition={{ duration: 0.4 * animationConfig.durationScale, ease: animationConfig.easePreset }}
       >
         <ScrollProgressBar />
+        <AnimatedSpriteSystem />
         <Navbar />
         <main>
           <Outlet />

@@ -15,6 +15,7 @@ import {
   ANIMATION_PROFILE_OPTIONS,
   MASCOT_STYLE_OPTIONS,
   REDUCE_MOTION_OPTIONS,
+  SPRITE_STYLE_OPTIONS,
   SECTION_REVEAL_OPTIONS,
 } from '../../utils/animationSettings.js'
 
@@ -724,6 +725,99 @@ export default function AdminSettings() {
                     max={1}
                     step={0.05}
                     defaultValue={0.85}
+                  />
+                </div>
+              </CardSection>
+
+              <CardSection>
+                <SectionTitle>Sprites SVG Dynamiques</SectionTitle>
+                <InlineTip>
+                  Active un sprite qui se balade sur l&apos;ecran + des sprites lateraux qui apparaissent puis disparaissent.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox label="Sprite principal baladeur" fieldKey="anim_sprite_wander_enabled" settings={settings} onChange={handleChange} />
+                  <FieldCheckbox label="Sprites lateraux apparition/disparition" fieldKey="anim_sprite_side_enabled" settings={settings} onChange={handleChange} />
+                  <FieldSelect
+                    label="Style sprite"
+                    fieldKey="anim_sprite_style"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={SPRITE_STYLE_OPTIONS}
+                  />
+                  <FieldRange
+                    label="Taille sprite principal"
+                    fieldKey="anim_sprite_wander_size"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={36}
+                    max={140}
+                    step={1}
+                    unit="px"
+                    defaultValue={74}
+                  />
+                  <FieldRange
+                    label="Vitesse sprite principal"
+                    fieldKey="anim_sprite_wander_speed"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.4}
+                    max={2.6}
+                    step={0.05}
+                    unit="x"
+                    defaultValue={1}
+                  />
+                  <FieldRange
+                    label="Opacite sprite principal"
+                    fieldKey="anim_sprite_wander_opacity"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.2}
+                    max={1}
+                    step={0.05}
+                    defaultValue={0.88}
+                  />
+                  <FieldRange
+                    label="Nombre de sprites lateraux"
+                    fieldKey="anim_sprite_side_count"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={1}
+                    max={6}
+                    step={1}
+                    defaultValue={2}
+                  />
+                  <FieldRange
+                    label="Taille sprites lateraux"
+                    fieldKey="anim_sprite_side_size"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={36}
+                    max={160}
+                    step={1}
+                    unit="px"
+                    defaultValue={92}
+                  />
+                  <FieldRange
+                    label="Frequence apparition laterale"
+                    fieldKey="anim_sprite_side_frequency_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={1400}
+                    max={12000}
+                    step={100}
+                    unit="ms"
+                    defaultValue={5200}
+                  />
+                  <FieldRange
+                    label="Duree apparition laterale"
+                    fieldKey="anim_sprite_side_duration_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={700}
+                    max={5000}
+                    step={50}
+                    unit="ms"
+                    defaultValue={1700}
                   />
                 </div>
               </CardSection>

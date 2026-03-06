@@ -30,6 +30,12 @@ export const MASCOT_STYLE_OPTIONS = [
   { value: 'blob', label: 'Blob' },
 ]
 
+export const SPRITE_STYLE_OPTIONS = [
+  { value: 'pixel', label: 'Pixel' },
+  { value: 'ghost', label: 'Ghost' },
+  { value: 'rocket', label: 'Rocket' },
+]
+
 function clampNumber(rawValue, min, max, fallback) {
   const parsed = Number(rawValue)
   if (!Number.isFinite(parsed)) {
@@ -92,6 +98,16 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     mascotSpeed: clampNumber(settings.anim_mascot_speed, 0.5, 2.5, 1) * Math.max(0.75, intensity),
     mascotOpacity: clampNumber(settings.anim_mascot_opacity, 0.2, 1, 0.85),
     mascotStyle: settings.anim_mascot_style || 'mixed',
+    spriteWanderEnabled: parseBooleanSetting(settings.anim_sprite_wander_enabled, true),
+    spriteWanderSizePx: clampNumber(settings.anim_sprite_wander_size, 36, 140, 74) * Math.max(0.8, intensity),
+    spriteWanderSpeed: clampNumber(settings.anim_sprite_wander_speed, 0.4, 2.6, 1) * Math.max(0.75, intensity),
+    spriteWanderOpacity: clampNumber(settings.anim_sprite_wander_opacity, 0.2, 1, 0.88),
+    spriteSideEnabled: parseBooleanSetting(settings.anim_sprite_side_enabled, true),
+    spriteSideCount: Math.round(clampNumber(settings.anim_sprite_side_count, 1, 6, 2)),
+    spriteSideSizePx: clampNumber(settings.anim_sprite_side_size, 36, 160, 92) * Math.max(0.8, intensity),
+    spriteSideFrequencyMs: clampNumber(settings.anim_sprite_side_frequency_ms, 1400, 12000, 5200),
+    spriteSideDurationMs: clampNumber(settings.anim_sprite_side_duration_ms, 700, 5000, 1700),
+    spriteStyle: settings.anim_sprite_style || 'pixel',
     scrollProgressEnabled: parseBooleanSetting(settings.anim_scroll_progress_enabled, true),
     scrollProgressThickness: clampNumber(settings.anim_scroll_progress_thickness, 2, 10, 4),
   }
