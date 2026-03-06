@@ -175,12 +175,21 @@ BREVO_SENDER_EMAIL=noreply@votredomaine.com
 - `npm run dev` : demarrage Vite
 - `npm run build` : build production
 - `npm run preview` : preview build
+- `npm run lint` : lint backend (syntax check)
+- `npm run test` : tests backend
+- `npm run test:smoke` : smoke tests API backend (integration)
 
 ### Backend (`server/`)
 - `npm run dev` : demarrage avec nodemon
 - `npm start` : demarrage production
+- `npm run lint` : verifie la syntaxe JS (`src`, `scripts`, `tests`)
+- `npm run test` : lance les tests unitaires backend (scripts Node)
+- `npm run test:smoke` : lance les smoke tests API (skip auto des checks DB si DB indisponible)
 - `npm run migrate` : migrations Sequelize
 - `npm run seed` : seeders Sequelize
+
+Option smoke strict (CI):
+- `SMOKE_REQUIRE_DB=true npm run test:smoke` force l echec si PostgreSQL n est pas joignable.
 
 ## Securite
 - Access token JWT jamais persiste en localStorage.
@@ -215,3 +224,5 @@ BREVO_SENDER_EMAIL=noreply@votredomaine.com
 - Le SSL DB est configurable via:
   - `DB_SSL=true|false`
   - `DB_SSL_REJECT_UNAUTHORIZED=true|false`
+
+

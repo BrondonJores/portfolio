@@ -49,10 +49,18 @@ app.use('/api', routes)
 /* Middleware de gestion des erreurs globales */
 app.use(errorHandler)
 
-/* Demarrage serveur */
-const PORT = process.env.PORT || 5000
-app.listen(PORT, () => {
-  console.log(`Serveur demarre sur le port ${PORT}`)
-})
+/* Demarrage serveur (extrait pour faciliter les tests smoke) */
+function startServer(port = process.env.PORT || 5000) {
+  const server = app.listen(port, () => {
+    const address = server.address()
+    const effectivePort = typeof address === 'object' && address ? address.port : port
+    console.log(`Serveur demarre sur le port ${effectivePort}`)
+  })
+  return server
+}
 
-module.exports = app
+if (require.main === module) {
+  startServer()
+}
+
+module.exports = { app, startServer }

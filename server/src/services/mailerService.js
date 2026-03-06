@@ -40,7 +40,7 @@ function parseFromValue(fromValue) {
 
 function resolveDeliveryMode() {
   const explicitMode = String(process.env.MAIL_DELIVERY_MODE || '').trim().toLowerCase()
-  if (explicitMode === 'brevo' || explicitMode === 'smtp') {
+  if (explicitMode === 'brevo' || explicitMode === 'smtp' || explicitMode === 'mock') {
     return explicitMode
   }
 
@@ -57,6 +57,13 @@ function resolveDeliveryMode() {
 }
 
 function resolveDefaultSender(mode) {
+  if (mode === 'mock') {
+    return {
+      name: 'Mock Sender',
+      email: 'mock@example.test',
+    }
+  }
+
   if (mode === 'smtp') {
     const parsed = parseFromValue(process.env.DEV_SMTP_FROM || process.env.SMTP_FROM)
     return {
@@ -134,6 +141,17 @@ async function smtpSendEmail({ fromName, fromEmail, toEmail, subject, html }) {
 }
 
 async function sendWithProvider({ mode, fromName, fromEmail, toEmail, subject, html }) {
+  if (mode === 'mock') {
+    return {
+      mocked: true,
+      accepted: [toEmail],
+      envelope: { from: fromEmail, to: [toEmail] },
+      message: `Mock send: ${subject}`,
+      fromName,
+      htmlLength: typeof html === 'string' ? html.length : 0,
+    }
+  }
+
   if (mode === 'smtp') {
     return smtpSendEmail({ fromName, fromEmail, toEmail, subject, html })
   }

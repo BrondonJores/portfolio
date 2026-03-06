@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "npm --prefix server run lint",
+    "test": "npm --prefix server run test",
+    "test:smoke": "npm --prefix server run test:smoke"
   },
   "dependencies": {
     "@fontsource-variable/inter": "latest",
