@@ -1,26 +1,43 @@
-/* Controleur d'upload d'images */
+/* Controleur d upload d images */
+const fs = require('fs/promises')
 const cloudinary = require('../cloudinary')
+
+async function cleanupTempFile(filePath) {
+  if (!filePath) {
+    return
+  }
+
+  try {
+    await fs.unlink(filePath)
+  } catch (err) {
+    if (err?.code !== 'ENOENT') {
+      console.error('Impossible de supprimer le fichier temporaire:', err)
+    }
+  }
+}
 
 /**
  * POST /api/upload
- * Reçoit un fichier image via Multer et retourne son URL publique Cloudinary.
+ * Recoit un fichier image via Multer et retourne son URL publique Cloudinary.
  */
 async function uploadImage(req, res) {
+  const tempFilePath = req.file?.path
+
   if (!req.file) {
     return res.status(400).json({ error: 'Aucun fichier fourni.' })
   }
 
   try {
-    // Upload du fichier sur Cloudinary dans le dossier "portfolio"
-    const result = await cloudinary.uploader.upload(req.file.path, {
+    const result = await cloudinary.uploader.upload(tempFilePath, {
       folder: 'portfolio',
     })
 
-    // Retourne l'URL publique sécurisée
     return res.status(201).json({ url: result.secure_url })
   } catch (err) {
     console.error(err)
-    return res.status(500).json({ error: 'Upload échoué.' })
+    return res.status(500).json({ error: 'Upload echoue.' })
+  } finally {
+    await cleanupTempFile(tempFilePath)
   }
 }
 
