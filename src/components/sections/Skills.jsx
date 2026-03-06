@@ -1,12 +1,15 @@
 /* Section Competences avec grille animee */
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useMemo } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Spinner from '../ui/Spinner.jsx'
 import { getSkills } from '../../services/skillService.js'
+import { useSettings } from '../../context/SettingsContext.jsx'
+import { getAnimationConfig } from '../../utils/animationSettings.js'
 
 /* Variants pour l'animation staggeree des elements */
 const containerVariants = {
@@ -29,6 +32,13 @@ const itemVariants = {
 export default function Skills() {
   const [skillGroups, setSkillGroups] = useState([])
   const [loading, setLoading] = useState(true)
+  const { settings } = useSettings()
+  const prefersReducedMotion = useReducedMotion()
+  const animationConfig = useMemo(
+    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
+    [settings, prefersReducedMotion]
+  )
+  const canAnimate = animationConfig.canAnimate
 
   useEffect(() => {
     getSkills()
@@ -90,12 +100,16 @@ export default function Skills() {
           <motion.div
             className="grid grid-cols-1 md:grid-cols-3 gap-6"
             variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
+            initial={canAnimate ? 'hidden' : false}
+            whileInView={canAnimate ? 'visible' : false}
             viewport={{ once: true }}
           >
             {skillGroups.map((skillGroup) => (
-              <motion.div key={skillGroup.category} variants={itemVariants}>
+              <motion.div
+                key={skillGroup.category}
+                variants={itemVariants}
+                transition={{ duration: 0.4 * animationConfig.durationScale, ease: animationConfig.easePreset }}
+              >
                 <Card>
                   <h3
                     className="text-lg font-bold mb-4"

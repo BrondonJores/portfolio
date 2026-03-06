@@ -1,7 +1,8 @@
 /* Section Projets avec grille de cartes animees */
 import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   CodeBracketIcon,
   ArrowTopRightOnSquareIcon,
@@ -14,6 +15,8 @@ import Card from '../ui/Card.jsx'
 import Button from '../ui/Button.jsx'
 import Spinner from '../ui/Spinner.jsx'
 import { getProjects } from '../../services/projectService.js'
+import { useSettings } from '../../context/SettingsContext.jsx'
+import { getAnimationConfig } from '../../utils/animationSettings.js'
 
 /* Variants pour l'animation staggeree des cartes */
 const containerVariants = {
@@ -36,6 +39,13 @@ const cardVariants = {
 export default function Projects() {
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
+  const { settings } = useSettings()
+  const prefersReducedMotion = useReducedMotion()
+  const animationConfig = useMemo(
+    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
+    [settings, prefersReducedMotion]
+  )
+  const canAnimate = animationConfig.canAnimate
 
   useEffect(() => {
     getProjects({ featured: true, limit: 3 })
@@ -81,12 +91,16 @@ export default function Projects() {
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
           variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
+          initial={canAnimate ? 'hidden' : false}
+          whileInView={canAnimate ? 'visible' : false}
           viewport={{ once: true }}
         >
           {projects.map((project) => (
-            <motion.div key={project.id} variants={cardVariants}>
+            <motion.div
+              key={project.id}
+              variants={cardVariants}
+              transition={{ duration: 0.5 * animationConfig.durationScale, ease: animationConfig.easePreset }}
+            >
               <Card className="h-full flex flex-col overflow-hidden !p-0">
                 {/* Image du projet */}
                 {project.image_url ? (

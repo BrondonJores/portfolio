@@ -3,6 +3,7 @@ import { EnvelopeIcon, MapPinIcon, PaperAirplaneIcon } from '@heroicons/react/24
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Button from '../ui/Button.jsx'
+import AnimatedMascots from '../ui/AnimatedMascots.jsx'
 import { useContactForm } from '../../hooks/useContactForm.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 
@@ -29,8 +30,9 @@ export default function Contact() {
   return (
     <AnimatedSection
       id="contact"
-      className="py-24 px-4 sm:px-6 lg:px-8"
+      className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
     >
+      <AnimatedMascots scope="section" />
       <div className="max-w-6xl mx-auto">
         <SectionTitle
           title="Contact"

@@ -1,16 +1,26 @@
 /* Section Blog avec apercu des derniers articles */
 import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { DocumentTextIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Badge from '../ui/Badge.jsx'
 import { getArticles } from '../../services/articleService.js'
+import { useSettings } from '../../context/SettingsContext.jsx'
+import { getAnimationConfig } from '../../utils/animationSettings.js'
 
 export default function Blog() {
   const [articles, setArticles] = useState([])
+  const { settings } = useSettings()
+  const prefersReducedMotion = useReducedMotion()
+  const animationConfig = useMemo(
+    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
+    [settings, prefersReducedMotion]
+  )
+  const canAnimate = animationConfig.canAnimate
 
   useEffect(() => {
     getArticles({ limit: 3 })
@@ -36,10 +46,14 @@ export default function Blog() {
           {articles.map((article, i) => (
             <motion.div
               key={article.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={canAnimate ? { opacity: 0, y: 20 } : false}
+              whileInView={canAnimate ? { opacity: 1, y: 0 } : false}
               viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.1, ease: 'easeOut' }}
+              transition={{
+                duration: 0.4 * animationConfig.durationScale,
+                delay: i * 0.1 * animationConfig.durationScale,
+                ease: animationConfig.easePreset,
+              }}
             >
               <Link to={`/blog/${article.slug}`} className="block h-full">
                 <Card className="h-full flex flex-col hover:border-[var(--color-accent)] transition-colors overflow-hidden !p-0">

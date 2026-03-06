@@ -10,6 +10,13 @@ import {
   FONT_FAMILY_OPTIONS,
   mergeWithThemeDefaults,
 } from '../../utils/themeSettings.js'
+import {
+  ANIMATION_EASE_OPTIONS,
+  ANIMATION_PROFILE_OPTIONS,
+  MASCOT_STYLE_OPTIONS,
+  REDUCE_MOTION_OPTIONS,
+  SECTION_REVEAL_OPTIONS,
+} from '../../utils/animationSettings.js'
 
 const TABS = [
   { id: 'identity', label: 'Identite' },
@@ -17,6 +24,7 @@ const TABS = [
   { id: 'contact', label: 'Contact' },
   { id: 'seo', label: 'SEO' },
   { id: 'appearance', label: 'Apparence' },
+  { id: 'animations', label: 'Animations' },
   { id: 'newsletter', label: 'Newsletter' },
 ]
 
@@ -227,6 +235,14 @@ function CardSection({ children, className = '' }) {
   )
 }
 
+function InlineTip({ children }) {
+  return (
+    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+      {children}
+    </p>
+  )
+}
+
 export default function AdminSettings() {
   const addToast = useAdminToast()
   const { updateLocalSettings } = useSettings()
@@ -250,16 +266,16 @@ export default function AdminSettings() {
 
   const handleChange = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
+    updateLocalSettings({ [key]: value })
   }
 
   const handleResetAppearance = () => {
-    setSettings((prev) => {
-      const next = { ...prev }
-      styleKeys.forEach((key) => {
-        next[key] = DEFAULT_THEME_SETTINGS[key]
-      })
-      return next
+    const next = { ...settings }
+    styleKeys.forEach((key) => {
+      next[key] = DEFAULT_THEME_SETTINGS[key]
     })
+    setSettings(next)
+    updateLocalSettings(next)
   }
 
   const handleSave = async () => {
@@ -296,7 +312,7 @@ export default function AdminSettings() {
           </h1>
 
           <div className="flex items-center gap-2">
-            {activeTab === 'appearance' && (
+            {(activeTab === 'appearance' || activeTab === 'animations') && (
               <button
                 onClick={handleResetAppearance}
                 className="px-4 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none"
@@ -306,7 +322,7 @@ export default function AdminSettings() {
                   border: '1px solid var(--color-border)',
                 }}
               >
-                Reinitialiser le style
+                {activeTab === 'appearance' ? 'Reinitialiser le style' : 'Reinitialiser les animations'}
               </button>
             )}
             <button
@@ -565,6 +581,213 @@ export default function AdminSettings() {
                     max={1}
                     step={0.01}
                     defaultValue={0.95}
+                  />
+                </div>
+              </CardSection>
+            </>
+          )}
+
+          {activeTab === 'animations' && (
+            <>
+              <CardSection>
+                <SectionTitle>Moteur Global</SectionTitle>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox label="Activer les animations" fieldKey="anim_enabled" settings={settings} onChange={handleChange} />
+                  <FieldCheckbox label="Reveler chaque section une seule fois" fieldKey="anim_section_once" settings={settings} onChange={handleChange} />
+                  <FieldSelect
+                    label="Profil"
+                    fieldKey="anim_profile"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={ANIMATION_PROFILE_OPTIONS}
+                  />
+                  <FieldSelect
+                    label="Easing principal"
+                    fieldKey="anim_ease_preset"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={ANIMATION_EASE_OPTIONS}
+                  />
+                  <FieldSelect
+                    label="Gestion reduce-motion"
+                    fieldKey="anim_reduce_motion_mode"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={REDUCE_MOTION_OPTIONS}
+                  />
+                  <FieldSelect
+                    label="Reveal de section"
+                    fieldKey="anim_section_reveal_type"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={SECTION_REVEAL_OPTIONS}
+                  />
+                  <FieldRange
+                    label="Echelle des durees"
+                    fieldKey="anim_duration_scale"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.6}
+                    max={2}
+                    step={0.05}
+                    unit="x"
+                    defaultValue={1}
+                  />
+                  <FieldRange
+                    label="Intensite globale"
+                    fieldKey="anim_intensity"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.4}
+                    max={2.5}
+                    step={0.05}
+                    unit="x"
+                    defaultValue={1}
+                  />
+                  <FieldRange
+                    label="Duree reveal section"
+                    fieldKey="anim_section_duration_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={200}
+                    max={1600}
+                    step={25}
+                    unit="ms"
+                    defaultValue={650}
+                  />
+                  <FieldRange
+                    label="Distance reveal section"
+                    fieldKey="anim_section_distance_px"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0}
+                    max={120}
+                    step={1}
+                    unit="px"
+                    defaultValue={36}
+                  />
+                </div>
+              </CardSection>
+
+              <CardSection>
+                <SectionTitle>Mascottes Animees (Petits Bonhommes)</SectionTitle>
+                <InlineTip>
+                  Ces mascottes apparaissent dans les sections clefs et flottent selon ton style.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox label="Activer les mascottes" fieldKey="anim_mascots_enabled" settings={settings} onChange={handleChange} />
+                  <FieldSelect
+                    label="Style de mascotte"
+                    fieldKey="anim_mascot_style"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={MASCOT_STYLE_OPTIONS}
+                  />
+                  <FieldRange
+                    label="Nombre de mascottes"
+                    fieldKey="anim_mascot_count"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0}
+                    max={8}
+                    step={1}
+                    defaultValue={4}
+                  />
+                  <FieldRange
+                    label="Taille des mascottes"
+                    fieldKey="anim_mascot_size"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={56}
+                    max={180}
+                    step={1}
+                    unit="px"
+                    defaultValue={96}
+                  />
+                  <FieldRange
+                    label="Vitesse des mascottes"
+                    fieldKey="anim_mascot_speed"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.5}
+                    max={2.5}
+                    step={0.05}
+                    unit="x"
+                    defaultValue={1}
+                  />
+                  <FieldRange
+                    label="Opacite mascottes"
+                    fieldKey="anim_mascot_opacity"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.2}
+                    max={1}
+                    step={0.05}
+                    defaultValue={0.85}
+                  />
+                </div>
+              </CardSection>
+
+              <CardSection>
+                <SectionTitle>Interactions et Effets</SectionTitle>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox label="Hover anime sur les cartes" fieldKey="anim_card_hover" settings={settings} onChange={handleChange} />
+                  <FieldCheckbox label="Pulse sur les CTA primaires" fieldKey="anim_cta_pulse" settings={settings} onChange={handleChange} />
+                  <FieldCheckbox label="Barre de progression du scroll" fieldKey="anim_scroll_progress_enabled" settings={settings} onChange={handleChange} />
+                  <FieldRange
+                    label="Lift des cartes"
+                    fieldKey="anim_card_lift_px"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0}
+                    max={24}
+                    step={1}
+                    unit="px"
+                    defaultValue={8}
+                  />
+                  <FieldRange
+                    label="Scale hover cartes"
+                    fieldKey="anim_card_scale"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={1}
+                    max={1.1}
+                    step={0.005}
+                    unit="x"
+                    defaultValue={1.02}
+                  />
+                  <FieldRange
+                    label="Tilt hover cartes"
+                    fieldKey="anim_card_tilt_deg"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0}
+                    max={6}
+                    step={0.1}
+                    unit="deg"
+                    defaultValue={1.5}
+                  />
+                  <FieldRange
+                    label="Intervalle pulse CTA"
+                    fieldKey="anim_cta_pulse_interval_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={900}
+                    max={4000}
+                    step={50}
+                    unit="ms"
+                    defaultValue={1800}
+                  />
+                  <FieldRange
+                    label="Epaisseur barre scroll"
+                    fieldKey="anim_scroll_progress_thickness"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={2}
+                    max={10}
+                    step={1}
+                    unit="px"
+                    defaultValue={4}
                   />
                 </div>
               </CardSection>

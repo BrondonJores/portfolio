@@ -55,6 +55,11 @@
   --ui-hero-blur: 80px;
   --ui-hero-speed-factor: 1;
   --ui-glow-strength: 1;
+  --anim-duration-scale: 1;
+  --anim-intensity: 1;
+  --anim-cta-pulse-ms: 1800ms;
+  --anim-mascot-opacity: 0.85;
+  --anim-scroll-progress-thickness: 4px;
 }
 
 :root.light {
@@ -147,6 +152,17 @@ samp {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+@keyframes cta-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 calc(26px * var(--anim-intensity)) var(--color-accent-glow);
+  }
 }
 
 @keyframes aurora-float {

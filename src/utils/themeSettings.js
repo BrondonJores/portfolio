@@ -45,6 +45,30 @@ export const DEFAULT_THEME_SETTINGS = {
   ui_navbar_blur: '12',
   ui_navbar_opacity: '0.7',
   ui_navbar_opacity_scrolled: '0.95',
+  anim_enabled: 'true',
+  anim_profile: 'balanced',
+  anim_reduce_motion_mode: 'auto',
+  anim_duration_scale: '1',
+  anim_intensity: '1',
+  anim_ease_preset: 'easeOut',
+  anim_section_reveal_type: 'fade-up',
+  anim_section_duration_ms: '650',
+  anim_section_distance_px: '36',
+  anim_section_once: 'true',
+  anim_card_hover: 'true',
+  anim_card_lift_px: '8',
+  anim_card_scale: '1.02',
+  anim_card_tilt_deg: '1.5',
+  anim_cta_pulse: 'true',
+  anim_cta_pulse_interval_ms: '1800',
+  anim_mascots_enabled: 'true',
+  anim_mascot_count: '4',
+  anim_mascot_size: '96',
+  anim_mascot_speed: '1',
+  anim_mascot_opacity: '0.85',
+  anim_mascot_style: 'mixed',
+  anim_scroll_progress_enabled: 'true',
+  anim_scroll_progress_thickness: '4',
 }
 
 function clampNumber(rawValue, min, max, fallback) {
@@ -86,6 +110,9 @@ function resolveFontFamily(fontToken, fallbackToken) {
 }
 
 function buildThemeConfig(settings = {}) {
+  const durationScale = clampNumber(settings.anim_duration_scale, 0.6, 2, 1)
+  const intensity = clampNumber(settings.anim_intensity, 0.4, 2.5, 1)
+
   return {
     darkBgPrimary: normalizeHexColor(settings.theme_dark_bg_primary, DEFAULT_THEME_SETTINGS.theme_dark_bg_primary),
     darkBgSecondary: normalizeHexColor(settings.theme_dark_bg_secondary, DEFAULT_THEME_SETTINGS.theme_dark_bg_secondary),
@@ -109,12 +136,17 @@ function buildThemeConfig(settings = {}) {
     fontScale: clampNumber(settings.ui_font_scale, 0.9, 1.2, 1),
     radiusPx: clampNumber(settings.ui_radius_base, 4, 24, 12),
     glowStrength: clampNumber(settings.ui_glow_strength, 0.3, 2, 1),
-    transitionSpeedMs: clampNumber(settings.ui_transition_speed, 100, 800, 300),
+    transitionSpeedMs: clampNumber(settings.ui_transition_speed, 100, 800, 300) * durationScale,
     heroBlurPx: clampNumber(settings.ui_hero_blur, 30, 140, 80),
     heroSpeedFactor: clampNumber(settings.ui_hero_speed_factor, 0.5, 2, 1),
     navbarBlurPx: clampNumber(settings.ui_navbar_blur, 0, 24, 12),
     navbarOpacity: clampNumber(settings.ui_navbar_opacity, 0.45, 0.95, 0.7),
     navbarOpacityScrolled: clampNumber(settings.ui_navbar_opacity_scrolled, 0.6, 1, 0.95),
+    durationScale,
+    intensity,
+    ctaPulseIntervalMs: clampNumber(settings.anim_cta_pulse_interval_ms, 900, 4000, 1800),
+    mascotOpacity: clampNumber(settings.anim_mascot_opacity, 0.2, 1, 0.85),
+    scrollProgressThickness: clampNumber(settings.anim_scroll_progress_thickness, 2, 10, 4),
   }
 }
 
@@ -165,4 +197,9 @@ export function applyThemeSettings(settings = {}) {
   rootStyle.setProperty('--ui-hero-blur', `${config.heroBlurPx}px`)
   rootStyle.setProperty('--ui-hero-speed-factor', String(config.heroSpeedFactor))
   rootStyle.setProperty('--ui-navbar-blur', `${config.navbarBlurPx}px`)
+  rootStyle.setProperty('--anim-duration-scale', String(config.durationScale))
+  rootStyle.setProperty('--anim-intensity', String(config.intensity))
+  rootStyle.setProperty('--anim-cta-pulse-ms', `${config.ctaPulseIntervalMs}ms`)
+  rootStyle.setProperty('--anim-mascot-opacity', String(config.mascotOpacity))
+  rootStyle.setProperty('--anim-scroll-progress-thickness', `${config.scrollProgressThickness}px`)
 }
