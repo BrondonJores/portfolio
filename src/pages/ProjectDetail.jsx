@@ -10,6 +10,8 @@ import Button from '../components/ui/Button.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
 import { getProjectBySlug } from '../services/projectService.js'
+import { useSettings } from '../context/SettingsContext.jsx'
+import { buildPageTitle } from '../utils/seoSettings.js'
 
 export default function ProjectDetail() {
   const { slug } = useParams()
@@ -18,6 +20,7 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [copied, setCopied] = useState(false)
+  const { settings } = useSettings()
 
   useEffect(() => {
     getProjectBySlug(slug)
@@ -58,7 +61,7 @@ export default function ProjectDetail() {
   return (
     <>
       <Helmet>
-        <title>{project.title} - BrondonJores</title>
+        <title>{buildPageTitle(settings, project.title)}</title>
       </Helmet>
       <Navbar />
       <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>

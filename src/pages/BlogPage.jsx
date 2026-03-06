@@ -11,6 +11,8 @@ import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import { getArticles } from '../services/articleService.js'
+import { useSettings } from '../context/SettingsContext.jsx'
+import { buildPageTitle } from '../utils/seoSettings.js'
 
 /* Formatage de la date de publication */
 function formatDate(dateString) {
@@ -27,6 +29,8 @@ export default function BlogPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState(null)
+  const { settings } = useSettings()
+  const pageTitle = buildPageTitle(settings, 'Blog')
 
   useEffect(() => {
     setLoading(true)
@@ -42,7 +46,7 @@ export default function BlogPage() {
   return (
     <>
       <Helmet>
-        <title>Blog - BrondonJores</title>
+        <title>{pageTitle}</title>
       </Helmet>
       <Navbar />
       <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>

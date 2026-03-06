@@ -1,4 +1,5 @@
 /* Page d'accueil regroupant toutes les sections */
+import Navbar from '../components/sections/Navbar.jsx'
 import Hero from '../components/sections/Hero.jsx'
 import About from '../components/sections/About.jsx'
 import Skills from '../components/sections/Skills.jsx'
@@ -14,6 +15,7 @@ import Footer from '../components/sections/Footer.jsx'
 export default function Home() {
   return (
     <>
+      <Navbar />
       <Hero />
       <About />
       <Skills />

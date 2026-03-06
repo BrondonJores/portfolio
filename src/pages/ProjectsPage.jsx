@@ -12,6 +12,8 @@ import Spinner from '../components/ui/Spinner.jsx'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
 import { getProjects } from '../services/projectService.js'
+import { useSettings } from '../context/SettingsContext.jsx'
+import { buildPageTitle } from '../utils/seoSettings.js'
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState([])
@@ -20,6 +22,8 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState(null)
+  const { settings } = useSettings()
+  const pageTitle = buildPageTitle(settings, 'Projets')
 
   useEffect(() => {
     const params = { page, limit: 9 }
@@ -46,7 +50,7 @@ export default function ProjectsPage() {
   return (
     <>
       <Helmet>
-        <title>Projets - BrondonJores</title>
+        <title>{pageTitle}</title>
       </Helmet>
       <Navbar />
       <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>

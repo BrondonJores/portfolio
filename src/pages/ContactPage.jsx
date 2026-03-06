@@ -12,6 +12,7 @@ import Footer from '../components/sections/Footer.jsx'
 import { useContactForm } from '../hooks/useContactForm.jsx'
 import { getTestimonials } from '../services/testimonialService.js'
 import { useSettings } from '../context/SettingsContext.jsx'
+import { buildPageTitle } from '../utils/seoSettings.js'
 
 /* Style commun des inputs */
 const inputStyle = {
@@ -24,6 +25,7 @@ export default function ContactPage() {
   const { fields, handleChange, handleSubmit, status } = useContactForm()
   const { settings } = useSettings()
   const [testimonials, setTestimonials] = useState([])
+  const pageTitle = buildPageTitle(settings, 'Contact')
 
   const socialLinks = [
     settings.github_url && { label: 'GitHub', href: settings.github_url },
@@ -43,7 +45,7 @@ export default function ContactPage() {
   return (
     <>
       <Helmet>
-        <title>Contact - BrondonJores</title>
+        <title>{pageTitle}</title>
       </Helmet>
       <Navbar />
       <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>

@@ -7,6 +7,8 @@ import Footer from '../components/sections/Footer.jsx'
 import SectionTitle from '../components/ui/SectionTitle.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import { getSkills } from '../services/skillService.js'
+import { useSettings } from '../context/SettingsContext.jsx'
+import { buildPageTitle } from '../utils/seoSettings.js'
 
 /* Animation de la barre de progression */
 function SkillBar({ skill }) {
@@ -46,6 +48,8 @@ function SkillBar({ skill }) {
 export default function SkillsPage() {
   const [grouped, setGrouped] = useState({})
   const [loading, setLoading] = useState(true)
+  const { settings } = useSettings()
+  const pageTitle = buildPageTitle(settings, 'Competences')
 
   useEffect(() => {
     getSkills()
@@ -57,7 +61,7 @@ export default function SkillsPage() {
   return (
     <>
       <Helmet>
-        <title>Competences - BrondonJores</title>
+        <title>{pageTitle}</title>
       </Helmet>
       <Navbar />
       <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>

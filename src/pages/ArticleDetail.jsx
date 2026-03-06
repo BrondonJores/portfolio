@@ -24,6 +24,8 @@ import { getArticleBySlug, getArticles } from '../services/articleService.js'
 import { getCommentsByArticle, postComment } from '../services/commentService.js'
 import { subscribe } from '../services/subscriberService.js'
 import { useScrollPosition } from '../hooks/useScrollPosition.jsx'
+import { useSettings } from '../context/SettingsContext.jsx'
+import { buildPageTitle } from '../utils/seoSettings.js'
 
 /* Formatage de la date */
 function formatDate(dateString) {
@@ -412,6 +414,7 @@ function NewsletterCTA() {
 export default function ArticleDetail() {
   const { slug } = useParams()
   const navigate = useNavigate()
+  const { settings } = useSettings()
   const [article, setArticle] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -490,7 +493,7 @@ export default function ArticleDetail() {
   return (
     <>
       <Helmet>
-        <title>{article.title} - BrondonJores</title>
+        <title>{buildPageTitle(settings, article.title)}</title>
         <meta name="description" content={article.excerpt || ''} />
         <meta property="og:title" content={article.title} />
         <meta property="og:description" content={article.excerpt || ''} />

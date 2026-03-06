@@ -4,8 +4,9 @@ import { useSettings } from '../../context/SettingsContext.jsx'
 export default function Footer() {
   const year = new Date().getFullYear()
   const { settings } = useSettings()
+  const siteName = settings.site_name || settings.hero_name || 'Portfolio'
 
-  const footerText = settings.footer_text || `© ${year} BrondonJores. Tous droits reserves.`
+  const footerText = settings.footer_text || `© ${year} ${siteName}. Tous droits reserves.`
   const footerCredits = settings.footer_credits || 'Construit avec React, Tailwind CSS et Heroicons'
 
   return (

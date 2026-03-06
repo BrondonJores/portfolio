@@ -24,10 +24,13 @@ export default function Navbar() {
   const { settings } = useSettings()
   const location = useLocation()
 
-  const heroName = settings.hero_name || ''
-  const logoInitials = heroName
-    ? heroName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
-    : 'BJ'
+  const siteName = settings.site_name || settings.hero_name || 'Portfolio'
+  const logoInitials = siteName
+    .split(' ')
+    .map((token) => token[0] || '')
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
 
   /* Sur la page d'accueil, on utilise les ancres pour le scroll fluide */
   const isHome = location.pathname === '/'
@@ -92,10 +95,10 @@ export default function Navbar() {
           to="/"
           className="text-xl font-bold"
           style={{ color: 'var(--color-accent)' }}
-          aria-label="BrondonJores - Accueil"
+          aria-label={`${siteName} - Accueil`}
         >
           {settings.logo_url ? (
-            <img src={settings.logo_url} alt="Logo" className="h-8 w-auto" />
+            <img src={settings.logo_url} alt={`Logo de ${siteName}`} className="h-8 w-auto" />
           ) : (
             logoInitials
           )}

@@ -1,18 +1,20 @@
 /* Controleur des campagnes newsletter */
 const { NewsletterCampaign, Subscriber, Setting } = require('../models')
-const { sendNewsletter } = require('../services/mailerService')
+const { sendNewsletter, resolveDeliveryMode } = require('../services/mailerService')
 
-const SMTP_DEBUG = String(process.env.SMTP_DEBUG || '').toLowerCase() === 'true'
+const MAIL_DEBUG = String(process.env.MAIL_DEBUG || process.env.SMTP_DEBUG || '').toLowerCase() === 'true'
 
 function debug(...args) {
-  if (SMTP_DEBUG) console.log('[newsletter]', ...args)
+  if (MAIL_DEBUG) {
+    console.log('[newsletter]', ...args)
+  }
 }
 
 function sanitizeError(err) {
   return {
     error: err?.message || 'Erreur',
     code: err?.code,
-    stack: SMTP_DEBUG ? err?.stack : undefined,
+    stack: MAIL_DEBUG ? err?.stack : undefined,
   }
 }
 
@@ -68,13 +70,13 @@ async function update(req, res, next) {
 
     const campaign = await NewsletterCampaign.findByPk(id)
 
-    if (!campaign)
+    if (!campaign) {
       return res.status(404).json({ error: 'Campagne introuvable.' })
+    }
 
-    if (campaign.status === 'sent')
-      return res
-        .status(400)
-        .json({ error: 'Impossible de modifier une campagne déjà envoyée.' })
+    if (campaign.status === 'sent') {
+      return res.status(400).json({ error: 'Impossible de modifier une campagne deja envoyee.' })
+    }
 
     await campaign.update({
       subject,
@@ -96,13 +98,13 @@ async function remove(req, res, next) {
     const { id } = req.params
     const campaign = await NewsletterCampaign.findByPk(id)
 
-    if (!campaign)
+    if (!campaign) {
       return res.status(404).json({ error: 'Campagne introuvable.' })
+    }
 
-    if (campaign.status === 'sent')
-      return res
-        .status(400)
-        .json({ error: 'Impossible de supprimer une campagne déjà envoyée.' })
+    if (campaign.status === 'sent') {
+      return res.status(400).json({ error: 'Impossible de supprimer une campagne deja envoyee.' })
+    }
 
     await campaign.destroy()
     return res.status(204).end()
@@ -118,22 +120,21 @@ async function send(req, res, next) {
     const { id } = req.params
     const campaign = await NewsletterCampaign.findByPk(id)
 
-    if (!campaign)
+    if (!campaign) {
       return res.status(404).json({ error: 'Campagne introuvable.' })
+    }
 
-    if (campaign.status === 'sent')
-      return res
-        .status(400)
-        .json({ error: 'Cette campagne a déjà été envoyée.' })
+    if (campaign.status === 'sent') {
+      return res.status(400).json({ error: 'Cette campagne a deja ete envoyee.' })
+    }
 
     const subscribers = await Subscriber.findAll({
       where: { confirmed: true },
     })
 
-    if (subscribers.length === 0)
-      return res
-        .status(400)
-        .json({ error: 'Aucun abonné confirmé.' })
+    if (subscribers.length === 0) {
+      return res.status(400).json({ error: 'Aucun abonne confirme.' })
+    }
 
     const settingRows = await Setting.findAll()
     const settings = {}
@@ -144,17 +145,17 @@ async function send(req, res, next) {
     debug('send:start', {
       campaignId: campaign.id,
       subscribers: subscribers.length,
-      smtpHost: process.env.SMTP_HOST,
-      smtpPort: process.env.SMTP_PORT,
-      smtpSecure: process.env.SMTP_SECURE,
+      deliveryMode: resolveDeliveryMode(),
+      devSmtpHost: process.env.DEV_SMTP_HOST || process.env.SMTP_HOST,
+      devSmtpPort: process.env.DEV_SMTP_PORT || process.env.SMTP_PORT,
+      brevoConfigured: Boolean(process.env.BREVO_API_KEY),
     })
 
-    // Envoi synchronisé (comme ton code), mais logs + erreurs plus explicites
     const result = await sendNewsletter({
       campaign,
       subscribers,
       fromName: settings.newsletter_from_name || 'Newsletter',
-      fromEmail: settings.newsletter_from_email || process.env.SMTP_USER,
+      fromEmail: settings.newsletter_from_email || process.env.BREVO_SENDER_EMAIL || process.env.DEV_SMTP_USER || process.env.SMTP_USER,
       settings,
     })
 
@@ -171,12 +172,11 @@ async function send(req, res, next) {
   } catch (err) {
     debug('send:error', sanitizeError(err))
 
-    // Si c'est un timeout SMTP, on renvoie un message clair
     const msg = err?.message || ''
     if (/Connection timeout/i.test(msg) || /timeout/i.test(msg)) {
       return res.status(502).json({
-        error: 'Connection timeout (SMTP). Le serveur ne parvient pas à joindre le relay SMTP.',
-        details: SMTP_DEBUG ? sanitizeError(err) : undefined,
+        error: 'Mail provider timeout. Le serveur ne parvient pas a joindre le service d envoi.',
+        details: MAIL_DEBUG ? sanitizeError(err) : undefined,
       })
     }
 
