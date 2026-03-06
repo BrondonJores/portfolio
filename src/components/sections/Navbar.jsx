@@ -75,10 +75,12 @@ export default function Navbar() {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-md"
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
       style={{
-        backgroundColor: isScrolled ? 'rgba(10, 10, 15, 0.95)' : 'rgba(10, 10, 15, 0.7)',
+        backgroundColor: isScrolled ? 'var(--ui-navbar-bg-scrolled)' : 'var(--ui-navbar-bg)',
         borderBottom: '1px solid var(--color-border)',
+        backdropFilter: 'blur(var(--ui-navbar-blur))',
+        WebkitBackdropFilter: 'blur(var(--ui-navbar-blur))',
       }}
     >
       <nav

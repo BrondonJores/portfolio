@@ -89,7 +89,7 @@ function generateNewsletterHtml(settings, payload) {
         .join(' &nbsp;·&nbsp; ')
     : ''
 
-  const siteUrl = (s.site_url || 'https://brondonjores.dev').replace(/\/$/, '')
+  const siteUrl = (s.site_url || 'https://brondonjores.me').replace(/\/$/, '')
   let articlesHtml = ''
   if (Array.isArray(p.articles) && p.articles.length > 0) {
     const articleCards = p.articles.map((article) => {

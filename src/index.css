@@ -1,37 +1,76 @@
-/* Import des polices self-hosted via Fontsource */
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
-
-/* Import de Tailwind CSS v4 */
 @import "tailwindcss";
 
-/* Variables CSS du design system "Aurora Noir" - theme sombre par defaut */
 :root {
-  --color-bg-primary:    #060b0f;
-  --color-bg-secondary:  #0a1118;
-  --color-bg-card:       #0f1a22;
-  --color-accent:        #00d4a8;
-  --color-accent-light:  #4df5d0;
-  --color-accent-glow:   rgba(0, 212, 168, 0.20);
-  --color-text-primary:  #e8f4f1;
-  --color-text-secondary:#7a9fa0;
-  --color-border:        #132028;
+  --theme-dark-bg-primary: #060b0f;
+  --theme-dark-bg-secondary: #0a1118;
+  --theme-dark-bg-card: #0f1a22;
+  --theme-dark-accent: #00d4a8;
+  --theme-dark-accent-light: #4df5d0;
+  --theme-dark-accent-glow: rgba(0, 212, 168, 0.2);
+  --theme-dark-text-primary: #e8f4f1;
+  --theme-dark-text-secondary: #7a9fa0;
+  --theme-dark-border: #132028;
+  --theme-dark-navbar-bg: rgba(10, 17, 24, 0.7);
+  --theme-dark-navbar-bg-scrolled: rgba(10, 17, 24, 0.95);
+
+  --theme-light-bg-primary: #f0faf8;
+  --theme-light-bg-secondary: #e3f6f2;
+  --theme-light-bg-card: #ffffff;
+  --theme-light-accent: #00a688;
+  --theme-light-accent-light: #00c49a;
+  --theme-light-accent-glow: rgba(0, 166, 136, 0.12);
+  --theme-light-text-primary: #0a1f1c;
+  --theme-light-text-secondary: #3d7a72;
+  --theme-light-border: #b8e0d9;
+  --theme-light-navbar-bg: rgba(227, 246, 242, 0.75);
+  --theme-light-navbar-bg-scrolled: rgba(227, 246, 242, 0.95);
+
+  --color-bg-primary: var(--theme-dark-bg-primary);
+  --color-bg-secondary: var(--theme-dark-bg-secondary);
+  --color-bg-card: var(--theme-dark-bg-card);
+  --color-accent: var(--theme-dark-accent);
+  --color-accent-light: var(--theme-dark-accent-light);
+  --color-accent-glow: var(--theme-dark-accent-glow);
+  --color-text-primary: var(--theme-dark-text-primary);
+  --color-text-secondary: var(--theme-dark-text-secondary);
+  --color-border: var(--theme-dark-border);
+
+  --ui-navbar-bg: var(--theme-dark-navbar-bg);
+  --ui-navbar-bg-scrolled: var(--theme-dark-navbar-bg-scrolled);
+  --ui-navbar-blur: 12px;
+
+  --font-family-body: "Inter Variable", sans-serif;
+  --font-family-heading: "Inter Variable", sans-serif;
+  --font-family-mono: "JetBrains Mono Variable", monospace;
+  --ui-font-scale: 1;
+  --ui-radius-base: 12px;
+  --ui-radius-sm: calc(var(--ui-radius-base) * 0.66);
+  --ui-radius-md: calc(var(--ui-radius-base) * 0.88);
+  --ui-radius-lg: var(--ui-radius-base);
+  --ui-radius-xl: calc(var(--ui-radius-base) * 1.33);
+  --ui-radius-2xl: calc(var(--ui-radius-base) * 1.66);
+  --ui-transition-ms: 300ms;
+  --ui-hero-blur: 80px;
+  --ui-hero-speed-factor: 1;
+  --ui-glow-strength: 1;
 }
 
-/* Variables CSS pour le theme clair */
 :root.light {
-  --color-bg-primary:    #f0faf8;
-  --color-bg-secondary:  #e3f6f2;
-  --color-bg-card:       #ffffff;
-  --color-accent:        #00a688;
-  --color-accent-light:  #00c49a;
-  --color-accent-glow:   rgba(0, 166, 136, 0.12);
-  --color-text-primary:  #0a1f1c;
-  --color-text-secondary:#3d7a72;
-  --color-border:        #b8e0d9;
+  --color-bg-primary: var(--theme-light-bg-primary);
+  --color-bg-secondary: var(--theme-light-bg-secondary);
+  --color-bg-card: var(--theme-light-bg-card);
+  --color-accent: var(--theme-light-accent);
+  --color-accent-light: var(--theme-light-accent-light);
+  --color-accent-glow: var(--theme-light-accent-glow);
+  --color-text-primary: var(--theme-light-text-primary);
+  --color-text-secondary: var(--theme-light-text-secondary);
+  --color-border: var(--theme-light-border);
+  --ui-navbar-bg: var(--theme-light-navbar-bg);
+  --ui-navbar-bg-scrolled: var(--theme-light-navbar-bg-scrolled);
 }
 
-/* Styles globaux */
 html {
   scroll-behavior: smooth;
 }
@@ -39,11 +78,49 @@ html {
 body {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
-  font-family: "Inter Variable", sans-serif;
-  transition: background-color 300ms ease, color 300ms ease;
+  font-family: var(--font-family-body);
+  font-size: calc(16px * var(--ui-font-scale));
+  transition:
+    background-color var(--ui-transition-ms) ease,
+    color var(--ui-transition-ms) ease;
 }
 
-/* Scrollbar personnalisee style sombre */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-family-heading);
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-family-mono);
+}
+
+.rounded {
+  border-radius: var(--ui-radius-sm) !important;
+}
+
+.rounded-md {
+  border-radius: var(--ui-radius-md) !important;
+}
+
+.rounded-lg {
+  border-radius: var(--ui-radius-lg) !important;
+}
+
+.rounded-xl {
+  border-radius: var(--ui-radius-xl) !important;
+}
+
+.rounded-2xl {
+  border-radius: var(--ui-radius-2xl) !important;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -61,12 +138,10 @@ body {
   background: var(--color-accent);
 }
 
-/* Classe utilitaire glow accent */
 .glow-accent {
-  box-shadow: 0 0 20px var(--color-accent-glow);
+  box-shadow: 0 0 calc(20px * var(--ui-glow-strength)) var(--color-accent-glow);
 }
 
-/* Classe gradient text */
 .gradient-text {
   background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
   -webkit-background-clip: text;
@@ -74,9 +149,17 @@ body {
   background-clip: text;
 }
 
-/* Animation aurora pour les blobs de fond */
 @keyframes aurora-float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -20px) scale(1.05); }
-  66% { transform: translate(-20px, 15px) scale(0.97); }
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(30px, -20px) scale(1.05);
+  }
+
+  66% {
+    transform: translate(-20px, 15px) scale(0.97);
+  }
 }

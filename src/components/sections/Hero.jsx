@@ -38,6 +38,10 @@ export default function Hero() {
 
   const bio = settings.hero_bio || 'Je construis des applications web modernes, performantes et securisees.'
   const availability = settings.contact_availability || 'Disponible pour des projets'
+  const heroSpeedFactorRaw = Number(settings.ui_hero_speed_factor)
+  const heroSpeedFactor = Number.isFinite(heroSpeedFactorRaw)
+    ? Math.min(2, Math.max(0.5, heroSpeedFactorRaw))
+    : 1
 
   return (
     <section
@@ -56,7 +60,7 @@ export default function Hero() {
           ],
         }}
         transition={{
-          duration: 12,
+          duration: 12 / heroSpeedFactor,
           repeat: Infinity,
           ease: 'linear',
         }}
@@ -70,8 +74,8 @@ export default function Hero() {
           top: '10%',
           left: '5%',
           background: 'var(--color-accent-glow)',
-          filter: 'blur(80px)',
-          animation: 'aurora-float 10s ease-in-out infinite',
+          filter: 'blur(var(--ui-hero-blur))',
+          animation: 'aurora-float calc(10s / var(--ui-hero-speed-factor)) ease-in-out infinite',
         }}
       />
       <div
@@ -79,9 +83,9 @@ export default function Hero() {
         style={{
           top: '50%',
           right: '5%',
-          background: 'rgba(77, 245, 208, 0.08)',
-          filter: 'blur(70px)',
-          animation: 'aurora-float 14s ease-in-out infinite reverse',
+          background: 'var(--color-accent-glow)',
+          filter: 'blur(calc(var(--ui-hero-blur) * 0.88))',
+          animation: 'aurora-float calc(14s / var(--ui-hero-speed-factor)) ease-in-out infinite reverse',
         }}
       />
       <div
@@ -90,8 +94,8 @@ export default function Hero() {
           bottom: '15%',
           left: '40%',
           background: 'var(--color-accent-glow)',
-          filter: 'blur(60px)',
-          animation: 'aurora-float 18s ease-in-out infinite',
+          filter: 'blur(calc(var(--ui-hero-blur) * 0.75))',
+          animation: 'aurora-float calc(18s / var(--ui-hero-speed-factor)) ease-in-out infinite',
         }}
       />
 

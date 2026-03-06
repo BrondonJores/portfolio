@@ -6,14 +6,12 @@ module.exports = {
     const now = new Date()
 
     const settings = [
-      /* ── Identité ─────────────────────────────────────────── */
-      { key: 'hero_name',   value: 'Brondon Jores' },
-      { key: 'hero_title',  value: 'Developpeur Full Stack' },
-      { key: 'bio',         value: "Developpeur Full Stack passionne par la creation d'applications web modernes et performantes. Je me specialise dans l'ecosysteme JavaScript avec React pour le frontend et Node.js pour le backend." },
-      { key: 'avatar_url',  value: '' },
-      { key: 'logo_url',    value: '' },
+      { key: 'hero_name', value: 'Brondon Jores' },
+      { key: 'hero_title', value: 'Developpeur Full Stack' },
+      { key: 'bio', value: "Developpeur Full Stack passionne par la creation d'applications web modernes et performantes. Je me specialise dans l'ecosysteme JavaScript avec React pour le frontend et Node.js pour le backend." },
+      { key: 'avatar_url', value: '' },
+      { key: 'logo_url', value: '' },
 
-      /* Statistiques About */
       { key: 'stat_1_value', value: '3+' },
       { key: 'stat_1_label', value: "ans d'experience" },
       { key: 'stat_2_value', value: '20+' },
@@ -21,28 +19,53 @@ module.exports = {
       { key: 'stat_3_value', value: '10+' },
       { key: 'stat_3_label', value: 'clients satisfaits' },
 
-      /* ── Réseaux sociaux ───────────────────────────────────── */
-      { key: 'github_url',    value: 'https://github.com/BrondonJores' },
-      { key: 'linkedin_url',  value: 'https://linkedin.com/in/brondonjores' },
-      { key: 'twitter_url',   value: '' },
-      { key: 'youtube_url',   value: '' },
+      { key: 'github_url', value: 'https://github.com/BrondonJores' },
+      { key: 'linkedin_url', value: 'https://linkedin.com/in/brondonjores' },
+      { key: 'twitter_url', value: '' },
+      { key: 'youtube_url', value: '' },
       { key: 'instagram_url', value: '' },
 
-      /* ── Contact ───────────────────────────────────────────── */
-      { key: 'contact_email',        value: 'contact@brondonjores.dev' },
-      { key: 'contact_location',     value: 'France' },
+      { key: 'contact_email', value: 'contact@brondonjores.dev' },
+      { key: 'contact_location', value: 'France' },
       { key: 'contact_availability', value: 'Disponible pour des projets' },
 
-      /* ── SEO ───────────────────────────────────────────────── */
-      { key: 'seo_title',       value: 'BrondonJores - Developpeur Full Stack' },
+      { key: 'seo_title', value: 'BrondonJores - Developpeur Full Stack' },
       { key: 'seo_description', value: 'Portfolio de BrondonJores, developpeur Full Stack specialise React et Node.js. Applications web modernes, performantes et securisees.' },
-      { key: 'seo_keywords',    value: 'developpeur, full stack, react, node.js, javascript, portfolio' },
-      { key: 'og_image_url',    value: '' },
+      { key: 'seo_keywords', value: 'developpeur, full stack, react, node.js, javascript, portfolio' },
+      { key: 'og_image_url', value: '' },
 
-      /* ── Apparence ─────────────────────────────────────────── */
-      { key: 'footer_text',      value: 'Tous droits reserves.' },
-      { key: 'footer_credits',   value: 'Construit avec React, Tailwind CSS et Heroicons' },
+      { key: 'footer_text', value: 'Tous droits reserves.' },
+      { key: 'footer_credits', value: 'Construit avec React, Tailwind CSS et Heroicons' },
       { key: 'maintenance_mode', value: 'false' },
+
+      { key: 'theme_dark_bg_primary', value: '#060b0f' },
+      { key: 'theme_dark_bg_secondary', value: '#0a1118' },
+      { key: 'theme_dark_bg_card', value: '#0f1a22' },
+      { key: 'theme_dark_accent', value: '#00d4a8' },
+      { key: 'theme_dark_accent_light', value: '#4df5d0' },
+      { key: 'theme_dark_text_primary', value: '#e8f4f1' },
+      { key: 'theme_dark_text_secondary', value: '#7a9fa0' },
+      { key: 'theme_dark_border', value: '#132028' },
+      { key: 'theme_light_bg_primary', value: '#f0faf8' },
+      { key: 'theme_light_bg_secondary', value: '#e3f6f2' },
+      { key: 'theme_light_bg_card', value: '#ffffff' },
+      { key: 'theme_light_accent', value: '#00a688' },
+      { key: 'theme_light_accent_light', value: '#00c49a' },
+      { key: 'theme_light_text_primary', value: '#0a1f1c' },
+      { key: 'theme_light_text_secondary', value: '#3d7a72' },
+      { key: 'theme_light_border', value: '#b8e0d9' },
+      { key: 'ui_font_body', value: 'inter' },
+      { key: 'ui_font_heading', value: 'inter' },
+      { key: 'ui_font_mono', value: 'jetbrains' },
+      { key: 'ui_font_scale', value: '1' },
+      { key: 'ui_radius_base', value: '12' },
+      { key: 'ui_glow_strength', value: '1' },
+      { key: 'ui_transition_speed', value: '300' },
+      { key: 'ui_hero_blur', value: '80' },
+      { key: 'ui_hero_speed_factor', value: '1' },
+      { key: 'ui_navbar_blur', value: '12' },
+      { key: 'ui_navbar_opacity', value: '0.7' },
+      { key: 'ui_navbar_opacity_scrolled', value: '0.95' },
     ].map((s) => ({ ...s, updated_at: now }))
 
     await queryInterface.bulkInsert('settings', settings, {})

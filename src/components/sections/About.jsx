@@ -37,7 +37,7 @@ export default function About() {
               <div
                 className="w-64 h-64 rounded-2xl flex items-center justify-center text-6xl font-black select-none"
                 style={{
-                  background: 'linear-gradient(135deg, var(--color-accent), #818cf8)',
+                  background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-light))',
                   color: '#fff',
                 }}
                 aria-label={`Avatar de ${heroName} avec initiales ${initials}`}
