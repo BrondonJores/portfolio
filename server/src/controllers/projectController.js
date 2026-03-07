@@ -1,3 +1,4 @@
+/* Controleur HTTP project : delegue le metier au service associe. */
 const {
   getAllPublicProjects,
   getPublicProjectBySlug,
@@ -7,6 +8,13 @@ const {
   deleteProject,
 } = require('../services/projectService')
 
+/**
+ * Recupere les projets publics avec filtres optionnels et pagination.
+ * @param {import('express').Request} req Requete (query: page, limit, tag, featured).
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres envoi du resultat.
+ */
 async function getAllPublic(req, res, next) {
   try {
     const result = await getAllPublicProjects({
@@ -22,6 +30,13 @@ async function getAllPublic(req, res, next) {
   }
 }
 
+/**
+ * Recupere le detail d'un projet public par slug.
+ * @param {import('express').Request} req Requete contenant `params.slug`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres serialisation JSON.
+ */
 async function getBySlug(req, res, next) {
   try {
     const project = await getPublicProjectBySlug(req.params.slug)
@@ -31,6 +46,13 @@ async function getBySlug(req, res, next) {
   }
 }
 
+/**
+ * Liste tous les projets en contexte administration.
+ * @param {import('express').Request} req Requete HTTP.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres envoi des donnees.
+ */
 async function getAllAdmin(req, res, next) {
   try {
     const projects = await getAllAdminProjects()
@@ -40,6 +62,13 @@ async function getAllAdmin(req, res, next) {
   }
 }
 
+/**
+ * Cree un nouveau projet.
+ * @param {import('express').Request} req Requete contenant le payload projet.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres creation.
+ */
 async function create(req, res, next) {
   try {
     const project = await createProject(req.body)
@@ -49,6 +78,13 @@ async function create(req, res, next) {
   }
 }
 
+/**
+ * Met a jour un projet existant.
+ * @param {import('express').Request} req Requete contenant `params.id` + payload.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres mise a jour.
+ */
 async function update(req, res, next) {
   try {
     const project = await updateProject(req.params.id, req.body)
@@ -58,6 +94,13 @@ async function update(req, res, next) {
   }
 }
 
+/**
+ * Supprime un projet.
+ * @param {import('express').Request} req Requete contenant `params.id`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres suppression.
+ */
 async function remove(req, res, next) {
   try {
     await deleteProject(req.params.id)

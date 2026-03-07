@@ -1,8 +1,15 @@
+/* Service metier project : regles applicatives et acces donnees. */
 const { Op } = require('sequelize')
 const slugifyLib = require('slugify')
 const { Project } = require('../models')
 const { createHttpError } = require('../utils/httpError')
 
+/**
+ * Convertit une valeur en entier strictement positif.
+ * @param {unknown} value Valeur source.
+ * @param {number} fallback Valeur de repli.
+ * @returns {number} Entier positif valide.
+ */
 function parsePositiveInt(value, fallback) {
   const parsed = Number.parseInt(value, 10)
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -11,11 +18,28 @@ function parsePositiveInt(value, fallback) {
   return parsed
 }
 
+/**
+ * Construit le service projet avec dependances injectables.
+ * @param {object} [deps={}] Dependances externes.
+ * @param {object} [deps.projectModel] Modele projet.
+ * @param {Function} [deps.slugify] Fonction de slugification.
+ * @param {symbol|string} [deps.likeOperator] Operateur SQL LIKE.
+ * @returns {object} API metier projet.
+ */
 function createProjectService(deps = {}) {
   const projectModel = deps.projectModel || Project
   const slugify = deps.slugify || slugifyLib
   const likeOperator = deps.likeOperator || Op.like
 
+  /**
+   * Liste les projets publics avec filtres et pagination.
+   * @param {object} params Parametres de recherche.
+   * @param {string|number|undefined} params.page Numero de page.
+   * @param {string|number|undefined} params.limit Taille de page.
+   * @param {string|undefined} params.tag Filtre tag.
+   * @param {string|undefined} params.featured Filtre featured.
+   * @returns {Promise<{data:Array,pagination:{total:number,page:number,limit:number,pages:number}}>} Resultat pagine.
+   */
   async function getAllPublicProjects({ page, limit, tag, featured }) {
     const safePage = parsePositiveInt(page, 1)
     const safeLimit = parsePositiveInt(limit, 10)
@@ -48,6 +72,12 @@ function createProjectService(deps = {}) {
     }
   }
 
+  /**
+   * Recupere un projet public par slug.
+   * @param {string} slug Slug projet.
+   * @returns {Promise<object>} Projet trouve.
+   * @throws {Error} Erreur 404 si projet introuvable.
+   */
   async function getPublicProjectBySlug(slug) {
     const project = await projectModel.findOne({
       where: { slug, published: true },
@@ -60,10 +90,19 @@ function createProjectService(deps = {}) {
     return project
   }
 
+  /**
+   * Liste tous les projets (admin).
+   * @returns {Promise<Array>} Liste complete.
+   */
   async function getAllAdminProjects() {
     return projectModel.findAll({ order: [['created_at', 'DESC']] })
   }
 
+  /**
+   * Cree un nouveau projet et calcule son slug.
+   * @param {object} payload Donnees projet valides.
+   * @returns {Promise<object>} Projet cree.
+   */
   async function createProject(payload) {
     const { title, description, content, tags, github_url, demo_url, image_url, featured, published } = payload
     const slug = slugify(title, { lower: true, strict: true })
@@ -82,6 +121,13 @@ function createProjectService(deps = {}) {
     })
   }
 
+  /**
+   * Met a jour un projet et regenere le slug si le titre change.
+   * @param {number|string} id Identifiant projet.
+   * @param {object} payload Champs a mettre a jour.
+   * @returns {Promise<object>} Projet mis a jour.
+   * @throws {Error} Erreur 404 si projet introuvable.
+   */
   async function updateProject(id, payload) {
     const project = await projectModel.findByPk(id)
 
@@ -98,6 +144,12 @@ function createProjectService(deps = {}) {
     return project
   }
 
+  /**
+   * Supprime un projet.
+   * @param {number|string} id Identifiant projet.
+   * @returns {Promise<void>} Promise resolue apres suppression.
+   * @throws {Error} Erreur 404 si projet introuvable.
+   */
   async function deleteProject(id) {
     const project = await projectModel.findByPk(id)
 

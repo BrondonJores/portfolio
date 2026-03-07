@@ -1,3 +1,4 @@
+# Pipeline CI backend: lint, tests unitaires, migrations, seed et smoke test
 name: CI
 
 on:

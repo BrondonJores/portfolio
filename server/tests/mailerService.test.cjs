@@ -1,13 +1,25 @@
+/* Test unitaire des modes de livraison du service mailer. */
 const assert = require('node:assert/strict')
 
 const MAILER_MODULE_PATH = '../src/services/mailerService'
 
+/**
+ * Recharge le module mailer sans cache Node.js.
+ * Utile pour relire les variables d'environnement a chaque test.
+ * @returns {object} Export courant du module mailer.
+ */
 function loadMailerFresh() {
   const resolved = require.resolve(MAILER_MODULE_PATH)
   delete require.cache[resolved]
   return require(MAILER_MODULE_PATH)
 }
 
+/**
+ * Applique un patch temporaire sur `process.env` pendant l'execution d'un callback.
+ * @param {Record<string, unknown>} patch Variables a ajouter/surcharger/supprimer.
+ * @param {Function} callback Fonction a executer avec cet environnement.
+ * @returns {void}
+ */
 function withEnv(patch, callback) {
   const keys = Object.keys(patch)
   const previous = {}
@@ -38,6 +50,12 @@ function withEnv(patch, callback) {
 
 let failures = 0
 
+/**
+ * Execute un cas de test unitaire et trace PASS/FAIL.
+ * @param {string} name Nom humain du test.
+ * @param {Function} callback Scenario de test.
+ * @returns {void}
+ */
 function runCase(name, callback) {
   try {
     callback()

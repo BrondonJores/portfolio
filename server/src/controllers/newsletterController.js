@@ -1,3 +1,4 @@
+/* Controleur HTTP newsletter : delegue le metier au service associe. */
 const {
   getAllCampaigns,
   createCampaign,
@@ -6,6 +7,13 @@ const {
   sendCampaign,
 } = require('../services/newsletterService')
 
+/**
+ * Liste les campagnes newsletter (admin).
+ * @param {import('express').Request} req Requete HTTP.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres envoi de la liste.
+ */
 async function getAll(req, res, next) {
   try {
     const campaigns = await getAllCampaigns()
@@ -15,6 +23,13 @@ async function getAll(req, res, next) {
   }
 }
 
+/**
+ * Cree une campagne newsletter en brouillon.
+ * @param {import('express').Request} req Requete contenant le payload campagne.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres creation.
+ */
 async function create(req, res, next) {
   try {
     const campaign = await createCampaign(req.body)
@@ -24,6 +39,13 @@ async function create(req, res, next) {
   }
 }
 
+/**
+ * Met a jour une campagne existante.
+ * @param {import('express').Request} req Requete contenant `params.id` et les champs a modifier.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres mise a jour.
+ */
 async function update(req, res, next) {
   try {
     const campaign = await updateCampaign(req.params.id, req.body)
@@ -33,6 +55,13 @@ async function update(req, res, next) {
   }
 }
 
+/**
+ * Supprime une campagne non envoyee.
+ * @param {import('express').Request} req Requete contenant `params.id`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres suppression.
+ */
 async function remove(req, res, next) {
   try {
     await deleteCampaign(req.params.id)
@@ -42,6 +71,14 @@ async function remove(req, res, next) {
   }
 }
 
+/**
+ * Envoie une campagne newsletter a tous les abonnes confirmes.
+ * Intercepte explicitement les erreurs timeout provider pour renvoyer un 502 lisible.
+ * @param {import('express').Request} req Requete contenant `params.id`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres envoi ou propagation d'erreur.
+ */
 async function send(req, res, next) {
   try {
     const result = await sendCampaign(req.params.id)

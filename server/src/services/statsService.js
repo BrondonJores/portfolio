@@ -1,6 +1,13 @@
+/* Service metier stats : regles applicatives et acces donnees. */
 const sequelizeLib = require('sequelize')
 const { Message, Project, Article } = require('../models')
 
+/**
+ * Construit la fenetre glissante des 6 derniers mois (mois courant inclus).
+ * @param {Function} now Fabrique de date courante.
+ * @param {string} locale Locale d'affichage des labels mois.
+ * @returns {Array<{key:string,label:string}>} Serie de mois.
+ */
 function buildLastSixMonths(now, locale) {
   const months = []
   const baseDate = now()
@@ -15,10 +22,20 @@ function buildLastSixMonths(now, locale) {
   return months
 }
 
+/**
+ * Convertit des lignes SQL agregees en map mois -> valeur numerique.
+ * @param {Array<{month:string,count:string|number}>} rawRows Lignes d'aggregation.
+ * @returns {Record<string, number>} Map des comptes.
+ */
 function toCountMap(rawRows) {
   return Object.fromEntries(rawRows.map((row) => [row.month, Number.parseInt(row.count, 10)]))
 }
 
+/**
+ * Construit le service statistiques avec dependances injectables.
+ * @param {object} [deps={}] Dependances externes.
+ * @returns {{getDashboardStats: Function}} API stats.
+ */
 function createStatsService(deps = {}) {
   const messageModel = deps.messageModel || Message
   const projectModel = deps.projectModel || Project
@@ -28,10 +45,19 @@ function createStatsService(deps = {}) {
   const sequelizeFns = deps.sequelizeFns || sequelizeLib
   const { Op, fn, col, literal } = sequelizeFns
 
+  /**
+   * Construit l'expression SQL de formatage mois `YYYY-MM`.
+   * @param {string} field Nom de colonne SQL date.
+   * @returns {unknown} Expression Sequelize utilisable en attribut.
+   */
   function monthSql(field) {
     return fn('to_char', col(field), 'YYYY-MM')
   }
 
+  /**
+   * Retourne les statistiques mensuelles du dashboard admin.
+   * @returns {Promise<Array<{month:string,messages:number,projets:number,articles:number}>>} Serie exploitable par graphique.
+   */
   async function getDashboardStats() {
     const since = now()
     since.setMonth(since.getMonth() - 5)

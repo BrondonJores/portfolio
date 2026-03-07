@@ -1,9 +1,17 @@
+/* Controleur HTTP message : delegue le metier au service associe. */
 const {
   createContactMessage,
   getAllMessages,
   markMessageAsRead,
 } = require('../services/messageService')
 
+/**
+ * Cree un message de contact depuis la page publique.
+ * @param {import('express').Request} req Requete contenant nom, email et message.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres creation.
+ */
 async function create(req, res, next) {
   try {
     await createContactMessage(req.body)
@@ -13,6 +21,13 @@ async function create(req, res, next) {
   }
 }
 
+/**
+ * Liste tous les messages de contact pour l'administration.
+ * @param {import('express').Request} req Requete HTTP.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres reponse JSON.
+ */
 async function getAll(req, res, next) {
   try {
     const messages = await getAllMessages()
@@ -22,6 +37,13 @@ async function getAll(req, res, next) {
   }
 }
 
+/**
+ * Marque un message comme lu.
+ * @param {import('express').Request} req Requete contenant `params.id`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres mise a jour.
+ */
 async function markAsRead(req, res, next) {
   try {
     const message = await markMessageAsRead(req.params.id)

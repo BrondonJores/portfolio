@@ -1,7 +1,15 @@
+/* Service metier article : regles applicatives et acces donnees. */
 const slugifyLib = require('slugify')
 const { Article } = require('../models')
 const { createHttpError } = require('../utils/httpError')
 
+/**
+ * Convertit une valeur en entier strictement positif.
+ * Utilise une valeur de repli si la conversion est invalide.
+ * @param {unknown} value Valeur a convertir.
+ * @param {number} fallback Valeur par defaut.
+ * @returns {number} Entier positif valide.
+ */
 function parsePositiveInt(value, fallback) {
   const parsed = Number.parseInt(value, 10)
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -10,11 +18,26 @@ function parsePositiveInt(value, fallback) {
   return parsed
 }
 
+/**
+ * Construit une instance du service article avec dependances injectables.
+ * @param {object} [deps={}] Dependances externes surchargeables pour tests/DI.
+ * @param {object} [deps.articleModel] Modele Sequelize article.
+ * @param {Function} [deps.slugify] Fonction de generation de slug.
+ * @param {Function} [deps.now] Fabrique de date courante.
+ * @returns {object} API du service article.
+ */
 function createArticleService(deps = {}) {
   const articleModel = deps.articleModel || Article
   const slugify = deps.slugify || slugifyLib
   const now = deps.now || (() => new Date())
 
+  /**
+   * Liste les articles publies avec pagination.
+   * @param {object} params Parametres de pagination.
+   * @param {string|number|undefined} params.page Numero de page.
+   * @param {string|number|undefined} params.limit Taille de page.
+   * @returns {Promise<{data: Array, pagination: {total:number,page:number,limit:number,pages:number}}>} Resultat pagine.
+   */
   async function getAllPublicArticles({ page, limit }) {
     const safePage = parsePositiveInt(page, 1)
     const safeLimit = parsePositiveInt(limit, 10)
@@ -38,6 +61,12 @@ function createArticleService(deps = {}) {
     }
   }
 
+  /**
+   * Recherche un article publie par slug.
+   * @param {string} slug Slug de l'article.
+   * @returns {Promise<object>} Article trouve.
+   * @throws {Error} Erreur 404 si article inexistant.
+   */
   async function getPublicArticleBySlug(slug) {
     const article = await articleModel.findOne({
       where: { slug, published: true },
@@ -50,10 +79,19 @@ function createArticleService(deps = {}) {
     return article
   }
 
+  /**
+   * Recupere tous les articles pour l'administration.
+   * @returns {Promise<Array>} Liste complete des articles.
+   */
   async function getAllAdminArticles() {
     return articleModel.findAll({ order: [['created_at', 'DESC']] })
   }
 
+  /**
+   * Cree un article en appliquant les regles metier (slug, publication).
+   * @param {object} payload Donnees article valides.
+   * @returns {Promise<object>} Article cree.
+   */
   async function createArticle(payload) {
     const { title, excerpt, content, cover_image, tags, published } = payload
     const slug = slugify(title, { lower: true, strict: true })
@@ -71,6 +109,13 @@ function createArticleService(deps = {}) {
     })
   }
 
+  /**
+   * Met a jour un article existant et regenere le slug si le titre change.
+   * @param {number|string} id Identifiant article.
+   * @param {object} payload Champs a mettre a jour.
+   * @returns {Promise<object>} Article mis a jour.
+   * @throws {Error} Erreur 404 si article inexistant.
+   */
   async function updateArticle(id, payload) {
     const article = await articleModel.findByPk(id)
 
@@ -92,6 +137,12 @@ function createArticleService(deps = {}) {
     return article
   }
 
+  /**
+   * Supprime un article existant.
+   * @param {number|string} id Identifiant article.
+   * @returns {Promise<void>} Promise resolue apres suppression.
+   * @throws {Error} Erreur 404 si article inexistant.
+   */
   async function deleteArticle(id) {
     const article = await articleModel.findByPk(id)
 

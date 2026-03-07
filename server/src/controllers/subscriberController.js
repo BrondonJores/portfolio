@@ -1,3 +1,4 @@
+/* Controleur HTTP subscriber : delegue le metier au service associe. */
 const {
   subscribeToNewsletter,
   unsubscribeFromNewsletter,
@@ -5,6 +6,14 @@ const {
   deleteSubscriber,
 } = require('../services/subscriberService')
 
+/**
+ * Abonne un email a la newsletter.
+ * Retourne 201 a la creation, 200 si deja inscrit (comportement volontaire).
+ * @param {import('express').Request} req Requete contenant `body.email`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres reponse.
+ */
 async function subscribe(req, res, next) {
   try {
     const result = await subscribeToNewsletter(req.body.email)
@@ -15,6 +24,13 @@ async function subscribe(req, res, next) {
   }
 }
 
+/**
+ * Desabonne un utilisateur via son token de desinscription.
+ * @param {import('express').Request} req Requete contenant `params.token`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres envoi de la page HTML.
+ */
 async function unsubscribe(req, res, next) {
   try {
     await unsubscribeFromNewsletter(req.params.token)
@@ -24,6 +40,13 @@ async function unsubscribe(req, res, next) {
   }
 }
 
+/**
+ * Liste tous les abonnes newsletter (admin).
+ * @param {import('express').Request} req Requete HTTP.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres envoi de la liste.
+ */
 async function getAll(req, res, next) {
   try {
     const subscribers = await getAllSubscribers()
@@ -33,6 +56,13 @@ async function getAll(req, res, next) {
   }
 }
 
+/**
+ * Supprime un abonne par identifiant.
+ * @param {import('express').Request} req Requete contenant `params.id`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres suppression.
+ */
 async function remove(req, res, next) {
   try {
     await deleteSubscriber(req.params.id)

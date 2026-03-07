@@ -1,7 +1,13 @@
-/* Service d'envoi d'emails (Brevo en prod, SMTP optionnel en dev) */
+/* Service d'envoi d'emails (Brevo en prod, SMTP optionnel en dev). */
 const nodemailerLib = require('nodemailer')
 const { generateNewsletterHtml } = require('../templates/newsletterTemplate')
 
+/**
+ * Parse une variable booleenne type env (`true`, `1`, `yes`, `on`).
+ * @param {unknown} value Valeur brute a interpreter.
+ * @param {boolean} [fallback=false] Valeur de repli si absente.
+ * @returns {boolean} Booleen calcule.
+ */
 function parseBooleanEnv(value, fallback = false) {
   if (value === undefined || value === null || value === '') {
     return fallback
@@ -9,6 +15,13 @@ function parseBooleanEnv(value, fallback = false) {
   return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase())
 }
 
+/**
+ * Verifie qu'une variable requise existe dans l'objet env.
+ * @param {object} env Objet des variables d'environnement.
+ * @param {string} name Nom de la variable a verifier.
+ * @returns {string} Valeur de la variable.
+ * @throws {Error} Erreur explicite si la variable est manquante.
+ */
 function requireEnv(env, name) {
   const value = env[name]
   if (!value) {
@@ -17,6 +30,11 @@ function requireEnv(env, name) {
   return value
 }
 
+/**
+ * Parse une valeur expediteur au format `Nom <email@domaine>`.
+ * @param {string|undefined|null} fromValue Valeur brute expediteur.
+ * @returns {{name:string,email:string}} Objet expediteur normalise.
+ */
 function parseFromValue(fromValue) {
   const raw = String(fromValue || '').trim()
   if (!raw) {
@@ -38,12 +56,26 @@ function parseFromValue(fromValue) {
   return { name: raw, email: '' }
 }
 
+/**
+ * Construit le service mailer avec dependances injectables.
+ * Permet de tester le service sans dependre directement des providers reels.
+ * @param {object} [deps={}] Dependances externes optionnelles.
+ * @param {object} [deps.env] Variables d'environnement cible.
+ * @param {object} [deps.nodemailer] Implementation nodemailer.
+ * @param {Function} [deps.fetch] Implementation fetch.
+ * @param {Function} [deps.generateNewsletterHtml] Fonction de rendu template.
+ * @returns {{sendMail: Function, sendNewsletter: Function, resolveDeliveryMode: Function}} API publique du mailer.
+ */
 function createMailerService(deps = {}) {
   const env = deps.env || process.env
   const nodemailer = deps.nodemailer || nodemailerLib
   const fetchFn = deps.fetch || global.fetch
   const renderNewsletterHtml = deps.generateNewsletterHtml || generateNewsletterHtml
 
+  /**
+   * Determine le mode de livraison effectif.
+   * @returns {'brevo'|'smtp'|'mock'} Mode de livraison retenu.
+   */
   function resolveDeliveryMode() {
     const explicitMode = String(env.MAIL_DELIVERY_MODE || '').trim().toLowerCase()
     if (explicitMode === 'dev') {
@@ -66,6 +98,11 @@ function createMailerService(deps = {}) {
     return 'brevo'
   }
 
+  /**
+   * Construit l'expediteur par defaut selon le mode.
+   * @param {'brevo'|'smtp'|'mock'} mode Mode de livraison retenu.
+   * @returns {{name:string,email:string}} Informations expediteur.
+   */
   function resolveDefaultSender(mode) {
     if (mode === 'mock') {
       return {
@@ -88,6 +125,11 @@ function createMailerService(deps = {}) {
     }
   }
 
+  /**
+   * Envoie un email via l'API Brevo.
+   * @param {{fromName:string,fromEmail:string,toEmail:string,subject:string,html:string}} params Donnees email.
+   * @returns {Promise<object>} Reponse provider parsee.
+   */
   async function brevoSendEmail({ fromName, fromEmail, toEmail, subject, html }) {
     if (typeof fetchFn !== 'function') {
       throw new Error('fetch indisponible pour le provider Brevo')
@@ -120,6 +162,11 @@ function createMailerService(deps = {}) {
     return response.json().catch(() => ({}))
   }
 
+  /**
+   * Envoie un email via SMTP (mailpit/mailhog/local ou relay SMTP).
+   * @param {{fromName:string,fromEmail:string,toEmail:string,subject:string,html:string}} params Donnees email.
+   * @returns {Promise<object>} Resultat de `nodemailer.sendMail`.
+   */
   async function smtpSendEmail({ fromName, fromEmail, toEmail, subject, html }) {
     const host = env.DEV_SMTP_HOST || env.SMTP_HOST
     const port = Number(env.DEV_SMTP_PORT || env.SMTP_PORT || 1025)
@@ -154,6 +201,11 @@ function createMailerService(deps = {}) {
     })
   }
 
+  /**
+   * Route un envoi vers le provider adapte (`mock`, `smtp`, `brevo`).
+   * @param {{mode:string,fromName:string,fromEmail:string,toEmail:string,subject:string,html:string}} params Donnees normalisees.
+   * @returns {Promise<object>} Reponse provider.
+   */
   async function sendWithProvider({ mode, fromName, fromEmail, toEmail, subject, html }) {
     if (mode === 'mock') {
       return {
@@ -173,6 +225,11 @@ function createMailerService(deps = {}) {
     return brevoSendEmail({ fromName, fromEmail, toEmail, subject, html })
   }
 
+  /**
+   * Envoie un email unitaire (hors campagne).
+   * @param {{from?:string,to:string,subject:string,html:string}} params Parametres d'envoi.
+   * @returns {Promise<object>} Reponse provider.
+   */
   async function sendMail({ from, to, subject, html }) {
     const mode = resolveDeliveryMode()
     const fromParsed = parseFromValue(from)
@@ -188,6 +245,17 @@ function createMailerService(deps = {}) {
     })
   }
 
+  /**
+   * Envoie une campagne newsletter a une liste d'abonnes.
+   * Continue l'envoi meme si certains destinataires echouent, puis retourne un bilan.
+   * @param {object} params Parametres campagne.
+   * @param {object} params.campaign Campagne newsletter.
+   * @param {Array<{email:string,unsubscribe_token:string}>} params.subscribers Liste abonnes confirmes.
+   * @param {string} [params.fromName] Nom expediteur force.
+   * @param {string} [params.fromEmail] Email expediteur force.
+   * @param {object} [params.settings={}] Parametres globaux.
+   * @returns {Promise<{success:number,failed:number,failedEmails:string[],mode:string}>} Bilan d'envoi.
+   */
   async function sendNewsletter({ campaign, subscribers, fromName, fromEmail, settings = {} }) {
     const mode = resolveDeliveryMode()
     const appUrl = settings.site_url || env.APP_URL || ''

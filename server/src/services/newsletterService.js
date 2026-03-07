@@ -1,8 +1,14 @@
+/* Service metier newsletter : regles applicatives et acces donnees. */
 const { NewsletterCampaign, Subscriber } = require('../models')
 const mailerService = require('./mailerService')
 const settingService = require('./settingService')
 const { createHttpError } = require('../utils/httpError')
 
+/**
+ * Construit le service newsletter avec dependances injectables.
+ * @param {object} [deps={}] Dependances externes (modeles, mailer, env, logger...).
+ * @returns {object} API metier newsletter.
+ */
 function createNewsletterService(deps = {}) {
   const campaignModel = deps.campaignModel || NewsletterCampaign
   const subscriberModel = deps.subscriberModel || Subscriber
@@ -15,12 +21,22 @@ function createNewsletterService(deps = {}) {
 
   const mailDebug = String(env.MAIL_DEBUG || env.SMTP_DEBUG || '').toLowerCase() === 'true'
 
+  /**
+   * Journalise une trace metier newsletter uniquement si le debug mail est actif.
+   * @param {...unknown} args Donnees a logger.
+   * @returns {void}
+   */
   function debug(...args) {
     if (mailDebug) {
       logger.log('[newsletter]', ...args)
     }
   }
 
+  /**
+   * Sanitise une erreur brute pour journalisation/reponse technique.
+   * @param {unknown} err Erreur d'origine.
+   * @returns {{error:string,code:unknown,stack:unknown}} Erreur simplifiee.
+   */
   function sanitizeError(err) {
     return {
       error: err?.message || 'Erreur',
@@ -29,12 +45,21 @@ function createNewsletterService(deps = {}) {
     }
   }
 
+  /**
+   * Liste les campagnes newsletter.
+   * @returns {Promise<Array>} Campagnes triees.
+   */
   async function getAllCampaigns() {
     return campaignModel.findAll({
       order: [['created_at', 'DESC']],
     })
   }
 
+  /**
+   * Cree une campagne en statut `draft`.
+   * @param {object} payload Donnees campagne.
+   * @returns {Promise<object>} Campagne creee.
+   */
   async function createCampaign(payload) {
     const { subject, preheader, body_html, cta_label, cta_url, articles } = payload
 
@@ -49,6 +74,13 @@ function createNewsletterService(deps = {}) {
     })
   }
 
+  /**
+   * Met a jour une campagne non envoyee.
+   * @param {number|string} id Identifiant campagne.
+   * @param {object} payload Donnees a mettre a jour.
+   * @returns {Promise<object>} Campagne mise a jour.
+   * @throws {Error} Erreur 404/400 selon le statut.
+   */
   async function updateCampaign(id, payload) {
     const campaign = await campaignModel.findByPk(id)
 
@@ -74,6 +106,12 @@ function createNewsletterService(deps = {}) {
     return campaign
   }
 
+  /**
+   * Supprime une campagne si elle n'a pas encore ete envoyee.
+   * @param {number|string} id Identifiant campagne.
+   * @returns {Promise<void>} Promise resolue apres suppression.
+   * @throws {Error} Erreur 404/400 selon le statut.
+   */
   async function deleteCampaign(id) {
     const campaign = await campaignModel.findByPk(id)
 
@@ -88,6 +126,12 @@ function createNewsletterService(deps = {}) {
     await campaign.destroy()
   }
 
+  /**
+   * Envoie une campagne a tous les abonnes confirmes puis marque la campagne comme envoyee.
+   * @param {number|string} id Identifiant campagne.
+   * @returns {Promise<{campaign:object,mailer:object}>} Campagne mise a jour + bilan mailer.
+   * @throws {Error} Erreurs metier 404/400/502.
+   */
   async function sendCampaign(id) {
     const t0 = Date.now()
 
