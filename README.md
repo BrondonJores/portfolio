@@ -51,7 +51,8 @@ Application portfolio complete avec site public, blog, formulaire de contact, es
 - Desabonnement via token.
 - Mode d envoi configurable:
   - `smtp` pour dev,
-  - `brevo` pour prod.
+  - `brevo` pour prod,
+  - `mock` pour tests locaux/CI (`MAIL_DELIVERY_MODE=dev` est un alias de `mock`).
 
 ## Stack technique
 
@@ -169,6 +170,13 @@ BREVO_API_KEY=...
 BREVO_SENDER_EMAIL=noreply@votredomaine.com
 ```
 
+### Mode test local (sans envoi d emails)
+Dans `server/.env`:
+
+```env
+MAIL_DELIVERY_MODE=mock
+```
+
 ## Scripts
 
 ### Frontend (racine)
@@ -190,6 +198,16 @@ BREVO_SENDER_EMAIL=noreply@votredomaine.com
 
 Option smoke strict (CI):
 - `SMOKE_REQUIRE_DB=true npm run test:smoke` force l echec si PostgreSQL n est pas joignable.
+
+## CI GitHub Actions
+- Workflow: `.github/workflows/ci.yml`
+- Execute a chaque `push` et `pull_request`:
+  - installation des dependances frontend + backend,
+  - `npm run lint`,
+  - `npm run test`,
+  - `npm --prefix server run migrate`,
+  - `npm --prefix server run seed`,
+  - `npm run test:smoke` avec `SMOKE_REQUIRE_DB=true`.
 
 ## Securite
 - Access token JWT jamais persiste en localStorage.

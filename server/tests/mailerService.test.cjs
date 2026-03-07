@@ -49,6 +49,23 @@ function runCase(name, callback) {
   }
 }
 
+runCase('resolveDeliveryMode: dev alias maps to mock', () => {
+  withEnv(
+    {
+      MAIL_DELIVERY_MODE: 'dev',
+      BREVO_API_KEY: undefined,
+      BREVO_SENDER_EMAIL: undefined,
+      DEV_SMTP_HOST: undefined,
+      SMTP_HOST: undefined,
+    },
+    () => {
+      const { resolveDeliveryMode } = loadMailerFresh()
+      assert.equal(resolveDeliveryMode(), 'mock')
+    }
+  )
+})
+
+
 runCase('resolveDeliveryMode: explicit mode has priority', () => {
   withEnv(
     {
