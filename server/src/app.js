@@ -8,6 +8,7 @@ const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
 const routes = require('./routes')
 const { errorHandler } = require('./middleware/errorMiddleware')
+const { getSitemapXml } = require('./controllers/sitemapController')
 const { logSecurityEventFromRequest } = require('./services/securityEventService')
 
 const app = express()
@@ -185,6 +186,9 @@ const globalLimiter = rateLimit({
   },
 })
 app.use(globalLimiter)
+
+/* Endpoint sitemap XML public pour les robots SEO. */
+app.get('/sitemap.xml', getSitemapXml)
 
 /* Montage des routes sur /api */
 app.use('/api', routes)
