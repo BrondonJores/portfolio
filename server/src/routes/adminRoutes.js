@@ -10,11 +10,13 @@ const { getAll: getSettings, upsert: upsertSettings } = require('../controllers/
 const { getStats } = require('../controllers/statsController')
 const { getAll: getAllSubscribers, remove: deleteSubscriber } = require('../controllers/subscriberController')
 const { getAll: getAllCampaigns, create: createCampaign, update: updateCampaign, remove: deleteCampaign, send: sendCampaign } = require('../controllers/newsletterController')
+const { getAll: getAllBlockTemplates, create: createBlockTemplate, update: updateBlockTemplate, remove: deleteBlockTemplate } = require('../controllers/blockTemplateController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
 const { createProjectValidator, updateProjectValidator } = require('../validators/projectValidator')
 const { createArticleValidator, updateArticleValidator } = require('../validators/articleValidator')
 const { createSkillValidator, updateSkillValidator } = require('../validators/skillValidator')
+const { listBlockTemplateValidator, createBlockTemplateValidator, updateBlockTemplateValidator } = require('../validators/blockTemplateValidator')
 
 const router = Router()
 
@@ -71,5 +73,11 @@ router.post('/newsletter/:id/send', sendCampaign)
 /* Routes abonnes admin */
 router.get('/subscribers', getAllSubscribers)
 router.delete('/subscribers/:id', deleteSubscriber)
+
+/* Routes templates de blocs admin */
+router.get('/block-templates', validate(listBlockTemplateValidator), getAllBlockTemplates)
+router.post('/block-templates', validate(createBlockTemplateValidator), createBlockTemplate)
+router.put('/block-templates/:id', validate(updateBlockTemplateValidator), updateBlockTemplate)
+router.delete('/block-templates/:id', deleteBlockTemplate)
 
 module.exports = router

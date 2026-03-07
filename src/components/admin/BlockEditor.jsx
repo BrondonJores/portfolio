@@ -1,5 +1,5 @@
 /* Editeur d'articles par blocs (version modernisee). */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   PlusIcon,
   TrashIcon,
@@ -88,6 +88,75 @@ function transformBlockToType(currentBlock, typeDef) {
   }
 
   return { ...base, id: currentBlock.id }
+}
+
+/**
+ * Normalise un bloc de template vers un format compatible editeur.
+ * @param {object} block Bloc source.
+ * @returns {object} Bloc normalise sans identifiant.
+ */
+function normalizeTemplateBlock(block) {
+  const type = block?.type || 'paragraph'
+
+  switch (type) {
+    case 'heading':
+      return {
+        type: 'heading',
+        level: block?.level === 3 ? 3 : 2,
+        content: String(block?.content || ''),
+      }
+    case 'image':
+      return {
+        type: 'image',
+        url: String(block?.url || ''),
+        caption: String(block?.caption || ''),
+      }
+    case 'code':
+      return {
+        type: 'code',
+        language: String(block?.language || 'js'),
+        content: String(block?.content || ''),
+      }
+    case 'quote':
+      return {
+        type: 'quote',
+        content: String(block?.content || ''),
+        author: String(block?.author || ''),
+      }
+    case 'list':
+      return {
+        type: 'list',
+        items: Array.isArray(block?.items) && block.items.length > 0 ? safeClone(block.items) : [''],
+      }
+    case 'paragraph':
+    default:
+      return {
+        type: 'paragraph',
+        content: String(block?.content || ''),
+      }
+  }
+}
+
+/**
+ * Instancie les blocs d'un template avec des ids uniques.
+ * @param {Array<object>} blocksFromTemplate Blocs du template.
+ * @returns {Array<object>} Blocs prets a inserer.
+ */
+function instantiateTemplateBlocks(blocksFromTemplate) {
+  return (Array.isArray(blocksFromTemplate) ? blocksFromTemplate : [])
+    .map((block) => ({ ...normalizeTemplateBlock(block), id: genId() }))
+}
+
+/**
+ * Indique si la cible de l'evenement est un champ de saisie texte.
+ * @param {EventTarget | null} target Cible de l'evenement clavier.
+ * @returns {boolean} true si la cible est editable.
+ */
+function isTypingTarget(target) {
+  if (!(target instanceof HTMLElement)) return false
+  const tagName = target.tagName.toLowerCase()
+  if (tagName === 'input' || tagName === 'textarea') return true
+  return target.isContentEditable
 }
 
 /* --- Sous-composants de blocs --- */
@@ -456,20 +525,77 @@ function BlockContent({ block, onChange }) {
  * @param {object} props Propriete du composant.
  * @param {Array<object>} props.blocks Tableau des blocs.
  * @param {Function} props.onChange Callback appele avec la nouvelle liste.
+ * @param {Array<{id: string, label: string, description?: string, blocks: Array<object>}>} [props.templates] Templates predefinis optionnels.
  * @returns {JSX.Element} Interface de gestion des blocs.
  */
-export default function BlockEditor({ blocks = [], onChange }) {
+export default function BlockEditor({ blocks = [], onChange, templates = [] }) {
   const [paletteQuery, setPaletteQuery] = useState('')
   const [insertionIndex, setInsertionIndex] = useState(null)
   const [collapsedMap, setCollapsedMap] = useState({})
   const [dragIndex, setDragIndex] = useState(null)
   const [dragOverIndex, setDragOverIndex] = useState(null)
+  const [activeBlockId, setActiveBlockId] = useState(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
+  const rootRef = useRef(null)
+
+  const availableTemplates = useMemo(() => {
+    if (!Array.isArray(templates)) return []
+
+    return templates.filter(
+      (template) => template?.id && template?.label && Array.isArray(template?.blocks) && template.blocks.length > 0
+    )
+  }, [templates])
 
   const filteredTypes = useMemo(() => {
     const q = paletteQuery.trim().toLowerCase()
     if (!q) return BLOCK_TYPES
     return BLOCK_TYPES.filter((typeDef) => typeDef.label.toLowerCase().includes(q))
   }, [paletteQuery])
+
+  const activeIndex = useMemo(
+    () => blocks.findIndex((block) => block.id === activeBlockId),
+    [blocks, activeBlockId]
+  )
+
+  const selectedTemplate = useMemo(
+    () => availableTemplates.find((template) => template.id === selectedTemplateId) || null,
+    [availableTemplates, selectedTemplateId]
+  )
+
+  useEffect(() => {
+    if (blocks.length === 0) {
+      setActiveBlockId(null)
+      return
+    }
+
+    if (!activeBlockId || !blocks.some((block) => block.id === activeBlockId)) {
+      setActiveBlockId(blocks[0].id)
+    }
+  }, [blocks, activeBlockId])
+
+  useEffect(() => {
+    if (availableTemplates.length === 0) {
+      setSelectedTemplateId('')
+      return
+    }
+
+    if (!selectedTemplateId || !availableTemplates.some((template) => template.id === selectedTemplateId)) {
+      setSelectedTemplateId(availableTemplates[0].id)
+    }
+  }, [availableTemplates, selectedTemplateId])
+
+  /**
+   * Donne le focus a la carte d'un bloc specifique.
+   * @param {string | null} blockId Identifiant du bloc.
+   * @returns {void}
+   */
+  const focusBlockCard = (blockId) => {
+    if (!blockId || !rootRef.current) return
+    const target = rootRef.current.querySelector(`[data-block-card-id="${blockId}"]`)
+    if (target instanceof HTMLElement) {
+      target.focus()
+    }
+  }
 
   const updateBlock = (index, updated) => {
     const next = [...blocks]
@@ -478,7 +604,14 @@ export default function BlockEditor({ blocks = [], onChange }) {
   }
 
   const removeBlock = (index) => {
-    onChange(blocks.filter((_, i) => i !== index))
+    const target = blocks[index]
+    const next = blocks.filter((_, i) => i !== index)
+    onChange(next)
+
+    if (target?.id !== activeBlockId) return
+    const nextActive = next[Math.min(index, next.length - 1)]?.id || null
+    setActiveBlockId(nextActive)
+    setTimeout(() => focusBlockCard(nextActive), 0)
   }
 
   const moveBlock = (index, direction) => {
@@ -487,6 +620,7 @@ export default function BlockEditor({ blocks = [], onChange }) {
     if (target < 0 || target >= next.length) return
     ;[next[index], next[target]] = [next[target], next[index]]
     onChange(next)
+    setTimeout(() => focusBlockCard(next[target]?.id || null), 0)
   }
 
   const duplicateBlock = (index) => {
@@ -498,6 +632,8 @@ export default function BlockEditor({ blocks = [], onChange }) {
     const next = [...blocks]
     next.splice(index + 1, 0, clone)
     onChange(next)
+    setActiveBlockId(clone.id)
+    setTimeout(() => focusBlockCard(clone.id), 0)
   }
 
   const changeBlockType = (index, nextType) => {
@@ -513,9 +649,53 @@ export default function BlockEditor({ blocks = [], onChange }) {
 
   const addBlockAt = (typeDef, atIndex = blocks.length) => {
     const next = [...blocks]
-    next.splice(atIndex, 0, typeDef.defaultData())
+    const created = typeDef.defaultData()
+    next.splice(atIndex, 0, created)
     onChange(next)
+    setActiveBlockId(created.id)
+    setTimeout(() => focusBlockCard(created.id), 0)
     setInsertionIndex(null)
+  }
+
+  /**
+   * Insere les blocs du template selectionne apres le bloc actif.
+   * @returns {void}
+   */
+  const insertSelectedTemplate = () => {
+    if (!selectedTemplate) return
+
+    const createdBlocks = instantiateTemplateBlocks(selectedTemplate.blocks)
+    if (createdBlocks.length === 0) return
+
+    const at = activeIndex >= 0 ? activeIndex + 1 : blocks.length
+    const next = [...blocks]
+    next.splice(at, 0, ...createdBlocks)
+    onChange(next)
+
+    setActiveBlockId(createdBlocks[0].id)
+    setTimeout(() => focusBlockCard(createdBlocks[0].id), 0)
+  }
+
+  /**
+   * Remplace le contenu actuel par le template selectionne.
+   * @returns {void}
+   */
+  const replaceWithSelectedTemplate = () => {
+    if (!selectedTemplate) return
+
+    if (blocks.length > 0 && typeof window !== 'undefined') {
+      const confirmed = window.confirm('Remplacer tout le contenu actuel par ce template ?')
+      if (!confirmed) return
+    }
+
+    const createdBlocks = instantiateTemplateBlocks(selectedTemplate.blocks)
+    onChange(createdBlocks)
+    setCollapsedMap({})
+    setInsertionIndex(null)
+
+    const firstBlockId = createdBlocks[0]?.id || null
+    setActiveBlockId(firstBlockId)
+    setTimeout(() => focusBlockCard(firstBlockId), 0)
   }
 
   const toggleCollapsed = (blockId) => {
@@ -553,6 +733,9 @@ export default function BlockEditor({ blocks = [], onChange }) {
     next.splice(target, 0, moved)
 
     onChange(next)
+    const keptActive = activeBlockId && next.some((entry) => entry.id === activeBlockId) ? activeBlockId : next[target]?.id
+    setActiveBlockId(keptActive || null)
+    setTimeout(() => focusBlockCard(keptActive || null), 0)
     setDragIndex(null)
     setDragOverIndex(null)
   }
@@ -560,6 +743,64 @@ export default function BlockEditor({ blocks = [], onChange }) {
   const handleDragEnd = () => {
     setDragIndex(null)
     setDragOverIndex(null)
+  }
+
+  /**
+   * Gere les raccourcis clavier de productivite de l'editeur.
+   * @param {React.KeyboardEvent<HTMLDivElement>} event Evenement clavier.
+   * @returns {void}
+   */
+  const handleEditorKeyDown = (event) => {
+    const key = event.key.toLowerCase()
+    const withMainModifier = event.ctrlKey || event.metaKey
+    const typingTarget = isTypingTarget(event.target)
+
+    if (withMainModifier && event.shiftKey) {
+      const shortcutMap = {
+        p: 'paragraph',
+        h: 'heading',
+        i: 'image',
+        c: 'code',
+        q: 'quote',
+        l: 'list',
+      }
+      const type = shortcutMap[key]
+      if (!type) return
+
+      const typeDef = BLOCK_TYPES.find((entry) => entry.type === type)
+      if (!typeDef) return
+
+      event.preventDefault()
+      const at = activeIndex >= 0 ? activeIndex + 1 : blocks.length
+      addBlockAt(typeDef, at)
+      return
+    }
+
+    if (!event.altKey || withMainModifier || event.shiftKey) return
+    if (activeIndex < 0) return
+
+    if (key === 'arrowup') {
+      event.preventDefault()
+      moveBlock(activeIndex, -1)
+      return
+    }
+
+    if (key === 'arrowdown') {
+      event.preventDefault()
+      moveBlock(activeIndex, 1)
+      return
+    }
+
+    if (key === 'd' && !typingTarget) {
+      event.preventDefault()
+      duplicateBlock(activeIndex)
+      return
+    }
+
+    if (key === 'backspace' || key === 'delete') {
+      event.preventDefault()
+      removeBlock(activeIndex)
+    }
   }
 
   const renderInsertControl = (position) => {
@@ -631,7 +872,7 @@ export default function BlockEditor({ blocks = [], onChange }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div ref={rootRef} className="space-y-4" onKeyDown={handleEditorKeyDown}>
       <div
         className="rounded-xl border p-3 space-y-3"
         style={{
@@ -644,7 +885,8 @@ export default function BlockEditor({ blocks = [], onChange }) {
             Composer en blocs
           </p>
           <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            Astuce: glisser-deposer, dupliquer, changer le type d'un bloc.
+            Raccourcis: Ctrl+Shift+P/H/I/C/Q/L (ajouter), Alt+haut/bas (deplacer), Alt+D
+            (dupliquer), Alt+Suppr (supprimer).
           </p>
         </div>
 
@@ -678,6 +920,74 @@ export default function BlockEditor({ blocks = [], onChange }) {
             ))}
           </div>
         </div>
+
+        {availableTemplates.length > 0 && (
+          <div
+            className="rounded-lg border p-3 space-y-2"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-bg-primary)',
+            }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+              Templates rapides
+            </p>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <select
+                value={selectedTemplateId}
+                onChange={(event) => setSelectedTemplateId(event.target.value)}
+                className="px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all sm:min-w-56"
+                style={inputStyle}
+                aria-label="Choisir un template"
+              >
+                {availableTemplates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.label}
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={insertSelectedTemplate}
+                  disabled={!selectedTemplate}
+                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  style={{
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text-secondary)',
+                    backgroundColor: 'var(--color-bg-secondary)',
+                  }}
+                >
+                  <PlusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  Inserer template
+                </button>
+
+                <button
+                  type="button"
+                  onClick={replaceWithSelectedTemplate}
+                  disabled={!selectedTemplate}
+                  className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  style={{
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text-secondary)',
+                    backgroundColor: 'var(--color-bg-secondary)',
+                  }}
+                >
+                  <DocumentDuplicateIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                  Remplacer tout
+                </button>
+              </div>
+            </div>
+
+            {selectedTemplate?.description && (
+              <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                {selectedTemplate.description}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {blocks.length === 0 && (
@@ -698,18 +1008,23 @@ export default function BlockEditor({ blocks = [], onChange }) {
         const typeDef = BLOCK_TYPES.find((entry) => entry.type === block.type)
         const isCollapsed = Boolean(collapsedMap[block.id])
         const isDropTarget = dragOverIndex === index
+        const isActive = activeBlockId === block.id
 
         return (
           <div key={block.id} className="space-y-2">
             {renderInsertControl(index)}
 
             <article
+              data-block-card-id={block.id}
+              tabIndex={0}
               className="rounded-xl border p-3 space-y-3"
               style={{
-                borderColor: isDropTarget ? 'var(--color-accent)' : 'var(--color-border)',
+                borderColor: isDropTarget || isActive ? 'var(--color-accent)' : 'var(--color-border)',
                 backgroundColor: 'var(--color-bg-secondary)',
-                boxShadow: isDropTarget ? '0 0 0 1px var(--color-accent)' : 'none',
+                boxShadow: isDropTarget || isActive ? '0 0 0 1px var(--color-accent)' : 'none',
               }}
+              onClick={() => setActiveBlockId(block.id)}
+              onFocusCapture={() => setActiveBlockId(block.id)}
               onDragOver={(event) => handleDragOver(event, index)}
               onDrop={(event) => handleDrop(event, index)}
             >

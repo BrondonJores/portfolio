@@ -10,5 +10,6 @@ const Comment = require('./Comment')
 const Setting = require('./Setting')
 const Subscriber = require('./Subscriber')
 const NewsletterCampaign = require('./NewsletterCampaign')
+const BlockTemplate = require('./BlockTemplate')
 
-module.exports = { sequelize, Admin, Project, Article, Skill, Message, Testimonial, Comment, Setting, Subscriber, NewsletterCampaign }
+module.exports = { sequelize, Admin, Project, Article, Skill, Message, Testimonial, Comment, Setting, Subscriber, NewsletterCampaign, BlockTemplate }

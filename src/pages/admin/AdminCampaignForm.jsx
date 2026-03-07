@@ -1,28 +1,53 @@
-/* Formulaire de creation et d'edition de campagne newsletter */
-import { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+/* Formulaire de creation et d'edition de campagne newsletter. */
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { PaperAirplaneIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
+import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
-import BlockEditor from '../../components/admin/BlockEditor.jsx'
-import {
-  getNewsletterCampaigns,
-  createCampaign,
-  updateCampaign,
-  sendCampaign,
-} from '../../services/newsletterService.js'
+import { NEWSLETTER_BLOCK_TEMPLATES } from '../../constants/blockTemplates.js'
+import useAdminBlockTemplates from '../../hooks/useAdminBlockTemplates.js'
+import useLocalDraftAutosave from '../../hooks/useLocalDraftAutosave.jsx'
 import { getArticles } from '../../services/articleService.js'
+import {
+  createCampaign,
+  getNewsletterCampaigns,
+  sendCampaign,
+  updateCampaign,
+} from '../../services/newsletterService.js'
 
-/* --------- Helpers: blocks <-> HTML (en gardant body_html pour l'envoi) --------- */
+const EMPTY = {
+  subject: '',
+  body_html: '',
+  articles: [],
+}
 
+const AUTOSAVE_DEBOUNCE_MS = 900
+const LOCAL_DRAFT_PREFIX = 'portfolio_newsletter_campaign_draft'
+
+const inputStyle = {
+  backgroundColor: 'var(--color-bg-primary)',
+  borderColor: 'var(--color-border)',
+  color: 'var(--color-text-primary)',
+}
+
+/**
+ * Genere un identifiant local pour les blocs.
+ * @returns {string} Identifiant unique.
+ */
 function genId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-function escapeHtml(s) {
-  return String(s ?? '')
+/**
+ * Echappe le HTML pour eviter l'injection dans le rendu.
+ * @param {string | null | undefined} value Texte source.
+ * @returns {string} Texte HTML escape.
+ */
+function escapeHtml(value) {
+  return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -30,71 +55,99 @@ function escapeHtml(s) {
     .replace(/'/g, '&#039;')
 }
 
-function nl2br(s) {
-  return escapeHtml(s).replace(/\n/g, '<br />')
+/**
+ * Convertit les retours ligne en balises <br />.
+ * @param {string | null | undefined} value Texte source.
+ * @returns {string} Texte converti.
+ */
+function nl2br(value) {
+  return escapeHtml(value).replace(/\n/g, '<br />')
 }
 
-function isJsonBlocksString(str) {
-  if (typeof str !== 'string') return false
-  const s = str.trim()
-  if (!s.startsWith('{') && !s.startsWith('[')) return false
-  return s.includes('"blocks"')
+/**
+ * Verifie si la chaine est un JSON de blocs.
+ * @param {unknown} value Valeur a verifier.
+ * @returns {boolean} true si la valeur ressemble a un JSON blocks.
+ */
+function isJsonBlocksString(value) {
+  if (typeof value !== 'string') return false
+  const trimmed = value.trim()
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return false
+  return trimmed.includes('"blocks"')
 }
 
-/* Désérialise body_html en tableau de blocs compatibles avec ton BlockEditor */
-function parseContent(body_html) {
+/**
+ * Parse une liste HTML (ul/ol) vers le format attendu par ListBlock.
+ * @param {Element} listEl Element UL/OL.
+ * @returns {Array<string | {content: string, items: Array}>} Liste normalisee.
+ */
+function parseListItems(listEl) {
+  const lis = Array.from(listEl.querySelectorAll(':scope > li'))
+
+  return lis.map((li) => {
+    const childList = li.querySelector(':scope > ul, :scope > ol')
+    const content = (li.childNodes?.length ? Array.from(li.childNodes) : [li])
+      .filter((node) => !(node.nodeType === 1 && ['ul', 'ol'].includes(node.tagName?.toLowerCase())))
+      .map((node) => (node.textContent || '').trim())
+      .join(' ')
+      .trim()
+
+    if (!childList) return content
+
+    return {
+      content,
+      items: parseListItems(childList),
+    }
+  })
+}
+
+/**
+ * Reconstruit des blocs a partir de body_html (JSON blocks, texte ou HTML).
+ * @param {string | null | undefined} bodyHtml Contenu source.
+ * @returns {Array<object>} Tableau de blocs exploitable par BlockEditor.
+ */
+function parseContent(bodyHtml) {
   try {
-    if (isJsonBlocksString(body_html)) {
-      const parsed = JSON.parse(body_html)
-      if (parsed?.blocks && Array.isArray(parsed.blocks)) return parsed.blocks
+    if (isJsonBlocksString(bodyHtml)) {
+      const parsed = JSON.parse(bodyHtml)
+      if (parsed?.blocks && Array.isArray(parsed.blocks)) {
+        return parsed.blocks
+      }
     }
   } catch {
-    /* ignore */
+    /* ignore parse JSON error */
   }
 
-  if (!body_html || typeof body_html !== 'string') return []
+  if (!bodyHtml || typeof bodyHtml !== 'string') return []
 
-  const html = body_html.trim()
+  const html = bodyHtml.trim()
   if (!html.startsWith('<')) {
-    // texte brut
     return [{ id: genId(), type: 'paragraph', content: html }]
   }
 
   const doc = new DOMParser().parseFromString(html, 'text/html')
-
   const blocks = []
   const nodes = Array.from(doc.body.childNodes).filter(
-    (n) => !(n.nodeType === 3 && !n.textContent.trim())
+    (node) => !(node.nodeType === 3 && !(node.textContent || '').trim())
   )
 
-  const pushParagraph = (txt) => {
-    const t = (txt || '').trim()
-    if (!t) return
-    blocks.push({ id: genId(), type: 'paragraph', content: t })
+  /**
+   * Ajoute un bloc paragraphe si le texte contient du contenu.
+   * @param {string | null | undefined} text Texte source.
+   * @returns {void}
+   */
+  const pushParagraph = (text) => {
+    const value = (text || '').trim()
+    if (!value) return
+    blocks.push({ id: genId(), type: 'paragraph', content: value })
   }
 
-  const parseListItems = (listEl) => {
-    const lis = Array.from(listEl.querySelectorAll(':scope > li'))
-    // Ton ListBlock supporte string OU objet { content, items }
-    return lis.map((li) => {
-      // sous-listes (ul/ol) à l'intérieur d'un li
-      const sub = li.querySelector(':scope > ul, :scope > ol')
-      const contentText = (li.childNodes?.length ? Array.from(li.childNodes) : [li])
-        .filter((x) => !(x.nodeType === 1 && (x.tagName?.toLowerCase() === 'ul' || x.tagName?.toLowerCase() === 'ol')))
-        .map((x) => (x.textContent || '').trim())
-        .join(' ')
-        .trim()
-
-      if (!sub) return contentText
-
-      return {
-        content: contentText,
-        items: parseListItems(sub),
-      }
-    })
-  }
-
-  const handleEl = (node) => {
+  /**
+   * Parse un noeud HTML vers un bloc ou des sous-blocs.
+   * @param {Node} node Noeud a analyser.
+   * @returns {void}
+   */
+  const handleNode = (node) => {
     if (node.nodeType === 3) {
       pushParagraph(node.textContent)
       return
@@ -109,13 +162,11 @@ function parseContent(body_html) {
     }
 
     if (/^h[1-6]$/.test(tag)) {
-      // Ton HeadingBlock ne propose que H2/H3 dans le select
       const level = Number(tag.slice(1))
-      const normalized = level <= 2 ? 2 : 3
       blocks.push({
         id: genId(),
         type: 'heading',
-        level: normalized,
+        level: level <= 2 ? 2 : 3,
         content: (node.textContent || '').trim(),
       })
       return
@@ -124,7 +175,9 @@ function parseContent(body_html) {
     if (tag === 'img') {
       const url = node.getAttribute('src') || ''
       const caption = node.getAttribute('alt') || ''
-      if (url) blocks.push({ id: genId(), type: 'image', url, caption })
+      if (url) {
+        blocks.push({ id: genId(), type: 'image', url, caption })
+      }
       return
     }
 
@@ -132,13 +185,13 @@ function parseContent(body_html) {
       const img = node.querySelector('img')
       if (img) {
         const url = img.getAttribute('src') || ''
-        const caption =
-          (node.querySelector('figcaption')?.textContent || img.getAttribute('alt') || '').trim()
-        if (url) blocks.push({ id: genId(), type: 'image', url, caption })
+        const caption = (node.querySelector('figcaption')?.textContent || img.getAttribute('alt') || '').trim()
+        if (url) {
+          blocks.push({ id: genId(), type: 'image', url, caption })
+        }
         return
       }
-      // sinon fallback sur enfants
-      Array.from(node.childNodes).forEach(handleEl)
+      Array.from(node.childNodes).forEach(handleNode)
       return
     }
 
@@ -182,71 +235,68 @@ function parseContent(body_html) {
       return
     }
 
-    if (tag === 'br') {
-      return
-    }
-
-    // div/section/article etc: descend
     if (tag === 'div' || tag === 'section' || tag === 'article') {
-      Array.from(node.childNodes).forEach(handleEl)
+      Array.from(node.childNodes).forEach(handleNode)
       return
     }
 
-    // fallback: si l'élément contient du texte -> paragraphe
     pushParagraph(node.textContent)
   }
 
-  nodes.forEach(handleEl)
-
+  nodes.forEach(handleNode)
   return blocks
 }
 
-/* Sérialise les blocs vers du HTML email (stocké dans body_html) */
+/**
+ * Serialise les blocs vers un HTML email.
+ * @param {Array<object>} blocks Tableau de blocs.
+ * @returns {string} HTML final.
+ */
 function blocksToHtml(blocks) {
   return (blocks || [])
-    .map((b) => {
-      switch (b.type) {
+    .map((block) => {
+      switch (block.type) {
         case 'paragraph':
-          return `<p>${nl2br(b.content)}</p>`
+          return `<p>${nl2br(block.content)}</p>`
 
         case 'heading': {
-          // H2/H3 uniquement (conforme à ton editor)
-          const lvl = b.level === 3 ? 3 : 2
-          return `<h${lvl}>${escapeHtml(b.content)}</h${lvl}>`
+          const level = block.level === 3 ? 3 : 2
+          return `<h${level}>${escapeHtml(block.content)}</h${level}>`
         }
 
         case 'image': {
-          if (!b.url) return ''
-          const alt = escapeHtml(b.caption || '')
-          const figcap = b.caption ? `<figcaption>${escapeHtml(b.caption)}</figcaption>` : ''
-          return `<figure><img src="${escapeHtml(b.url)}" alt="${alt}" />${figcap}</figure>`
+          if (!block.url) return ''
+          const alt = escapeHtml(block.caption || '')
+          const caption = block.caption ? `<figcaption>${escapeHtml(block.caption)}</figcaption>` : ''
+          return `<figure><img src="${escapeHtml(block.url)}" alt="${alt}" />${caption}</figure>`
         }
 
         case 'code': {
-          const lang = escapeHtml(b.language || 'js')
-          return `<pre><code data-lang="${lang}">${escapeHtml(b.content)}</code></pre>`
+          const lang = escapeHtml(block.language || 'js')
+          return `<pre><code data-lang="${lang}">${escapeHtml(block.content)}</code></pre>`
         }
 
         case 'quote': {
-          const author = (b.author || '').trim()
-          const authorHtml = author ? `<footer>— ${escapeHtml(author)}</footer>` : ''
-          return `<blockquote><p>${nl2br(b.content)}</p>${authorHtml}</blockquote>`
+          const author = (block.author || '').trim()
+          const authorHtml = author ? `<footer>-- ${escapeHtml(author)}</footer>` : ''
+          return `<blockquote><p>${nl2br(block.content)}</p>${authorHtml}</blockquote>`
         }
 
         case 'list': {
           const renderItems = (items) =>
             (items || [])
-              .map((it) => {
-                if (typeof it === 'string') {
-                  return `<li>${escapeHtml(it)}</li>`
+              .map((item) => {
+                if (typeof item === 'string') {
+                  return `<li>${escapeHtml(item)}</li>`
                 }
-                // { content, items }
-                const content = escapeHtml(it?.content || '')
-                const sub = it?.items?.length ? `<ul>${renderItems(it.items)}</ul>` : ''
-                return `<li>${content}${sub}</li>`
+
+                const content = escapeHtml(item?.content || '')
+                const children = item?.items?.length ? `<ul>${renderItems(item.items)}</ul>` : ''
+                return `<li>${content}${children}</li>`
               })
               .join('')
-          return `<ul>${renderItems(b.items)}</ul>`
+
+          return `<ul>${renderItems(block.items)}</ul>`
         }
 
         default:
@@ -257,23 +307,21 @@ function blocksToHtml(blocks) {
     .join('\n')
 }
 
-const EMPTY = {
-  subject: '',
-  body_html: '',
-  articles: [],
-}
-
-const inputStyle = {
-  backgroundColor: 'var(--color-bg-primary)',
-  borderColor: 'var(--color-border)',
-  color: 'var(--color-text-primary)',
+/**
+ * Cree la cle localStorage du brouillon.
+ * @param {boolean} isEdit true si on modifie une campagne existante.
+ * @param {string | undefined} campaignId Identifiant de campagne.
+ * @returns {string} Cle de stockage.
+ */
+function getLocalDraftKey(isEdit, campaignId) {
+  return isEdit ? `${LOCAL_DRAFT_PREFIX}_edit_${campaignId}` : `${LOCAL_DRAFT_PREFIX}_new`
 }
 
 export default function AdminCampaignForm() {
   const { id } = useParams()
   const navigate = useNavigate()
   const addToast = useAdminToast()
-  const isEdit = !!id
+  const isEdit = Boolean(id)
 
   const [form, setForm] = useState(EMPTY)
   const [blocks, setBlocks] = useState([])
@@ -281,8 +329,57 @@ export default function AdminCampaignForm() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
-
   const [availableArticles, setAvailableArticles] = useState([])
+
+  const isSent = status === 'sent'
+
+  const draftStorageKey = useMemo(() => getLocalDraftKey(isEdit, id), [isEdit, id])
+  const previewHtml = useMemo(() => blocksToHtml(blocks), [blocks])
+  const hasDraftContent = useMemo(
+    () => Boolean(form.subject.trim() || blocks.length > 0 || (form.articles || []).length > 0),
+    [form.subject, form.articles, blocks]
+  )
+  const draftData = useMemo(
+    () => ({
+      subject: form.subject,
+      articles: form.articles || [],
+      blocks,
+      status,
+    }),
+    [form.subject, form.articles, blocks, status]
+  )
+
+  /**
+   * Applique un brouillon restaure depuis localStorage.
+   * @param {unknown} draft Donnees restaurees.
+   * @returns {void}
+   */
+  const handleRestoreDraft = useCallback((draft) => {
+    const restoredBlocks = Array.isArray(draft?.blocks) ? draft.blocks : []
+    setBlocks(restoredBlocks)
+    setStatus(typeof draft?.status === 'string' ? draft.status : 'draft')
+    setForm((prev) => ({
+      ...prev,
+      subject: typeof draft?.subject === 'string' ? draft.subject : '',
+      articles: Array.isArray(draft?.articles) ? draft.articles : [],
+      body_html: blocksToHtml(restoredBlocks),
+    }))
+    addToast('Brouillon local restaure sur ce navigateur.', 'info')
+  }, [addToast])
+
+  const { autosaveLabel, localDraftRestored, clearDraft } = useLocalDraftAutosave({
+    storageKey: draftStorageKey,
+    loading,
+    hasContent: hasDraftContent,
+    draftData,
+    onRestore: handleRestoreDraft,
+    debounceMs: AUTOSAVE_DEBOUNCE_MS,
+    enabled: !isSent,
+  })
+  const { templates: editorTemplates } = useAdminBlockTemplates({
+    context: 'newsletter',
+    fallbackTemplates: NEWSLETTER_BLOCK_TEMPLATES,
+  })
 
   useEffect(() => {
     getArticles().then((res) => {
@@ -292,46 +389,57 @@ export default function AdminCampaignForm() {
 
   useEffect(() => {
     if (!isEdit) return
+
     getNewsletterCampaigns()
       .then((res) => {
-        const campaign = (res?.data || []).find((c) => String(c.id) === String(id))
-        if (campaign) {
-          const nextForm = {
-            subject: campaign.subject || '',
-            body_html: campaign.body_html || '',
-            articles: campaign.articles || [],
-          }
+        const campaign = (res?.data || []).find((entry) => String(entry.id) === String(id))
+        if (!campaign) return
 
-          setForm(nextForm)
-          setStatus(campaign.status || 'draft')
-
-          // IMPORTANT: reconstruire des blocs réels depuis body_html (HTML ou JSON blocks)
-          setBlocks(parseContent(nextForm.body_html || ''))
+        const nextForm = {
+          subject: campaign.subject || '',
+          body_html: campaign.body_html || '',
+          articles: campaign.articles || [],
         }
+
+        setForm(nextForm)
+        setStatus(campaign.status || 'draft')
+        setBlocks(parseContent(nextForm.body_html || ''))
       })
       .finally(() => setLoading(false))
   }, [id, isEdit])
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
+  /**
+   * Met a jour les champs de formulaire standards.
+   * @param {React.ChangeEvent<HTMLInputElement>} event Evenement input.
+   * @returns {void}
+   */
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target
     setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
-  const handleBlocksChange = (newBlocks) => {
-    setBlocks(newBlocks)
-
-    // IMPORTANT: on garde body_html en HTML (pour l'envoi plus tard)
-    const html = blocksToHtml(newBlocks)
-    setForm((prev) => ({ ...prev, body_html: html }))
+  /**
+   * Met a jour les blocs et le HTML derive.
+   * @param {Array<object>} nextBlocks Nouveau tableau de blocs.
+   * @returns {void}
+   */
+  const handleBlocksChange = (nextBlocks) => {
+    setBlocks(nextBlocks)
+    setForm((prev) => ({ ...prev, body_html: blocksToHtml(nextBlocks) }))
   }
 
+  /**
+   * Ajoute ou retire un article associe a la campagne.
+   * @param {object} article Article source.
+   * @returns {void}
+   */
   const handleArticleToggle = (article) => {
     setForm((prev) => {
-      const exists = prev.articles.find((a) => a.slug === article.slug)
+      const exists = prev.articles.find((entry) => entry.slug === article.slug)
       if (exists) {
         return {
           ...prev,
-          articles: prev.articles.filter((a) => a.slug !== article.slug),
+          articles: prev.articles.filter((entry) => entry.slug !== article.slug),
         }
       }
 
@@ -351,12 +459,15 @@ export default function AdminCampaignForm() {
     })
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  /**
+   * Sauvegarde le brouillon (creation ou edition).
+   * @param {React.FormEvent<HTMLFormElement>} event Evenement submit.
+   * @returns {Promise<void>} Promise de fin de traitement.
+   */
+  const handleSubmit = async (event) => {
+    event.preventDefault()
 
-    // Synchronise body_html au cas où (si un autre code modifie form sans passer par handleBlocksChange)
     const synced = { ...form, body_html: blocksToHtml(blocks) }
-
     if (!synced.subject.trim() || blocks.length === 0) {
       addToast('Le sujet et le contenu sont obligatoires.', 'error')
       return
@@ -366,36 +477,37 @@ export default function AdminCampaignForm() {
     try {
       if (isEdit) {
         await updateCampaign(id, synced)
-        addToast('Campagne mise à jour.', 'success')
+        addToast('Campagne mise a jour.', 'success')
       } else {
         await createCampaign(synced)
-        addToast('Brouillon enregistré.', 'success')
+        addToast('Brouillon enregistre.', 'success')
       }
+
+      clearDraft()
       navigate('/admin/newsletter')
-    } catch (err) {
-      addToast(err.message || 'Erreur lors de la sauvegarde.', 'error')
+    } catch (error) {
+      addToast(error.message || 'Erreur lors de la sauvegarde.', 'error')
     } finally {
       setSaving(false)
     }
   }
 
+  /**
+   * Envoie la campagne apres synchronisation du HTML.
+   * @returns {Promise<void>} Promise de fin de traitement.
+   */
   const handleSend = async () => {
     if (!isEdit) return
 
     setSending(true)
     try {
-      // Cause fréquente du timeout côté envoi:
-      // - body_html vide / pas à jour (tout était "un seul paragraphe" ou non sérialisé correctement)
-      // Ici on force une mise à jour du brouillon avec le HTML généré des blocs avant l'envoi.
       await updateCampaign(id, { ...form, body_html: blocksToHtml(blocks) })
-
-      // Envoi inchangé
       await sendCampaign(id)
-
-      addToast('Campagne envoyée avec succès.', 'success')
+      clearDraft()
+      addToast('Campagne envoyee avec succes.', 'success')
       navigate('/admin/newsletter')
-    } catch (err) {
-      addToast(err.message || "Erreur lors de l'envoi.", 'error')
+    } catch (error) {
+      addToast(error.message || "Erreur lors de l'envoi.", 'error')
     } finally {
       setSending(false)
     }
@@ -409,102 +521,197 @@ export default function AdminCampaignForm() {
     )
   }
 
-  const isSent = status === 'sent'
-
   return (
     <>
       <Helmet>
         <title>{isEdit ? 'Modifier la campagne' : 'Nouvelle campagne'} - Administration</title>
       </Helmet>
 
-      <div className="max-w-3xl">
+      <div className="max-w-7xl">
         <h1 className="text-2xl font-bold mb-8" style={{ color: 'var(--color-text-primary)' }}>
           {isEdit ? 'Modifier la campagne' : 'Nouvelle campagne'}
         </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label
-              className="block text-sm font-medium mb-2"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              Sujet *
-            </label>
-            <input
-              name="subject"
-              type="text"
-              value={form.subject}
-              onChange={handleChange}
-              disabled={isSent}
-              className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-              style={inputStyle}
-            />
-          </div>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+            <div className="space-y-6 min-w-0">
+              <div>
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Sujet *
+                </label>
+                <input
+                  name="subject"
+                  type="text"
+                  value={form.subject}
+                  onChange={handleChange}
+                  disabled={isSent}
+                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+                  style={inputStyle}
+                />
+              </div>
 
-          {/* Contenu par blocs */}
-          {!isSent && (
-            <div>
-              <label
-                className="block text-sm font-medium mb-2"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Contenu *
-              </label>
-              <BlockEditor blocks={blocks} onChange={handleBlocksChange} />
-            </div>
-          )}
+              {!isSent && (
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Contenu *
+                  </label>
+                  <BlockEditor
+                    blocks={blocks}
+                    onChange={handleBlocksChange}
+                    templates={editorTemplates}
+                  />
+                </div>
+              )}
 
-          {!isSent && (
-            <div>
-              <label
-                className="block text-sm font-medium mb-3"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Sélectionner des articles
-              </label>
+              {!isSent && (
+                <div>
+                  <label
+                    className="block text-sm font-medium mb-3"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Selectionner des articles
+                  </label>
 
-              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
-                {availableArticles.map((article) => {
-                  const selected = form.articles.some((a) => a.slug === article.slug)
-                  return (
-                    <label key={article.id} className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selected}
-                        onChange={() => handleArticleToggle(article)}
-                        style={{ accentColor: 'var(--color-accent)' }}
-                      />
-                      <span style={{ color: 'var(--color-text-primary)' }}>{article.title}</span>
-                    </label>
-                  )
-                })}
+                  <div
+                    className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3"
+                    style={{ borderColor: 'var(--color-border)' }}
+                  >
+                    {availableArticles.map((article) => {
+                      const selected = form.articles.some((entry) => entry.slug === article.slug)
+                      return (
+                        <label key={article.id} className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => handleArticleToggle(article)}
+                            style={{ accentColor: 'var(--color-accent)' }}
+                          />
+                          <span style={{ color: 'var(--color-text-primary)' }}>{article.title}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                {!isSent && (
+                  <Button type="submit" variant="primary" disabled={saving}>
+                    {saving ? <Spinner size="sm" /> : 'Enregistrer'}
+                  </Button>
+                )}
+
+                {isEdit && !isSent && (
+                  <Button type="button" variant="secondary" onClick={handleSend} disabled={sending}>
+                    {sending ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <>
+                        <PaperAirplaneIcon className="h-4 w-4" />
+                        Envoyer
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                <Button type="button" variant="ghost" onClick={() => navigate('/admin/newsletter')}>
+                  Retour
+                </Button>
               </div>
             </div>
-          )}
 
-          <div className="flex items-center gap-3">
-            {!isSent && (
-              <Button type="submit" variant="primary" disabled={saving}>
-                {saving ? <Spinner size="sm" /> : 'Enregistrer'}
-              </Button>
-            )}
-
-            {isEdit && !isSent && (
-              <Button type="button" variant="secondary" onClick={handleSend} disabled={sending}>
-                {sending ? (
-                  <Spinner size="sm" />
-                ) : (
-                  <>
-                    <PaperAirplaneIcon className="h-4 w-4" />
-                    Envoyer
-                  </>
+            <aside className="space-y-4 xl:sticky xl:top-24 self-start">
+              <div
+                className="rounded-xl border p-3 space-y-1"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-bg-secondary)',
+                }}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+                  Autosave local
+                </p>
+                <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                  {autosaveLabel}
+                </p>
+                {localDraftRestored && (
+                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    Un brouillon local a ete restaure automatiquement.
+                  </p>
                 )}
-              </Button>
-            )}
+              </div>
 
-            <Button type="button" variant="ghost" onClick={() => navigate('/admin/newsletter')}>
-              Retour
-            </Button>
+              <div
+                className="rounded-xl border overflow-hidden"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-bg-secondary)',
+                }}
+              >
+                <div
+                  className="px-4 py-3 border-b"
+                  style={{ borderColor: 'var(--color-border)' }}
+                >
+                  <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    Apercu live newsletter
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    Mise a jour en temps reel pendant la redaction.
+                  </p>
+                </div>
+
+                <div className="p-4 max-h-[72vh] overflow-y-auto space-y-4">
+                  <section
+                    className="rounded-lg border p-3"
+                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
+                  >
+                    <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+                      Sujet
+                    </p>
+                    <h2 className="text-xl font-semibold break-words" style={{ color: 'var(--color-text-primary)' }}>
+                      {form.subject.trim() || 'Sujet de la campagne...'}
+                    </h2>
+                  </section>
+
+                  <article
+                    className="prose prose-sm max-w-none leading-relaxed"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {previewHtml ? (
+                      <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                    ) : (
+                      <p style={{ color: 'var(--color-text-secondary)' }}>
+                        Ajoute des blocs pour voir le rendu ici.
+                      </p>
+                    )}
+                  </article>
+
+                  {form.articles.length > 0 && (
+                    <section
+                      className="rounded-lg border p-3"
+                      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
+                    >
+                      <p className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                        Articles lies
+                      </p>
+                      <ul className="space-y-2">
+                        {form.articles.map((article) => (
+                          <li key={article.slug} className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                            {article.title}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                </div>
+              </div>
+            </aside>
           </div>
         </form>
       </div>

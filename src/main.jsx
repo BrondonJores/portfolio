@@ -37,6 +37,7 @@ const AdminSettings = lazy(() => import('./pages/admin/AdminSettings.jsx'))
 const AdminNewsletter = lazy(() => import('./pages/admin/AdminNewsletter.jsx'))
 const AdminCampaignForm = lazy(() => import('./pages/admin/AdminCampaignForm.jsx'))
 const AdminSubscribers = lazy(() => import('./pages/admin/AdminSubscribers.jsx'))
+const AdminBlockTemplates = lazy(() => import('./pages/admin/AdminBlockTemplates.jsx'))
 
 /* Fallback de chargement pour Suspense */
 function LoadingFallback() {
@@ -101,6 +102,7 @@ const router = createBrowserRouter([
       { path: 'newsletter/:id/edit', element: <Suspense fallback={<LoadingFallback />}><AdminCampaignForm /></Suspense> },
       { path: 'newsletter', element: <Suspense fallback={<LoadingFallback />}><AdminNewsletter /></Suspense> },
       { path: 'subscribers', element: <Suspense fallback={<LoadingFallback />}><AdminSubscribers /></Suspense> },
+      { path: 'templates', element: <Suspense fallback={<LoadingFallback />}><AdminBlockTemplates /></Suspense> },
     ],
   },
 ])
