@@ -1,5 +1,5 @@
 /* Page de gestion des templates de blocs personnalisables dans l'admin. */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import BlockEditor from '../../components/admin/BlockEditor.jsx'
@@ -11,6 +11,7 @@ import {
   createBlockTemplate,
   deleteBlockTemplate,
   getAdminBlockTemplates,
+  importBlockTemplates,
   updateBlockTemplate,
 } from '../../services/blockTemplateService.js'
 
@@ -91,6 +92,49 @@ function stripBlockIds(blocks) {
 }
 
 /**
+ * Lit un fichier texte JSON cote navigateur.
+ * @param {File} file Fichier selectionne.
+ * @returns {Promise<string>} Contenu brut du fichier.
+ */
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error('Impossible de lire le fichier JSON.'))
+    reader.readAsText(file)
+  })
+}
+
+/**
+ * Normalise le format d'import vers { templates: [...] }.
+ * Accepte:
+ * - un tableau de templates
+ * - un objet { templates: [...] }
+ * - un template unique
+ * @param {unknown} parsed Valeur JSON parsee.
+ * @returns {{templates:Array<object>} | null} Payload normalise ou null.
+ */
+function normalizeImportPayload(parsed) {
+  if (Array.isArray(parsed)) {
+    return { templates: parsed }
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    return null
+  }
+
+  if (Array.isArray(parsed.templates)) {
+    return { templates: parsed.templates }
+  }
+
+  if (parsed.name !== undefined || parsed.blocks !== undefined) {
+    return { templates: [parsed] }
+  }
+
+  return null
+}
+
+/**
  * Formulaire de base d'un template admin.
  * @returns {{name: string, context: string, description: string, blocks: Array<object>}} Etat initial.
  */
@@ -105,10 +149,13 @@ function createEmptyForm() {
 
 export default function AdminBlockTemplates() {
   const addToast = useAdminToast()
+  const fileInputRef = useRef(null)
 
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [replaceExistingImport, setReplaceExistingImport] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [confirmId, setConfirmId] = useState(null)
   const [form, setForm] = useState(() => createEmptyForm())
@@ -239,6 +286,54 @@ export default function AdminBlockTemplates() {
     }
   }
 
+  /**
+   * Ouvre le selecteur de fichier pour l'import JSON.
+   * @returns {void}
+   */
+  const openImportPicker = () => {
+    fileInputRef.current?.click()
+  }
+
+  /**
+   * Importe des templates depuis un fichier JSON.
+   * @param {import('react').ChangeEvent<HTMLInputElement>} event Evenement de selection.
+   * @returns {Promise<void>} Promise resolue apres traitement.
+   */
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    setImporting(true)
+    try {
+      const rawText = await readFileAsText(file)
+      const parsed = JSON.parse(rawText)
+      const normalized = normalizeImportPayload(parsed)
+
+      if (!normalized || !Array.isArray(normalized.templates) || normalized.templates.length === 0) {
+        addToast('Format JSON invalide. Utilise { "templates": [...] } ou un tableau.', 'error')
+        return
+      }
+
+      const response = await importBlockTemplates({
+        templates: normalized.templates,
+        replaceExisting: replaceExistingImport,
+      })
+
+      const summary = response?.data || {}
+      await loadTemplates()
+
+      addToast(
+        `Import termine: ${summary.created || 0} cree(s), ${summary.updated || 0} mis a jour, ${summary.skippedCount || 0} ignore(s).`,
+        'success'
+      )
+    } catch (error) {
+      addToast(error.message || "Erreur pendant l'import des templates.", 'error')
+    } finally {
+      setImporting(false)
+    }
+  }
+
   return (
     <>
       <Helmet>
@@ -246,15 +341,40 @@ export default function AdminBlockTemplates() {
       </Helmet>
 
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
             Templates de blocs
           </h1>
 
-          <Button variant="primary" onClick={startCreate}>
-            <PlusIcon className="h-4 w-4" aria-hidden="true" />
-            Nouveau template
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={replaceExistingImport}
+                onChange={(event) => setReplaceExistingImport(event.target.checked)}
+                style={{ accentColor: 'var(--color-accent)' }}
+              />
+              Remplacer les doublons
+            </label>
+
+            <Button variant="secondary" onClick={openImportPicker} disabled={importing}>
+              {importing ? <Spinner size="sm" /> : null}
+              Importer JSON
+            </Button>
+
+            <Button variant="primary" onClick={startCreate}>
+              <PlusIcon className="h-4 w-4" aria-hidden="true" />
+              Nouveau template
+            </Button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+          </div>
         </div>
 
         {loading ? (

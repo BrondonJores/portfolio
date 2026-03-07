@@ -56,8 +56,19 @@ const updateBlockTemplateValidator = [
     .withMessage('Le template doit contenir au moins un bloc.'),
 ]
 
+const importBlockTemplatesValidator = [
+  body('templates')
+    .isArray({ min: 1, max: 100 })
+    .withMessage("L'import doit contenir entre 1 et 100 templates."),
+  body('replaceExisting')
+    .optional()
+    .isBoolean()
+    .withMessage('replaceExisting doit etre un booleen.'),
+]
+
 module.exports = {
   listBlockTemplateValidator,
   createBlockTemplateValidator,
   updateBlockTemplateValidator,
+  importBlockTemplatesValidator,
 }

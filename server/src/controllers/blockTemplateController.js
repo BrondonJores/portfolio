@@ -4,6 +4,7 @@ const {
   createBlockTemplate,
   updateBlockTemplate,
   deleteBlockTemplate,
+  importBlockTemplates,
 } = require('../services/blockTemplateService')
 
 /**
@@ -72,4 +73,20 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { getAll, create, update, remove }
+/**
+ * Importe un lot de templates en JSON.
+ * @param {import('express').Request} req Requete avec `body.templates`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres import.
+ */
+async function importMany(req, res, next) {
+  try {
+    const result = await importBlockTemplates(req.body)
+    return res.status(200).json({ data: result })
+  } catch (err) {
+    next(err)
+  }
+}
+
+module.exports = { getAll, create, update, remove, importMany }

@@ -108,6 +108,77 @@ async function main() {
     assert.equal(destroyed, true)
   })
 
+  await runCase('importBlockTemplates creates new templates and updates duplicates', async () => {
+    let createCount = 0
+    let updateCount = 0
+
+    const fakeExisting = {
+      id: 10,
+      name: 'Template A',
+      context: 'article',
+      update: async () => {
+        updateCount += 1
+      },
+    }
+
+    const fakeModel = {
+      findOne: async ({ where }) => {
+        if (where.name === 'Template A' && where.context === 'article') {
+          return fakeExisting
+        }
+        return null
+      },
+      create: async (payload) => {
+        createCount += 1
+        return { id: 20 + createCount, ...payload }
+      },
+    }
+
+    const service = createBlockTemplateService({ blockTemplateModel: fakeModel })
+
+    const result = await service.importBlockTemplates({
+      replaceExisting: true,
+      templates: [
+        {
+          name: 'Template A',
+          context: 'article',
+          blocks: [{ type: 'paragraph', content: 'Maj' }],
+        },
+        {
+          name: 'Template B',
+          context: 'project',
+          blocks: [{ type: 'heading', level: 2, content: 'Nouveau' }],
+        },
+      ],
+    })
+
+    assert.equal(result.updated, 1)
+    assert.equal(result.created, 1)
+    assert.equal(updateCount, 1)
+    assert.equal(createCount, 1)
+  })
+
+  await runCase('importBlockTemplates throws 422 when no valid template is importable', async () => {
+    const fakeModel = {
+      findOne: async () => null,
+      create: async () => ({ id: 1 }),
+    }
+
+    const service = createBlockTemplateService({ blockTemplateModel: fakeModel })
+
+    await assert.rejects(
+      () =>
+        service.importBlockTemplates({
+          templates: [{ name: 'Template vide', context: 'article', blocks: [] }],
+        }),
+      (err) => {
+        assert.equal(err.statusCode, 422)
+        assert.equal(err.message, 'Import termine sans ajout ni mise a jour.')
+        return true
+      }
+    )
+  })
+
   if (failures > 0) {
     console.error(`\nDI unit tests failed: ${failures}`)
     process.exit(1)

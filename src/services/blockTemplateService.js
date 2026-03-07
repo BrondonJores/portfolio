@@ -19,6 +19,13 @@ export const getAdminBlockTemplates = (params) => {
 export const createBlockTemplate = (data) => api.post('/admin/block-templates', data)
 
 /**
+ * Importe un lot de templates en JSON.
+ * @param {{templates: Array<object>, replaceExisting?: boolean}} data Payload d'import.
+ * @returns {Promise<{data: {created:number,updated:number,skippedCount:number}}>} Reponse API.
+ */
+export const importBlockTemplates = (data) => api.post('/admin/block-templates/import', data)
+
+/**
  * Met a jour un template existant.
  * @param {number|string} id Identifiant du template.
  * @param {object} data Champs a mettre a jour.
