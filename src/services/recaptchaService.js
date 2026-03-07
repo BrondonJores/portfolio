@@ -75,6 +75,20 @@ function loadRecaptchaScript() {
 }
 
 /**
+ * Precharge reCAPTCHA v3 pour afficher le badge le plus tot possible.
+ * En absence de cle, la fonction reste silencieuse.
+ * @returns {Promise<void>} Promise de prechargement.
+ */
+export async function preloadRecaptcha() {
+  const siteKey = getSiteKey()
+  if (!siteKey) {
+    return
+  }
+
+  await loadRecaptchaScript()
+}
+
+/**
  * Execute reCAPTCHA v3 et retourne un token signe pour une action donnee.
  * @param {string} action Action metier (`contact_message`, `comment_create`, ...).
  * @returns {Promise<string>} Token reCAPTCHA a envoyer au backend.
@@ -111,4 +125,3 @@ export async function executeRecaptcha(action) {
     })
   })
 }
-
