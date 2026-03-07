@@ -13,6 +13,7 @@ const NewsletterCampaign = require('./NewsletterCampaign')
 const BlockTemplate = require('./BlockTemplate')
 const ThemePreset = require('./ThemePreset')
 const SecurityEvent = require('./SecurityEvent')
+const MarketplaceItem = require('./MarketplaceItem')
 
 module.exports = {
   sequelize,
@@ -29,4 +30,5 @@ module.exports = {
   BlockTemplate,
   ThemePreset,
   SecurityEvent,
+  MarketplaceItem,
 }

@@ -13,7 +13,7 @@ const {
  */
 async function getAllPublic(req, res, next) {
   try {
-    const data = listMarketplaceThemes({
+    const data = await listMarketplaceThemes({
       q: req.query.q,
       category: req.query.category,
     })
@@ -32,7 +32,7 @@ async function getAllPublic(req, res, next) {
  */
 async function getAllAdmin(req, res, next) {
   try {
-    const data = listMarketplaceThemes({
+    const data = await listMarketplaceThemes({
       q: req.query.q,
       category: req.query.category,
     })

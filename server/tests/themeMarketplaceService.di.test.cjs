@@ -37,6 +37,32 @@ function buildFakePreset(seed) {
 }
 
 /**
+ * Cree un faux repository marketplace en memoire.
+ * @returns {{findAll: Function, upsert: Function}} Repository fake.
+ */
+function buildFakeMarketplaceItemModel() {
+  const rows = []
+
+  return {
+    async findAll({ where } = {}) {
+      return rows.filter((row) => {
+        if (where?.type && row.type !== where.type) return false
+        if (where?.is_active !== undefined && row.is_active !== where.is_active) return false
+        return true
+      })
+    },
+    async upsert(payload) {
+      const index = rows.findIndex((row) => row.type === payload.type && row.slug === payload.slug)
+      if (index >= 0) {
+        rows[index] = { ...rows[index], ...payload }
+      } else {
+        rows.push({ ...payload })
+      }
+    },
+  }
+}
+
+/**
  * Point d'entree des tests DI.
  * @returns {Promise<void>} Promise resolue si succes.
  */
@@ -79,9 +105,12 @@ async function main() {
   ]
 
   await runCase('listMarketplaceThemes filters by query and category', async () => {
-    const service = createThemeMarketplaceService({ catalog: fakeCatalog })
-    const creativeOnly = service.listMarketplaceThemes({ category: 'creative' })
-    const byQuery = service.listMarketplaceThemes({ q: 'terminal' })
+    const service = createThemeMarketplaceService({
+      catalog: fakeCatalog,
+      marketplaceItemModel: buildFakeMarketplaceItemModel(),
+    })
+    const creativeOnly = await service.listMarketplaceThemes({ category: 'creative' })
+    const byQuery = await service.listMarketplaceThemes({ q: 'terminal' })
 
     assert.equal(creativeOnly.length, 1)
     assert.equal(creativeOnly[0].slug, 'ocean-bloom')
@@ -103,6 +132,7 @@ async function main() {
       catalog: fakeCatalog,
       themePresetModel: fakeThemePresetModel,
       settingModel: { upsert: async () => {} },
+      marketplaceItemModel: buildFakeMarketplaceItemModel(),
     })
 
     const result = await service.importMarketplaceTheme({ slug: 'ocean-bloom' })
@@ -132,6 +162,7 @@ async function main() {
       catalog: fakeCatalog,
       themePresetModel: fakeThemePresetModel,
       settingModel: { upsert: async () => {} },
+      marketplaceItemModel: buildFakeMarketplaceItemModel(),
     })
 
     const result = await service.importMarketplaceTheme({
@@ -163,6 +194,7 @@ async function main() {
       catalog: fakeCatalog,
       themePresetModel: fakeThemePresetModel,
       settingModel: { upsert: async () => {} },
+      marketplaceItemModel: buildFakeMarketplaceItemModel(),
     })
 
     const result = await service.importMarketplaceTheme({
@@ -189,6 +221,7 @@ async function main() {
           upsertCalls.push(payload)
         },
       },
+      marketplaceItemModel: buildFakeMarketplaceItemModel(),
       now: () => new Date('2026-03-07T10:00:00.000Z'),
     })
 

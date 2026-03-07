@@ -1,10 +1,23 @@
 /* Service metier des templates de blocs (CRUD + normalisation). */
 const { Op } = require('sequelize')
-const { BlockTemplate } = require('../models')
+const { BlockTemplate, MarketplaceItem } = require('../models')
 const { createHttpError } = require('../utils/httpError')
 
 const TEMPLATE_CONTEXTS = new Set(['article', 'project', 'newsletter', 'all'])
 const BLOCK_TYPES = new Set(['paragraph', 'heading', 'image', 'code', 'quote', 'list'])
+
+/**
+ * Verifie que le repository marketplace expose les methodes minimales.
+ * @param {unknown} repository Repository potentiel.
+ * @returns {boolean} True si le repository est exploitable.
+ */
+function canUseMarketplaceRepository(repository) {
+  return Boolean(
+    repository &&
+      typeof repository.upsert === 'function' &&
+      typeof repository.update === 'function'
+  )
+}
 
 /**
  * Tronque et normalise une valeur texte.
@@ -135,6 +148,57 @@ function sanitizeContext(context, fallback = 'all') {
 }
 
 /**
+ * Construit le slug stable d'un template dans marketplace_items.
+ * @param {number|string} templateId Identifiant template.
+ * @returns {string} Slug stable.
+ */
+function buildTemplateMarketplaceSlug(templateId) {
+  const safeId = Number.parseInt(templateId, 10)
+  if (!Number.isFinite(safeId) || safeId <= 0) {
+    return ''
+  }
+  return `template-${safeId}`
+}
+
+/**
+ * Construit le payload marketplace associe a un template.
+ * @param {object} template Template source.
+ * @returns {object|null} Payload marketplace normalise.
+ */
+function buildTemplateMarketplacePayload(template) {
+  const slug = buildTemplateMarketplaceSlug(template?.id)
+  const name = sanitizeText(template?.name, 160)
+  const context = sanitizeContext(template?.context, 'all')
+  const description = sanitizeText(template?.description, 10000, '')
+  const blocks = sanitizeBlocks(template?.blocks)
+
+  if (!slug || !name || blocks.length === 0) {
+    return null
+  }
+
+  return {
+    type: 'template',
+    slug,
+    name,
+    short_description: description ? description.slice(0, 255) : `${name} (${context})`,
+    description: description || null,
+    category: context,
+    style: 'custom',
+    author: 'Admin',
+    featured: false,
+    version: 1,
+    tags: [context],
+    payload: {
+      block_template_id: Number.parseInt(String(template.id), 10),
+      context,
+      blocks,
+    },
+    source: 'admin',
+    is_active: true,
+  }
+}
+
+/**
  * Normalise un payload template complet (hors controles metier).
  * @param {unknown} payload Donnees brutes.
  * @returns {{name:string,context:string,description:string,blocks:Array<object>}} Template nettoye.
@@ -187,6 +251,52 @@ function resolveTemplatesToImport(payload) {
 function createBlockTemplateService(deps = {}) {
   const blockTemplateModel = deps.blockTemplateModel || BlockTemplate
   const inOperator = deps.inOperator || Op.in
+  const marketplaceItemModel =
+    deps.marketplaceItemModel !== undefined
+      ? deps.marketplaceItemModel
+      : deps.blockTemplateModel
+        ? null
+        : MarketplaceItem
+  const marketplaceRepositoryEnabled = canUseMarketplaceRepository(marketplaceItemModel)
+
+  /**
+   * Synchronise un template dans marketplace_items sans bloquer le flux principal.
+   * @param {object} template Template source.
+   * @returns {Promise<void>} Promise resolue meme si la synchro echoue.
+   */
+  async function syncTemplateToMarketplace(template) {
+    if (!marketplaceRepositoryEnabled) return
+
+    const payload = buildTemplateMarketplacePayload(template)
+    if (!payload) return
+
+    try {
+      await marketplaceItemModel.upsert(payload)
+    } catch {
+      /* Le CRUD principal reste prioritaire si la synchro marketplace echoue. */
+    }
+  }
+
+  /**
+   * Desactive un item marketplace template apres suppression.
+   * @param {number|string} templateId Identifiant template supprime.
+   * @returns {Promise<void>} Promise resolue meme si la synchro echoue.
+   */
+  async function deactivateTemplateInMarketplace(templateId) {
+    if (!marketplaceRepositoryEnabled) return
+
+    const slug = buildTemplateMarketplaceSlug(templateId)
+    if (!slug) return
+
+    try {
+      await marketplaceItemModel.update(
+        { is_active: false },
+        { where: { type: 'template', slug } }
+      )
+    } catch {
+      /* Ignore les erreurs de synchro pour ne pas casser la suppression. */
+    }
+  }
 
   /**
    * Liste les templates (optionnellement filtres par contexte).
@@ -229,7 +339,9 @@ function createBlockTemplateService(deps = {}) {
       throw createHttpError(422, 'Le template doit contenir au moins un bloc valide.')
     }
 
-    return blockTemplateModel.create(sanitized)
+    const template = await blockTemplateModel.create(sanitized)
+    await syncTemplateToMarketplace(template)
+    return template
   }
 
   /**
@@ -268,6 +380,7 @@ function createBlockTemplateService(deps = {}) {
     }
 
     await template.update(updates)
+    await syncTemplateToMarketplace(template)
     return template
   }
 
@@ -284,6 +397,7 @@ function createBlockTemplateService(deps = {}) {
     }
 
     await template.destroy()
+    await deactivateTemplateInMarketplace(template.id)
   }
 
   /**
@@ -340,12 +454,14 @@ function createBlockTemplateService(deps = {}) {
           description: sanitized.description,
           blocks: sanitized.blocks,
         })
+        await syncTemplateToMarketplace(existing)
         updated += 1
         items.push(existing)
         continue
       }
 
       const createdTemplate = await blockTemplateModel.create(sanitized)
+      await syncTemplateToMarketplace(createdTemplate)
       created += 1
       items.push(createdTemplate)
     }

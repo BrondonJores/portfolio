@@ -74,6 +74,39 @@ async function main() {
     assert.equal(createPayload.blocks[0].level, 2)
   })
 
+  await runCase('createBlockTemplate syncs marketplace template when repository exists', async () => {
+    const upsertCalls = []
+
+    const fakeModel = {
+      create: async (payload) => ({ id: 42, ...payload }),
+    }
+
+    const fakeMarketplaceItemModel = {
+      upsert: async (payload) => {
+        upsertCalls.push(payload)
+      },
+      update: async () => {},
+    }
+
+    const service = createBlockTemplateService({
+      blockTemplateModel: fakeModel,
+      marketplaceItemModel: fakeMarketplaceItemModel,
+    })
+
+    await service.createBlockTemplate({
+      name: 'Template marketplace',
+      context: 'project',
+      description: 'Desc',
+      blocks: [{ type: 'paragraph', content: 'Contenu' }],
+    })
+
+    assert.equal(upsertCalls.length, 1)
+    assert.equal(upsertCalls[0].type, 'template')
+    assert.equal(upsertCalls[0].slug, 'template-42')
+    assert.equal(upsertCalls[0].source, 'admin')
+    assert.equal(upsertCalls[0].payload.block_template_id, 42)
+  })
+
   await runCase('updateBlockTemplate throws 404 when template is missing', async () => {
     const fakeModel = {
       findByPk: async () => null,
@@ -93,19 +126,34 @@ async function main() {
 
   await runCase('deleteBlockTemplate destroys existing template', async () => {
     let destroyed = false
+    const updateCalls = []
 
     const fakeModel = {
       findByPk: async () => ({
+        id: 9,
         destroy: async () => {
           destroyed = true
         },
       }),
     }
 
-    const service = createBlockTemplateService({ blockTemplateModel: fakeModel })
+    const fakeMarketplaceItemModel = {
+      upsert: async () => {},
+      update: async (payload, options) => {
+        updateCalls.push({ payload, options })
+      },
+    }
+
+    const service = createBlockTemplateService({
+      blockTemplateModel: fakeModel,
+      marketplaceItemModel: fakeMarketplaceItemModel,
+    })
     await service.deleteBlockTemplate(1)
 
     assert.equal(destroyed, true)
+    assert.equal(updateCalls.length, 1)
+    assert.equal(updateCalls[0].payload.is_active, false)
+    assert.equal(updateCalls[0].options.where.slug, 'template-9')
   })
 
   await runCase('importBlockTemplates creates new templates and updates duplicates', async () => {
