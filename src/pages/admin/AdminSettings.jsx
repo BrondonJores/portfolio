@@ -512,6 +512,19 @@ export default function AdminSettings() {
               <FieldInput label="Titre hero" fieldKey="hero_title" settings={settings} onChange={handleChange} />
               <FieldInput label="Hero bio" fieldKey="hero_bio" settings={settings} onChange={handleChange} textarea />
               <FieldInput label="Bio" fieldKey="bio" settings={settings} onChange={handleChange} textarea />
+              <FieldInput label="Hero photo - statut" fieldKey="hero_photo_status" settings={settings} onChange={handleChange} />
+              <FieldInput label="Hero photo - stack" fieldKey="hero_photo_stack" settings={settings} onChange={handleChange} />
+              <FieldInput label="Hero photo - texte alternatif" fieldKey="hero_photo_alt" settings={settings} onChange={handleChange} />
+              <FieldInput
+                label="Hero photo - cadrage (object-position)"
+                fieldKey="hero_photo_object_position"
+                settings={settings}
+                onChange={handleChange}
+                placeholder="50% 30%"
+              />
+              <InlineTip>Format conseille: 50% 30% (x horizontal, y vertical).</InlineTip>
+              <FieldInput label="About photo - badge" fieldKey="about_photo_badge" settings={settings} onChange={handleChange} />
+              <FieldInput label="About photo - legende" fieldKey="about_photo_caption" settings={settings} onChange={handleChange} textarea />
 
               <ImageUploader
                 label="Avatar"

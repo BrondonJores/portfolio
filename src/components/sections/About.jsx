@@ -1,5 +1,5 @@
 /* Section A propos avec mise en page deux colonnes */
-import { UserIcon, BriefcaseIcon, CodeBracketIcon } from '@heroicons/react/24/outline'
+import { UserIcon, BriefcaseIcon, CodeBracketIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import Card from '../ui/Card.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
@@ -16,6 +16,12 @@ export default function About() {
   const bio = settings.bio || "Developpeur Full Stack passionne par la creation d'applications web modernes et performantes. Je me specialise dans l'ecosysteme JavaScript avec React pour le frontend et Node.js pour le backend."
 
   const heroName = settings.hero_name || 'BJ'
+  const avatarUrl = settings.avatar_url || ''
+  const avatarAlt = settings.hero_photo_alt || `Portrait de ${heroName}`
+  const photoObjectPosition = settings.hero_photo_object_position || '50% 30%'
+  const location = settings.contact_location || 'Remote'
+  const aboutPhotoBadge = settings.about_photo_badge || 'Disponible pour missions freelance'
+  const aboutPhotoCaption = settings.about_photo_caption || 'De la conception au deploiement, je prends en charge le cycle complet.'
   const initials = heroName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
   return (
     <AnimatedSection
@@ -25,26 +31,76 @@ export default function About() {
     >
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          {/* Colonne gauche : avatar placeholder */}
-          <div className="flex justify-center lg:justify-start">
-            {settings.avatar_url ? (
-              <img
-                src={settings.avatar_url}
-                alt={`Avatar de ${heroName}`}
-                className="w-64 h-64 rounded-2xl object-cover"
-              />
-            ) : (
+          {/* Colonne gauche : photo hero retravaillee */}
+          <div className="flex flex-col items-center lg:items-start">
+            <div className="relative w-fit">
               <div
-                className="w-64 h-64 rounded-2xl flex items-center justify-center text-6xl font-black select-none"
+                className="absolute -inset-5 rounded-[2.4rem] opacity-65 -z-10 pointer-events-none"
                 style={{
-                  background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-light))',
-                  color: '#fff',
+                  background: 'radial-gradient(circle at 20% 20%, var(--color-accent-glow) 0%, transparent 70%)',
+                  filter: 'blur(18px)',
                 }}
-                aria-label={`Avatar de ${heroName} avec initiales ${initials}`}
+              />
+
+              <div
+                className="rounded-[2.1rem] border p-3"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-bg-card)',
+                }}
               >
-                {initials}
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={avatarAlt}
+                    className="w-72 h-[22rem] sm:w-80 sm:h-96 rounded-[1.7rem] object-cover"
+                    style={{ objectPosition: photoObjectPosition }}
+                    loading="lazy"
+                    decoding="async"
+                    width="420"
+                    height="520"
+                  />
+                ) : (
+                  <div
+                    className="w-72 h-[22rem] sm:w-80 sm:h-96 rounded-[1.7rem] flex items-center justify-center text-7xl font-black select-none"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-light))',
+                      color: '#ffffff',
+                    }}
+                    aria-label={`Avatar de ${heroName} avec initiales ${initials}`}
+                  >
+                    {initials}
+                  </div>
+                )}
               </div>
-            )}
+
+              <div
+                className="absolute -bottom-4 left-1/2 -translate-x-1/2 rounded-xl border px-3 py-1.5 text-xs font-medium whitespace-nowrap"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-bg-secondary)',
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                {aboutPhotoBadge}
+              </div>
+            </div>
+
+            <p className="mt-8 text-sm max-w-sm text-center lg:text-left" style={{ color: 'var(--color-text-secondary)' }}>
+              {aboutPhotoCaption}
+            </p>
+
+            <div
+              className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium"
+              style={{
+                borderColor: 'var(--color-border)',
+                backgroundColor: 'var(--color-bg-card)',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              <MapPinIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+              <span>{location}</span>
+            </div>
           </div>
 
           {/* Colonne droite : bio et statistiques */}
@@ -71,7 +127,7 @@ export default function About() {
               {stats.map((stat) => {
                 const Icon = stat.icon
                 return (
-                  <Card key={stat.label} className="text-center py-4">
+                  <Card key={stat.label} className="text-center py-4 transition-transform duration-300 hover:-translate-y-1">
                     <Icon
                       className="h-6 w-6 mx-auto mb-2"
                       style={{ color: 'var(--color-accent)' }}
