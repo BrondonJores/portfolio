@@ -2,11 +2,11 @@
 const { getDashboardStats } = require('../services/statsService')
 
 /**
- * Retourne les statistiques du dashboard admin (serie mensuelle).
+ * Retourne les statistiques enrichies du dashboard admin.
  * @param {import('express').Request} req Requete HTTP.
  * @param {import('express').Response} res Reponse HTTP.
  * @param {import('express').NextFunction} next Middleware d'erreur.
- * @returns {Promise<void>} Promise resolue apres envoi des statistiques.
+ * @returns {Promise<void>} Promise resolue apres envoi du snapshot stats.
  */
 async function getStats(req, res, next) {
   try {
