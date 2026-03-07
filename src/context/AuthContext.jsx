@@ -56,9 +56,37 @@ export function AuthProvider({ children }) {
     }
 
     const data = await response.json()
+    if (data?.mfaRequired) {
+      return data
+    }
+
     setAccessToken(data.accessToken)
     setUser(data.user)
 
+    return data
+  }, [])
+
+  /* Validation du challenge 2FA lors de la seconde etape de connexion */
+  const verifyTwoFactor = useCallback(async ({ mfaToken, totpCode, recoveryCode }) => {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify-2fa`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        mfa_token: mfaToken,
+        ...(totpCode ? { totp_code: totpCode } : {}),
+        ...(recoveryCode ? { recovery_code: recoveryCode } : {}),
+      }),
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data.error || 'Code 2FA invalide.')
+    }
+
+    const data = await response.json()
+    setAccessToken(data.accessToken)
+    setUser(data.user)
     return data
   }, [])
 
@@ -107,6 +135,7 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!user && !!accessToken,
     isLoading,
     login,
+    verifyTwoFactor,
     logout,
     refreshToken,
     setAccessToken,

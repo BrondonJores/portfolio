@@ -16,29 +16,66 @@ const inputStyle = {
 export default function AdminLogin() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [mfaToken, setMfaToken] = useState('')
+  const [totpCode, setTotpCode] = useState('')
+  const [recoveryCode, setRecoveryCode] = useState('')
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const { login, isAuthenticated } = useAuth()
+  const { login, verifyTwoFactor, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
   /* Redirection si deja connecte */
   const from = location.state?.from?.pathname || '/admin'
 
-  const handleSubmit = async (e) => {
+  const handleCredentialsSubmit = async (e) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
     try {
-      await login(email, password)
+      const result = await login(email, password)
+
+      if (result?.mfaRequired) {
+        setMfaToken(result.mfaToken)
+        setPassword('')
+        return
+      }
+
       navigate(from, { replace: true })
     } catch (err) {
       setError(err.message || 'Identifiants invalides.')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleTwoFactorSubmit = async (e) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    try {
+      await verifyTwoFactor({
+        mfaToken,
+        ...(useRecoveryCode ? { recoveryCode } : { totpCode }),
+      })
+      navigate(from, { replace: true })
+    } catch (err) {
+      setError(err.message || 'Code 2FA invalide.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleBackToCredentials = () => {
+    setMfaToken('')
+    setTotpCode('')
+    setRecoveryCode('')
+    setUseRecoveryCode(false)
+    setError(null)
   }
 
   return (
@@ -75,49 +112,126 @@ export default function AdminLogin() {
               borderColor: 'var(--color-border)',
             }}
           >
-            <form onSubmit={handleSubmit} noValidate>
+            <form onSubmit={mfaToken ? handleTwoFactorSubmit : handleCredentialsSubmit} noValidate>
               <div className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="admin-email"
-                    className="block text-sm font-medium mb-1.5"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    Email
-                  </label>
-                  <input
-                    id="admin-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoComplete="email"
-                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                    style={inputStyle}
-                    placeholder="admin@example.com"
-                  />
-                </div>
+                {!mfaToken && (
+                  <>
+                    <div>
+                      <label
+                        htmlFor="admin-email"
+                        className="block text-sm font-medium mb-1.5"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        Email
+                      </label>
+                      <input
+                        id="admin-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        autoComplete="email"
+                        className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+                        style={inputStyle}
+                        placeholder="admin@example.com"
+                      />
+                    </div>
 
-                <div>
-                  <label
-                    htmlFor="admin-password"
-                    className="block text-sm font-medium mb-1.5"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    Mot de passe
-                  </label>
-                  <input
-                    id="admin-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    autoComplete="current-password"
-                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                    style={inputStyle}
-                    placeholder="Mot de passe"
-                  />
-                </div>
+                    <div>
+                      <label
+                        htmlFor="admin-password"
+                        className="block text-sm font-medium mb-1.5"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        Mot de passe
+                      </label>
+                      <input
+                        id="admin-password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        autoComplete="current-password"
+                        className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+                        style={inputStyle}
+                        placeholder="Mot de passe"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {mfaToken && (
+                  <>
+                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      Verification 2FA requise pour
+                      {' '}
+                      <span style={{ color: 'var(--color-text-primary)' }}>{email}</span>
+                      .
+                    </p>
+
+                    {!useRecoveryCode && (
+                      <div>
+                        <label
+                          htmlFor="admin-totp"
+                          className="block text-sm font-medium mb-1.5"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          Code Authenticator (6 chiffres)
+                        </label>
+                        <input
+                          id="admin-totp"
+                          type="text"
+                          value={totpCode}
+                          onChange={(e) => setTotpCode(e.target.value)}
+                          required
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={12}
+                          className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+                          style={inputStyle}
+                          placeholder="123456"
+                        />
+                      </div>
+                    )}
+
+                    {useRecoveryCode && (
+                      <div>
+                        <label
+                          htmlFor="admin-recovery-code"
+                          className="block text-sm font-medium mb-1.5"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          Code de recuperation
+                        </label>
+                        <input
+                          id="admin-recovery-code"
+                          type="text"
+                          value={recoveryCode}
+                          onChange={(e) => setRecoveryCode(e.target.value)}
+                          required
+                          maxLength={32}
+                          className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+                          style={inputStyle}
+                          placeholder="ABCDE-12345"
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseRecoveryCode((prev) => !prev)
+                        setError(null)
+                        setTotpCode('')
+                        setRecoveryCode('')
+                      }}
+                      className="text-sm underline underline-offset-2"
+                      style={{ color: 'var(--color-accent)' }}
+                    >
+                      {useRecoveryCode ? 'Utiliser un code Authenticator' : 'Utiliser un code de recuperation'}
+                    </button>
+                  </>
+                )}
 
                 {error && (
                   <p
@@ -135,8 +249,19 @@ export default function AdminLogin() {
                   disabled={loading}
                   className="w-full justify-center"
                 >
-                  {loading ? <Spinner size="sm" /> : 'Se connecter'}
+                  {loading ? <Spinner size="sm" /> : mfaToken ? 'Verifier le code 2FA' : 'Se connecter'}
                 </Button>
+
+                {mfaToken && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleBackToCredentials}
+                    className="w-full justify-center"
+                  >
+                    Retour
+                  </Button>
+                )}
               </div>
             </form>
           </div>

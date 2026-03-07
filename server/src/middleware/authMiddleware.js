@@ -16,7 +16,12 @@ function authenticate(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET)
-    req.user = { id: payload.id, username: payload.username, email: payload.email }
+    req.user = {
+      id: payload.id,
+      username: payload.username,
+      email: payload.email,
+      twoFactorEnabled: payload.twoFactorEnabled === true,
+    }
     next()
   } catch {
     /* Ne jamais exposer le detail de l'erreur JWT en production */

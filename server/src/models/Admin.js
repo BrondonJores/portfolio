@@ -30,6 +30,19 @@ const Admin = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    two_factor_enabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    two_factor_secret_encrypted: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    two_factor_recovery_codes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     tableName: 'admins',
@@ -37,12 +50,15 @@ const Admin = sequelize.define(
     createdAt: 'created_at',
     updatedAt: false,
     defaultScope: {
-      /* Le mot de passe n'est jamais inclus par defaut dans les reponses */
-      attributes: { exclude: ['password_hash'] },
+      /* Les donnees sensibles ne sont jamais incluses par defaut */
+      attributes: { exclude: ['password_hash', 'two_factor_secret_encrypted', 'two_factor_recovery_codes'] },
     },
     scopes: {
       withPassword: {
         attributes: { include: ['password_hash'] },
+      },
+      withTwoFactorSecrets: {
+        attributes: { include: ['two_factor_secret_encrypted', 'two_factor_recovery_codes'] },
       },
     },
   }

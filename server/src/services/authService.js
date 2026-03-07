@@ -1,6 +1,7 @@
-/* Service metier auth : regles applicatives et acces donnees. */
+/* Service metier auth : regles applicatives, sessions JWT et 2FA. */
 const jwtLib = require('jsonwebtoken')
 const { Admin } = require('../models')
+const twoFactorServiceLib = require('./twoFactorService')
 const { createHttpError } = require('../utils/httpError')
 
 /**
@@ -8,13 +9,15 @@ const { createHttpError } = require('../utils/httpError')
  * @param {object} [deps={}] Dependances externes.
  * @param {object} [deps.adminModel] Modele admin.
  * @param {object} [deps.jwt] Librairie JWT.
- * @param {NodeJS.ProcessEnv|object} [deps.env] Variables d'environnement a utiliser.
+ * @param {NodeJS.ProcessEnv|object} [deps.env] Variables d'environnement.
+ * @param {object} [deps.twoFactorService] Service 2FA.
  * @returns {object} API d'authentification.
  */
 function createAuthService(deps = {}) {
   const adminModel = deps.adminModel || Admin
   const jwt = deps.jwt || jwtLib
   const env = deps.env || process.env
+  const twoFactorService = deps.twoFactorService || twoFactorServiceLib
 
   /**
    * Parse une version de refresh token vers un entier >= 0.
@@ -71,13 +74,28 @@ function createAuthService(deps = {}) {
   /**
    * Extrait les champs publics d'un enregistrement admin.
    * @param {object} admin Instance admin.
-   * @returns {{id:number,username:string,email:string}} Profil expose au client.
+   * @returns {{id:number,username:string,email:string,twoFactorEnabled:boolean}} Profil expose.
    */
   function toPublicUser(admin) {
     return {
       id: admin.id,
       username: admin.username,
       email: admin.email,
+      twoFactorEnabled: admin.two_factor_enabled === true,
+    }
+  }
+
+  /**
+   * Construit le payload de refresh token a partir d'un user public.
+   * @param {{id:number,username:string,email:string,twoFactorEnabled:boolean}} user Profil public.
+   * @param {number} tokenVersion Version serveur du refresh token.
+   * @returns {{id:number,username:string,email:string,twoFactorEnabled:boolean,rtv:number,typ:string}} Payload refresh.
+   */
+  function toRefreshPayload(user, tokenVersion) {
+    return {
+      ...user,
+      rtv: parseTokenVersion(tokenVersion, 0),
+      typ: 'refresh',
     }
   }
 
@@ -113,27 +131,20 @@ function createAuthService(deps = {}) {
   }
 
   /**
-   * Construit le payload de refresh token a partir d'un user public.
-   * @param {{id:number,username:string,email:string}} user Profil public.
-   * @param {number} tokenVersion Version serveur du refresh token.
-   * @returns {{id:number,username:string,email:string,rtv:number,typ:string}} Payload JWT refresh.
-   */
-  function toRefreshPayload(user, tokenVersion) {
-    return {
-      ...user,
-      rtv: parseTokenVersion(tokenVersion, 0),
-      typ: 'refresh',
-    }
-  }
-
-  /**
    * Charge un admin a partir de son id.
    * @param {number} adminId Identifiant admin.
+   * @param {{includeTwoFactorSecrets?:boolean}} [options={}] Options de chargement.
    * @returns {Promise<object>} Admin charge.
    * @throws {Error} Erreur 401 si session invalide.
    */
-  async function loadAdminOrThrow(adminId) {
-    const admin = await adminModel.findByPk(adminId)
+  async function loadAdminOrThrow(adminId, options = {}) {
+    const includeTwoFactorSecrets = options.includeTwoFactorSecrets === true
+    const model =
+      includeTwoFactorSecrets && typeof adminModel.scope === 'function'
+        ? adminModel.scope('withTwoFactorSecrets')
+        : adminModel
+
+    const admin = await model.findByPk(adminId)
     if (!admin) {
       throw createHttpError(401, 'Session invalide.')
     }
@@ -154,13 +165,34 @@ function createAuthService(deps = {}) {
   }
 
   /**
-   * Authentifie un administrateur et genere les tokens.
-   * @param {{email:string,password:string}} credentials Identifiants de connexion.
-   * @returns {Promise<{user:object,accessToken:string,refreshToken:string}>} Donnees de session.
+   * Genere une session complete (access + refresh) pour un admin.
+   * @param {object} admin Instance admin.
+   * @returns {{user:object,accessToken:string,refreshToken:string,mfaRequired:boolean}} Session complete.
+   */
+  function issueSessionForAdmin(admin) {
+    const user = toPublicUser(admin)
+    const tokenVersion = parseTokenVersion(admin.refresh_token_version, 0)
+    const accessToken = generateAccessToken(user)
+    const refreshToken = generateRefreshToken(toRefreshPayload(user, tokenVersion))
+
+    return {
+      mfaRequired: false,
+      user,
+      accessToken,
+      refreshToken,
+    }
+  }
+
+  /**
+   * Authentifie un administrateur (et demarre eventuellement le challenge 2FA).
+   * @param {{email:string,password:string}} credentials Identifiants.
+   * @returns {Promise<object>} Session immediate ou challenge MFA.
    * @throws {Error} Erreur 401 si credentials invalides.
    */
   async function loginAdmin({ email, password }) {
-    const admin = await adminModel.scope('withPassword').findOne({ where: { email } })
+    const modelWithPassword =
+      typeof adminModel.scope === 'function' ? adminModel.scope('withPassword') : adminModel
+    const admin = await modelWithPassword.findOne({ where: { email } })
 
     if (!admin) {
       throw createHttpError(401, 'Identifiants invalides.')
@@ -171,12 +203,264 @@ function createAuthService(deps = {}) {
       throw createHttpError(401, 'Identifiants invalides.')
     }
 
-    const user = toPublicUser(admin)
-    const tokenVersion = parseTokenVersion(admin.refresh_token_version, 0)
-    const accessToken = generateAccessToken(user)
-    const refreshToken = generateRefreshToken(toRefreshPayload(user, tokenVersion))
+    if (twoFactorService.isTwoFactorEnabled(admin)) {
+      const mfaToken = twoFactorService.signLoginChallengeToken({
+        adminId: admin.id,
+        email: admin.email,
+        username: admin.username,
+        tokenVersion: parseTokenVersion(admin.refresh_token_version, 0),
+      })
 
-    return { user, accessToken, refreshToken }
+      return {
+        mfaRequired: true,
+        mfaToken,
+        user: toPublicUser(admin),
+      }
+    }
+
+    return issueSessionForAdmin(admin)
+  }
+
+  /**
+   * Finalise la connexion via challenge 2FA.
+   * @param {{mfaToken:string,totpCode?:string,recoveryCode?:string}} payload Donnees de verification.
+   * @returns {Promise<object>} Session JWT complete.
+   */
+  async function verifyTwoFactorLogin({ mfaToken, totpCode, recoveryCode }) {
+    const challenge = twoFactorService.verifyLoginChallengeToken(mfaToken)
+    const admin = await loadAdminOrThrow(challenge.adminId, { includeTwoFactorSecrets: true })
+    const currentVersion = parseTokenVersion(admin.refresh_token_version, 0)
+
+    if (challenge.rtv !== currentVersion) {
+      throw createHttpError(401, 'Session invalide.')
+    }
+
+    if (!twoFactorService.isTwoFactorEnabled(admin)) {
+      throw createHttpError(401, '2FA non active pour ce compte.')
+    }
+
+    let isVerified = false
+    let usedRecoveryCode = false
+    let recoveryCodesRemaining = null
+
+    const normalizedTotpCode = twoFactorService.normalizeTotpCode(totpCode)
+    if (normalizedTotpCode) {
+      const secret = twoFactorService.decryptTotpSecret(admin.two_factor_secret_encrypted)
+      isVerified = twoFactorService.verifyTotpCode({
+        secret,
+        code: normalizedTotpCode,
+      })
+    }
+
+    const normalizedRecoveryCode = twoFactorService.normalizeRecoveryCode(recoveryCode)
+    if (!isVerified && normalizedRecoveryCode && twoFactorService.recoveryCodesEnabled()) {
+      const consumeResult = twoFactorService.consumeRecoveryCode({
+        serializedHashes: admin.two_factor_recovery_codes,
+        recoveryCode: normalizedRecoveryCode,
+      })
+
+      if (consumeResult.valid) {
+        await admin.update({
+          two_factor_recovery_codes: consumeResult.nextSerialized,
+        })
+        isVerified = true
+        usedRecoveryCode = true
+        recoveryCodesRemaining = consumeResult.remaining
+      }
+    }
+
+    if (!isVerified) {
+      throw createHttpError(401, 'Code 2FA invalide.')
+    }
+
+    const session = issueSessionForAdmin(admin)
+    return {
+      ...session,
+      usedRecoveryCode,
+      recoveryCodesRemaining,
+    }
+  }
+
+  /**
+   * Prepare un setup 2FA (secret + token setup + URL otpauth).
+   * @param {number|string} adminId Identifiant admin.
+   * @returns {Promise<{setupToken:string,secret:string,otpauthUrl:string}>} Donnees setup.
+   */
+  async function beginTwoFactorSetup(adminId) {
+    const admin = await loadAdminOrThrow(Number(adminId))
+
+    if (twoFactorService.isTwoFactorEnabled(admin)) {
+      throw createHttpError(400, 'Le 2FA est deja active.')
+    }
+
+    const secret = twoFactorService.generateTotpSecret()
+    const setupToken = twoFactorService.signSetupToken({
+      adminId: admin.id,
+      secret,
+    })
+    const otpauthUrl = twoFactorService.buildOtpAuthUrl({
+      label: admin.email || admin.username || `admin-${admin.id}`,
+      secret,
+    })
+
+    return {
+      setupToken,
+      secret,
+      otpauthUrl,
+    }
+  }
+
+  /**
+   * Active le 2FA pour un admin apres verification du code TOTP de setup.
+   * @param {{adminId:number|string,setupToken:string,totpCode:string}} payload Donnees activation.
+   * @returns {Promise<{enabled:boolean,recoveryCodes:string[]}>} Resultat activation.
+   */
+  async function enableTwoFactorForAdmin({ adminId, setupToken, totpCode }) {
+    const setup = twoFactorService.verifySetupToken(setupToken)
+    const normalizedAdminId = Number(adminId)
+    if (setup.adminId !== normalizedAdminId) {
+      throw createHttpError(403, 'Token setup 2FA non autorise pour ce compte.')
+    }
+
+    const admin = await loadAdminOrThrow(normalizedAdminId, { includeTwoFactorSecrets: true })
+    if (twoFactorService.isTwoFactorEnabled(admin)) {
+      throw createHttpError(400, 'Le 2FA est deja active.')
+    }
+
+    const isCodeValid = twoFactorService.verifyTotpCode({
+      secret: setup.secret,
+      code: twoFactorService.normalizeTotpCode(totpCode),
+    })
+    if (!isCodeValid) {
+      throw createHttpError(401, 'Code TOTP invalide.')
+    }
+
+    const encryptedSecret = twoFactorService.encryptTotpSecret(setup.secret)
+    const recoveryCodes = twoFactorService.recoveryCodesEnabled()
+      ? twoFactorService.generateRecoveryCodes()
+      : []
+    const recoveryHashes = twoFactorService.hashRecoveryCodes(recoveryCodes)
+
+    await admin.update({
+      two_factor_enabled: true,
+      two_factor_secret_encrypted: encryptedSecret,
+      two_factor_recovery_codes: twoFactorService.serializeRecoveryCodeHashes(recoveryHashes),
+    })
+
+    await bumpRefreshTokenVersion(admin)
+
+    return {
+      enabled: true,
+      recoveryCodes,
+    }
+  }
+
+  /**
+   * Retourne l'etat 2FA du compte admin.
+   * @param {number|string} adminId Identifiant admin.
+   * @returns {Promise<{enabled:boolean,hasRecoveryCodes:boolean,recoveryCodesCount:number}>} Etat 2FA.
+   */
+  async function getTwoFactorStatus(adminId) {
+    const admin = await loadAdminOrThrow(Number(adminId), { includeTwoFactorSecrets: true })
+    const hashes = twoFactorService.parseRecoveryCodeHashes(admin.two_factor_recovery_codes)
+
+    return {
+      enabled: admin.two_factor_enabled === true,
+      hasRecoveryCodes: hashes.length > 0,
+      recoveryCodesCount: hashes.length,
+    }
+  }
+
+  /**
+   * Desactive le 2FA apres verification TOTP ou recovery code.
+   * @param {{adminId:number|string,totpCode?:string,recoveryCode?:string}} payload Donnees desactivation.
+   * @returns {Promise<{enabled:boolean,usedRecoveryCode:boolean}>} Resultat.
+   */
+  async function disableTwoFactorForAdmin({ adminId, totpCode, recoveryCode }) {
+    const admin = await loadAdminOrThrow(Number(adminId), { includeTwoFactorSecrets: true })
+
+    if (!twoFactorService.isTwoFactorEnabled(admin)) {
+      return {
+        enabled: false,
+        usedRecoveryCode: false,
+      }
+    }
+
+    let verified = false
+    let usedRecoveryCode = false
+    const normalizedTotpCode = twoFactorService.normalizeTotpCode(totpCode)
+
+    if (normalizedTotpCode) {
+      const secret = twoFactorService.decryptTotpSecret(admin.two_factor_secret_encrypted)
+      verified = twoFactorService.verifyTotpCode({
+        secret,
+        code: normalizedTotpCode,
+      })
+    }
+
+    const normalizedRecoveryCode = twoFactorService.normalizeRecoveryCode(recoveryCode)
+    if (!verified && normalizedRecoveryCode && twoFactorService.recoveryCodesEnabled()) {
+      const consumeResult = twoFactorService.consumeRecoveryCode({
+        serializedHashes: admin.two_factor_recovery_codes,
+        recoveryCode: normalizedRecoveryCode,
+      })
+
+      if (consumeResult.valid) {
+        verified = true
+        usedRecoveryCode = true
+      }
+    }
+
+    if (!verified) {
+      throw createHttpError(401, 'Code 2FA invalide.')
+    }
+
+    await admin.update({
+      two_factor_enabled: false,
+      two_factor_secret_encrypted: null,
+      two_factor_recovery_codes: null,
+    })
+
+    await bumpRefreshTokenVersion(admin)
+
+    return {
+      enabled: false,
+      usedRecoveryCode,
+    }
+  }
+
+  /**
+   * Regenere les recovery codes (verification TOTP obligatoire).
+   * @param {{adminId:number|string,totpCode:string}} payload Donnees regeneration.
+   * @returns {Promise<{recoveryCodes:string[]}>} Nouveaux recovery codes en clair.
+   */
+  async function regenerateTwoFactorRecoveryCodes({ adminId, totpCode }) {
+    if (!twoFactorService.recoveryCodesEnabled()) {
+      throw createHttpError(400, 'Les recovery codes sont desactives.')
+    }
+
+    const admin = await loadAdminOrThrow(Number(adminId), { includeTwoFactorSecrets: true })
+    if (!twoFactorService.isTwoFactorEnabled(admin)) {
+      throw createHttpError(400, 'Le 2FA doit etre actif pour regenarer les recovery codes.')
+    }
+
+    const secret = twoFactorService.decryptTotpSecret(admin.two_factor_secret_encrypted)
+    const isCodeValid = twoFactorService.verifyTotpCode({
+      secret,
+      code: twoFactorService.normalizeTotpCode(totpCode),
+    })
+    if (!isCodeValid) {
+      throw createHttpError(401, 'Code TOTP invalide.')
+    }
+
+    const recoveryCodes = twoFactorService.generateRecoveryCodes()
+    const recoveryHashes = twoFactorService.hashRecoveryCodes(recoveryCodes)
+
+    await admin.update({
+      two_factor_recovery_codes: twoFactorService.serializeRecoveryCodeHashes(recoveryHashes),
+    })
+
+    return { recoveryCodes }
   }
 
   /**
@@ -247,6 +531,12 @@ function createAuthService(deps = {}) {
 
   return {
     loginAdmin,
+    verifyTwoFactorLogin,
+    beginTwoFactorSetup,
+    enableTwoFactorForAdmin,
+    disableTwoFactorForAdmin,
+    regenerateTwoFactorRecoveryCodes,
+    getTwoFactorStatus,
     refreshAdminSession,
     refreshAccessToken: refreshAdminSession,
     logoutAdminSession,
@@ -258,3 +548,4 @@ module.exports = {
   createAuthService,
   ...createAuthService(),
 }
+

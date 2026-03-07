@@ -1,10 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import ImageUploader from '../../components/ui/ImageUploader.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getAdminSettings, updateSettings } from '../../services/settingService.js'
+import {
+  createTwoFactorSetup,
+  disableTwoFactor,
+  enableTwoFactor,
+  getTwoFactorStatus,
+  regenerateTwoFactorRecoveryCodes,
+} from '../../services/authService.js'
 import {
   DEFAULT_THEME_SETTINGS,
   FONT_FAMILY_OPTIONS,
@@ -26,6 +33,7 @@ const TABS = [
   { id: 'seo', label: 'SEO' },
   { id: 'appearance', label: 'Apparence' },
   { id: 'animations', label: 'Animations' },
+  { id: 'security', label: 'Securite' },
   { id: 'newsletter', label: 'Newsletter' },
 ]
 
@@ -69,6 +77,17 @@ function normalizeColor(rawValue, fallback) {
     return value
   }
   return fallback
+}
+
+function normalizeTwoFactorStatus(raw) {
+  const count = Number(raw?.recoveryCodesCount)
+  const recoveryCodesCount = Number.isInteger(count) && count >= 0 ? count : 0
+
+  return {
+    enabled: raw?.enabled === true,
+    hasRecoveryCodes: raw?.hasRecoveryCodes === true || recoveryCodesCount > 0,
+    recoveryCodesCount,
+  }
 }
 
 function SectionTitle({ children }) {
@@ -251,8 +270,30 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('identity')
+  const [twoFactorBusy, setTwoFactorBusy] = useState(false)
+  const [twoFactorStatus, setTwoFactorStatus] = useState(() =>
+    normalizeTwoFactorStatus({ enabled: false, hasRecoveryCodes: false, recoveryCodesCount: 0 })
+  )
+  const [twoFactorSetup, setTwoFactorSetup] = useState(null)
+  const [twoFactorCode, setTwoFactorCode] = useState('')
+  const [twoFactorDisableTotp, setTwoFactorDisableTotp] = useState('')
+  const [twoFactorDisableRecoveryCode, setTwoFactorDisableRecoveryCode] = useState('')
+  const [twoFactorRegenerateCode, setTwoFactorRegenerateCode] = useState('')
+  const [freshRecoveryCodes, setFreshRecoveryCodes] = useState([])
 
   const styleKeys = useMemo(() => Object.keys(DEFAULT_THEME_SETTINGS), [])
+
+  const loadTwoFactorStatus = useCallback(async () => {
+    setTwoFactorBusy(true)
+    try {
+      const response = await getTwoFactorStatus()
+      setTwoFactorStatus(normalizeTwoFactorStatus(response?.data || {}))
+    } catch {
+      addToast('Erreur lors du chargement du statut 2FA.', 'error')
+    } finally {
+      setTwoFactorBusy(false)
+    }
+  }, [addToast])
 
   useEffect(() => {
     getAdminSettings()
@@ -264,6 +305,10 @@ export default function AdminSettings() {
       .catch(() => addToast('Erreur lors du chargement.', 'error'))
       .finally(() => setLoading(false))
   }, [addToast, updateLocalSettings])
+
+  useEffect(() => {
+    loadTwoFactorStatus()
+  }, [loadTwoFactorStatus])
 
   const handleChange = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
@@ -289,6 +334,108 @@ export default function AdminSettings() {
       addToast("Erreur lors de l'enregistrement.", 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleStartTwoFactorSetup = async () => {
+    setTwoFactorBusy(true)
+    try {
+      const response = await createTwoFactorSetup()
+      setTwoFactorSetup(response?.data || null)
+      setTwoFactorCode('')
+      addToast('Configuration 2FA generee. Scanne le QR ou copie le secret.', 'success')
+    } catch {
+      addToast('Impossible de demarrer la configuration 2FA.', 'error')
+    } finally {
+      setTwoFactorBusy(false)
+    }
+  }
+
+  const handleEnableTwoFactor = async () => {
+    if (!twoFactorSetup?.setupToken || !twoFactorCode.trim()) {
+      addToast('Code TOTP requis pour activer le 2FA.', 'error')
+      return
+    }
+
+    setTwoFactorBusy(true)
+    try {
+      const response = await enableTwoFactor({
+        setupToken: twoFactorSetup.setupToken,
+        totpCode: twoFactorCode,
+      })
+      setFreshRecoveryCodes(Array.isArray(response?.data?.recoveryCodes) ? response.data.recoveryCodes : [])
+      setTwoFactorSetup(null)
+      setTwoFactorCode('')
+      setTwoFactorDisableTotp('')
+      setTwoFactorDisableRecoveryCode('')
+      await loadTwoFactorStatus()
+      addToast('2FA active avec succes.', 'success')
+    } catch {
+      addToast('Activation 2FA refusee. Verifie le code Authenticator.', 'error')
+    } finally {
+      setTwoFactorBusy(false)
+    }
+  }
+
+  const handleDisableTwoFactor = async () => {
+    if (!twoFactorDisableTotp.trim() && !twoFactorDisableRecoveryCode.trim()) {
+      addToast('Renseigne un code TOTP ou un recovery code.', 'error')
+      return
+    }
+
+    setTwoFactorBusy(true)
+    try {
+      await disableTwoFactor({
+        totpCode: twoFactorDisableTotp,
+        recoveryCode: twoFactorDisableRecoveryCode,
+      })
+      setTwoFactorSetup(null)
+      setTwoFactorCode('')
+      setTwoFactorDisableTotp('')
+      setTwoFactorDisableRecoveryCode('')
+      setTwoFactorRegenerateCode('')
+      setFreshRecoveryCodes([])
+      await loadTwoFactorStatus()
+      addToast('2FA desactive.', 'success')
+    } catch {
+      addToast('Impossible de desactiver le 2FA avec ce code.', 'error')
+    } finally {
+      setTwoFactorBusy(false)
+    }
+  }
+
+  const handleRegenerateRecoveryCodes = async () => {
+    if (!twoFactorRegenerateCode.trim()) {
+      addToast('Code TOTP requis pour regenarer les recovery codes.', 'error')
+      return
+    }
+
+    setTwoFactorBusy(true)
+    try {
+      const response = await regenerateTwoFactorRecoveryCodes({
+        totpCode: twoFactorRegenerateCode,
+      })
+      setFreshRecoveryCodes(Array.isArray(response?.data?.recoveryCodes) ? response.data.recoveryCodes : [])
+      setTwoFactorRegenerateCode('')
+      await loadTwoFactorStatus()
+      addToast('Nouveaux recovery codes generes.', 'success')
+    } catch {
+      addToast('Impossible de regenarer les recovery codes.', 'error')
+    } finally {
+      setTwoFactorBusy(false)
+    }
+  }
+
+  const handleCopy = async (text, successMessage) => {
+    if (!text) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(text)
+      addToast(successMessage, 'success')
+    } catch {
+      addToast('Copie impossible depuis ce navigateur.', 'error')
     }
   }
 
@@ -326,14 +473,16 @@ export default function AdminSettings() {
                 {activeTab === 'appearance' ? 'Reinitialiser le style' : 'Reinitialiser les animations'}
               </button>
             )}
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
-              style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
-            >
-              {saving ? 'Enregistrement...' : 'Enregistrer'}
-            </button>
+            {activeTab !== 'security' && (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
+                style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+              >
+                {saving ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -885,6 +1034,295 @@ export default function AdminSettings() {
                   />
                 </div>
               </CardSection>
+            </>
+          )}
+
+          {activeTab === 'security' && (
+            <>
+              <CardSection className="max-w-3xl">
+                <SectionTitle>Authentification 2 facteurs</SectionTitle>
+                <InlineTip>
+                  Le 2FA ajoute une verification Authenticator apres le mot de passe.
+                </InlineTip>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <span
+                    className="px-3 py-1 rounded-full text-xs font-semibold"
+                    style={{
+                      backgroundColor: twoFactorStatus.enabled ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                      color: twoFactorStatus.enabled ? '#4ade80' : '#f87171',
+                    }}
+                  >
+                    {twoFactorStatus.enabled ? '2FA active' : '2FA inactive'}
+                  </span>
+                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    Recovery codes restants: {twoFactorStatus.recoveryCodesCount}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={loadTwoFactorStatus}
+                    disabled={twoFactorBusy}
+                    className="px-3 py-2 rounded-lg text-sm font-medium border"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                  >
+                    Rafraichir
+                  </button>
+                </div>
+
+                {twoFactorBusy && (
+                  <div className="py-3">
+                    <Spinner size="sm" />
+                  </div>
+                )}
+              </CardSection>
+
+              {!twoFactorStatus.enabled && (
+                <CardSection className="max-w-3xl">
+                  <SectionTitle>Activer le 2FA</SectionTitle>
+
+                  {!twoFactorSetup && (
+                    <div className="space-y-3">
+                      <InlineTip>
+                        Genere un secret, ajoute-le dans Google Authenticator (ou equivalent), puis confirme avec un code.
+                      </InlineTip>
+                      <button
+                        type="button"
+                        onClick={handleStartTwoFactorSetup}
+                        disabled={twoFactorBusy}
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium"
+                        style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+                      >
+                        Demarrer la configuration
+                      </button>
+                    </div>
+                  )}
+
+                  {twoFactorSetup && (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                          Secret manuel
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            readOnly
+                            value={twoFactorSetup.secret || ''}
+                            className="flex-1 px-3 py-2 rounded-lg border text-sm"
+                            style={inputStyle}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(twoFactorSetup.secret, 'Secret copie.')}
+                            className="px-3 py-2 rounded-lg text-sm font-medium border"
+                            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                          >
+                            Copier
+                          </button>
+                        </div>
+                      </div>
+
+                      {twoFactorSetup.otpauthUrl && (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                            Lien otpauth
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              readOnly
+                              value={twoFactorSetup.otpauthUrl}
+                              className="flex-1 px-3 py-2 rounded-lg border text-sm"
+                              style={inputStyle}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(twoFactorSetup.otpauthUrl, 'Lien otpauth copie.')}
+                              className="px-3 py-2 rounded-lg text-sm font-medium border"
+                              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                            >
+                              Copier
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-1"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          Code Authenticator (6 chiffres)
+                        </label>
+                        <input
+                          type="text"
+                          value={twoFactorCode}
+                          onChange={(e) => setTwoFactorCode(e.target.value)}
+                          inputMode="numeric"
+                          maxLength={12}
+                          className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          style={inputStyle}
+                          placeholder="123456"
+                        />
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleEnableTwoFactor}
+                          disabled={twoFactorBusy}
+                          className="px-4 py-2.5 rounded-lg text-sm font-medium"
+                          style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+                        >
+                          Activer le 2FA
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTwoFactorSetup(null)
+                            setTwoFactorCode('')
+                          }}
+                          disabled={twoFactorBusy}
+                          className="px-4 py-2.5 rounded-lg text-sm font-medium border"
+                          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </CardSection>
+              )}
+
+              {twoFactorStatus.enabled && (
+                <>
+                  <CardSection className="max-w-3xl">
+                    <SectionTitle>Recovery Codes</SectionTitle>
+                    <InlineTip>
+                      Regenere tes recovery codes avec un code Authenticator. Les anciens seront invalides.
+                    </InlineTip>
+
+                    <div>
+                      <label
+                        className="block text-sm font-medium mb-1"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        Code Authenticator pour regeneration
+                      </label>
+                      <input
+                        type="text"
+                        value={twoFactorRegenerateCode}
+                        onChange={(e) => setTwoFactorRegenerateCode(e.target.value)}
+                        inputMode="numeric"
+                        maxLength={12}
+                        className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={inputStyle}
+                        placeholder="123456"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleRegenerateRecoveryCodes}
+                      disabled={twoFactorBusy}
+                      className="px-4 py-2.5 rounded-lg text-sm font-medium"
+                      style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+                    >
+                      Regenerer les recovery codes
+                    </button>
+                  </CardSection>
+
+                  <CardSection className="max-w-3xl">
+                    <SectionTitle>Desactiver le 2FA</SectionTitle>
+                    <InlineTip>
+                      Pour desactiver, renseigne soit un code Authenticator, soit un recovery code.
+                    </InlineTip>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-1"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          Code Authenticator
+                        </label>
+                        <input
+                          type="text"
+                          value={twoFactorDisableTotp}
+                          onChange={(e) => setTwoFactorDisableTotp(e.target.value)}
+                          inputMode="numeric"
+                          maxLength={12}
+                          className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          style={inputStyle}
+                          placeholder="123456"
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          className="block text-sm font-medium mb-1"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          Recovery code
+                        </label>
+                        <input
+                          type="text"
+                          value={twoFactorDisableRecoveryCode}
+                          onChange={(e) => setTwoFactorDisableRecoveryCode(e.target.value)}
+                          maxLength={32}
+                          className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          style={inputStyle}
+                          placeholder="ABCDE-12345"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleDisableTwoFactor}
+                      disabled={twoFactorBusy}
+                      className="px-4 py-2.5 rounded-lg text-sm font-medium"
+                      style={{ backgroundColor: '#dc2626', color: '#fff' }}
+                    >
+                      Desactiver le 2FA
+                    </button>
+                  </CardSection>
+                </>
+              )}
+
+              {freshRecoveryCodes.length > 0 && (
+                <CardSection className="max-w-3xl">
+                  <SectionTitle>Nouveaux recovery codes</SectionTitle>
+                  <InlineTip>
+                    Copie-les maintenant. Ils ne seront plus affiches ensuite.
+                  </InlineTip>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {freshRecoveryCodes.map((code) => (
+                      <code
+                        key={code}
+                        className="px-3 py-2 rounded-lg border text-sm font-semibold"
+                        style={{
+                          borderColor: 'var(--color-border)',
+                          backgroundColor: 'var(--color-bg-primary)',
+                          color: 'var(--color-text-primary)',
+                        }}
+                      >
+                        {code}
+                      </code>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(freshRecoveryCodes.join('\n'), 'Recovery codes copies.')}
+                    className="px-4 py-2.5 rounded-lg text-sm font-medium border"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                  >
+                    Copier tous les codes
+                  </button>
+                </CardSection>
+              )}
             </>
           )}
 

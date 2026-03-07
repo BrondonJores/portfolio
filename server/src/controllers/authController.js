@@ -1,25 +1,164 @@
-/* Controleur HTTP auth : delegue le metier au service associe. */
+/* Controleur HTTP auth : delegue le metier auth/2FA au service associe. */
 const {
   loginAdmin,
+  verifyTwoFactorLogin,
+  beginTwoFactorSetup,
+  enableTwoFactorForAdmin,
+  disableTwoFactorForAdmin,
+  regenerateTwoFactorRecoveryCodes,
+  getTwoFactorStatus,
   refreshAdminSession,
   logoutAdminSession,
   getRefreshCookieOptions,
 } = require('../services/authService')
 
 /**
- * Authentifie un administrateur et pose le refresh token en cookie HTTP-only.
- * Retourne egalement un access token pour les appels API immediats.
+ * Authentifie un administrateur.
+ * - Si 2FA desactive: pose le refresh token en cookie + renvoie access token.
+ * - Si 2FA active: renvoie un challenge MFA (sans cookie de session).
  * @param {import('express').Request} req Requete contenant email/mot de passe.
  * @param {import('express').Response} res Reponse HTTP.
  * @param {import('express').NextFunction} next Middleware d'erreur.
- * @returns {Promise<void>} Promise resolue apres envoi des tokens.
+ * @returns {Promise<void>} Promise resolue apres reponse.
  */
 async function login(req, res, next) {
   try {
-    const { user, accessToken, refreshToken } = await loginAdmin(req.body)
+    const result = await loginAdmin(req.body)
 
-    res.cookie('refresh_token', refreshToken, getRefreshCookieOptions())
-    return res.json({ accessToken, user })
+    if (result.mfaRequired) {
+      return res.json({
+        mfaRequired: true,
+        mfaToken: result.mfaToken,
+        user: result.user,
+      })
+    }
+
+    res.cookie('refresh_token', result.refreshToken, getRefreshCookieOptions())
+    return res.json({
+      mfaRequired: false,
+      accessToken: result.accessToken,
+      user: result.user,
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Finalise une connexion via code 2FA (TOTP ou recovery code).
+ * @param {import('express').Request} req Requete contenant challenge token + code.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres ouverture de session.
+ */
+async function verifyTwoFactor(req, res, next) {
+  try {
+    const { mfa_token, totp_code, recovery_code } = req.body
+    const result = await verifyTwoFactorLogin({
+      mfaToken: mfa_token,
+      totpCode: totp_code,
+      recoveryCode: recovery_code,
+    })
+
+    res.cookie('refresh_token', result.refreshToken, getRefreshCookieOptions())
+    return res.json({
+      mfaRequired: false,
+      accessToken: result.accessToken,
+      user: result.user,
+      usedRecoveryCode: result.usedRecoveryCode === true,
+      recoveryCodesRemaining: result.recoveryCodesRemaining,
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Lance un setup 2FA pour l'admin courant (secret + otpauth + setup token).
+ * @param {import('express').Request} req Requete authentifiee.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres generation setup.
+ */
+async function setupTwoFactor(req, res, next) {
+  try {
+    const result = await beginTwoFactorSetup(req.user.id)
+    return res.json({ data: result })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Active le 2FA pour l'admin courant apres verification du code setup.
+ * @param {import('express').Request} req Requete authentifiee.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres activation.
+ */
+async function enableTwoFactor(req, res, next) {
+  try {
+    const result = await enableTwoFactorForAdmin({
+      adminId: req.user.id,
+      setupToken: req.body.setup_token,
+      totpCode: req.body.totp_code,
+    })
+    return res.json({ data: result })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Desactive le 2FA pour l'admin courant.
+ * @param {import('express').Request} req Requete authentifiee.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres desactivation.
+ */
+async function disableTwoFactor(req, res, next) {
+  try {
+    const result = await disableTwoFactorForAdmin({
+      adminId: req.user.id,
+      totpCode: req.body.totp_code,
+      recoveryCode: req.body.recovery_code,
+    })
+    return res.json({ data: result })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Regenere les recovery codes 2FA (verification TOTP requise).
+ * @param {import('express').Request} req Requete authentifiee.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres regeneration.
+ */
+async function regenerateRecoveryCodes(req, res, next) {
+  try {
+    const result = await regenerateTwoFactorRecoveryCodes({
+      adminId: req.user.id,
+      totpCode: req.body.totp_code,
+    })
+    return res.json({ data: result })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Retourne l'etat 2FA de l'admin courant.
+ * @param {import('express').Request} req Requete authentifiee.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres reponse.
+ */
+async function twoFactorStatus(req, res, next) {
+  try {
+    const status = await getTwoFactorStatus(req.user.id)
+    return res.json({ data: status })
   } catch (err) {
     next(err)
   }
@@ -43,8 +182,7 @@ async function refresh(req, res, next) {
 }
 
 /**
- * Deconnecte l'utilisateur en supprimant le cookie de refresh token.
- * Invalide egalement la version serveur du refresh token courant.
+ * Deconnecte l'utilisateur et invalide la version refresh token courante.
  * @param {import('express').Request} req Requete HTTP.
  * @param {import('express').Response} res Reponse HTTP.
  * @param {import('express').NextFunction} next Middleware d'erreur.
@@ -61,7 +199,7 @@ async function logout(req, res, next) {
 }
 
 /**
- * Retourne le profil de l'utilisateur authentifie (injecte par middleware JWT).
+ * Retourne le profil de l'utilisateur authentifie (payload JWT access).
  * @param {import('express').Request} req Requete enrichie avec `req.user`.
  * @param {import('express').Response} res Reponse HTTP.
  * @returns {import('express').Response} Reponse JSON contenant l'utilisateur courant.
@@ -70,4 +208,16 @@ function me(req, res) {
   return res.json({ user: req.user })
 }
 
-module.exports = { login, refresh, logout, me }
+module.exports = {
+  login,
+  verifyTwoFactor,
+  setupTwoFactor,
+  enableTwoFactor,
+  disableTwoFactor,
+  regenerateRecoveryCodes,
+  twoFactorStatus,
+  refresh,
+  logout,
+  me,
+}
+

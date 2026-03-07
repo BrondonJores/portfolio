@@ -31,6 +31,11 @@ Application portfolio complete avec site public, blog, formulaire de contact, es
 
 ### Espace admin
 - Auth JWT (access token en memoire, refresh token en cookie HTTP-only).
+- 2FA TOTP (Google Authenticator/Authy/etc.) activable depuis Admin Settings:
+  - challenge MFA a la connexion,
+  - setup via secret/otpauth,
+  - recovery codes regenerables,
+  - desactivation securisee (TOTP ou recovery code).
 - Dashboard avec KPI et graphiques.
 - CRUD complets:
   - projets,
@@ -53,6 +58,12 @@ Application portfolio complete avec site public, blog, formulaire de contact, es
   - `smtp` pour dev,
   - `brevo` pour prod,
   - `mock` pour tests locaux/CI (`MAIL_DELIVERY_MODE=dev` est un alias de `mock`).
+
+### Securite renforcee
+- reCAPTCHA v3 sur endpoints publics sensibles.
+- Rotation + revocation des refresh tokens.
+- 2FA TOTP admin avec chiffrement du secret en base (AES-256-GCM).
+- Recovery codes haches (SHA-256 + pepper) et consommation one-time.
 
 ## Stack technique
 
@@ -123,7 +134,7 @@ cp .env.example .env
 
 Renseigner au minimum:
 - Frontend: `VITE_API_URL`, `VITE_SERVER_URL`, `VITE_RECAPTCHA_SITE_KEY` (ou laisser vide en dev).
-- Backend: `DB_*`, `JWT_*`, `FRONTEND_URL`, `RECAPTCHA_*`.
+- Backend: `DB_*`, `JWT_*`, `FRONTEND_URL`, `RECAPTCHA_*`, `MFA_*` (si 2FA active).
 
 ### 4) Base de donnees
 
@@ -176,6 +187,32 @@ Dans `server/.env`:
 ```env
 MAIL_DELIVERY_MODE=mock
 ```
+
+## Configuration 2FA (Authenticator)
+
+Backend (`server/.env`) :
+
+```env
+JWT_MFA_SECRET=
+JWT_MFA_EXPIRES=5m
+JWT_MFA_SETUP_EXPIRES=10m
+MFA_ENCRYPTION_KEY=...
+MFA_RECOVERY_PEPPER=...
+MFA_DISABLE_RECOVERY_CODES=false
+TOTP_ISSUER=Portfolio CMS
+TOTP_ALGORITHM=sha1
+TOTP_DIGITS=6
+TOTP_PERIOD=30
+TOTP_WINDOW=1
+TOTP_SECRET_BYTES=20
+```
+
+Activation utilisateur:
+1. Se connecter en admin.
+2. Aller dans `Admin > Parametres > Securite`.
+3. Demarrer la configuration, scanner/coller le secret dans Authenticator.
+4. Saisir un code TOTP pour activer le 2FA.
+5. Sauvegarder les recovery codes affiches.
 
 ## Configuration reCAPTCHA (anti-spam)
 
@@ -235,6 +272,8 @@ Option smoke strict (CI):
 - Refresh token en cookie HTTP-only.
 - Rate limiting global + route login.
 - Rotation + revocation serveur des refresh tokens.
+- Challenge MFA 2FA a la connexion admin si active.
+- Secret 2FA chiffre en base + recovery codes one-time haches.
 - Verification reCAPTCHA Google sur les endpoints publics sensibles (messages, commentaires, newsletter).
 - Validation serveur avec express-validator.
 - Sanitisation frontend pour rendu HTML.
@@ -251,7 +290,16 @@ Option smoke strict (CI):
   - `GET /api/settings`
   - `POST /api/subscribe`, `GET /api/unsubscribe/:token`
 - Auth:
-  - `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me`
+  - `POST /api/auth/login`
+  - `POST /api/auth/verify-2fa`
+  - `POST /api/auth/refresh`
+  - `POST /api/auth/logout`
+  - `GET /api/auth/me`
+  - `GET /api/auth/2fa/status`
+  - `POST /api/auth/2fa/setup`
+  - `POST /api/auth/2fa/enable`
+  - `POST /api/auth/2fa/disable`
+  - `POST /api/auth/2fa/recovery-codes`
 - Admin (JWT requis):
   - `GET /api/admin/stats`
   - CRUD projets, articles, skills, testimonials
@@ -265,7 +313,3 @@ Option smoke strict (CI):
 - Le SSL DB est configurable via:
   - `DB_SSL=true|false`
   - `DB_SSL_REJECT_UNAUTHORIZED=true|false`
-
-
-
-

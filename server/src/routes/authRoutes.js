@@ -1,10 +1,27 @@
 /* Routes d'authentification */
 const { Router } = require('express')
-const { login, refresh, logout, me } = require('../controllers/authController')
+const {
+  login,
+  verifyTwoFactor,
+  setupTwoFactor,
+  enableTwoFactor,
+  disableTwoFactor,
+  regenerateRecoveryCodes,
+  twoFactorStatus,
+  refresh,
+  logout,
+  me,
+} = require('../controllers/authController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { requireTrustedOrigin } = require('../middleware/trustedOriginMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
-const { loginValidator } = require('../validators/authValidator')
+const {
+  loginValidator,
+  verifyTwoFactorValidator,
+  twoFactorEnableValidator,
+  twoFactorDisableValidator,
+  regenerateRecoveryCodesValidator,
+} = require('../validators/authValidator')
 const rateLimit = require('express-rate-limit')
 
 const router = Router()
@@ -27,9 +44,25 @@ const sessionLimiter = rateLimit({
   legacyHeaders: false,
 })
 
+/* Rate limiter strict pour validation 2FA login */
+const verifyTwoFactorLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Trop de tentatives 2FA. Reessayez dans 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
 router.post('/login', requireTrustedOrigin, authLimiter, validate(loginValidator), login)
+router.post('/verify-2fa', requireTrustedOrigin, verifyTwoFactorLimiter, validate(verifyTwoFactorValidator), verifyTwoFactor)
 router.post('/refresh', requireTrustedOrigin, sessionLimiter, refresh)
 router.post('/logout', requireTrustedOrigin, sessionLimiter, logout)
 router.get('/me', authenticate, me)
+router.get('/2fa/status', authenticate, twoFactorStatus)
+router.post('/2fa/setup', requireTrustedOrigin, authenticate, setupTwoFactor)
+router.post('/2fa/enable', requireTrustedOrigin, authenticate, validate(twoFactorEnableValidator), enableTwoFactor)
+router.post('/2fa/disable', requireTrustedOrigin, authenticate, validate(twoFactorDisableValidator), disableTwoFactor)
+router.post('/2fa/recovery-codes', requireTrustedOrigin, authenticate, validate(regenerateRecoveryCodesValidator), regenerateRecoveryCodes)
 
 module.exports = router
+
