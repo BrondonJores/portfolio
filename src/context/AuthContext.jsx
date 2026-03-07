@@ -4,6 +4,36 @@ import { configureApi } from '../services/api.js'
 
 const AuthContext = createContext(null)
 
+/**
+ * Extrait un message d'erreur lisible depuis un payload API.
+ * @param {unknown} payload Corps JSON d'erreur.
+ * @param {string} fallback Message par defaut.
+ * @returns {string} Message utilisateur.
+ */
+function resolveApiErrorMessage(payload, fallback) {
+  if (payload && typeof payload === 'object') {
+    const direct = String(payload.error || '').trim()
+    if (direct) {
+      return direct
+    }
+
+    if (Array.isArray(payload.errors)) {
+      const messages = Array.from(
+        new Set(
+          payload.errors
+            .map((item) => String(item?.msg || '').trim())
+            .filter(Boolean)
+        )
+      )
+      if (messages.length > 0) {
+        return messages.join(' ')
+      }
+    }
+  }
+
+  return fallback
+}
+
 /* Fournisseur du contexte d'authentification */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -51,8 +81,8 @@ export function AuthProvider({ children }) {
     })
 
     if (!response.ok) {
-      const data = await response.json()
-      throw new Error(data.error || 'Identifiants invalides.')
+      const data = await response.json().catch(() => null)
+      throw new Error(resolveApiErrorMessage(data, 'Identifiants invalides.'))
     }
 
     const data = await response.json()
@@ -81,7 +111,7 @@ export function AuthProvider({ children }) {
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}))
-      throw new Error(data.error || 'Code 2FA invalide.')
+      throw new Error(resolveApiErrorMessage(data, 'Code 2FA invalide.'))
     }
 
     const data = await response.json()

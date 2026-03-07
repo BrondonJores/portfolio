@@ -13,7 +13,19 @@ function validate(validations) {
 
     const errors = validationResult(req)
     if (!errors.isEmpty()) {
-      return res.status(422).json({ errors: errors.array() })
+      const details = errors.array()
+      const messages = Array.from(
+        new Set(
+          details
+            .map((item) => String(item?.msg || '').trim())
+            .filter(Boolean)
+        )
+      )
+
+      return res.status(422).json({
+        error: messages.length > 0 ? messages.join(' ') : 'Donnees invalides.',
+        errors: details,
+      })
     }
 
     next()

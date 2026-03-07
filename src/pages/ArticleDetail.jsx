@@ -350,9 +350,9 @@ function NewsletterCTA() {
       const captchaToken = await executeRecaptcha('newsletter_subscribe')
       await subscribe({ email, captchaToken })
       setStatus('success')
-    } catch {
+    } catch (err) {
       setStatus('error')
-      setErrorMsg('Une erreur est survenue. Veuillez reessayer.')
+      setErrorMsg(err?.message || 'Une erreur est survenue. Veuillez reessayer.')
     }
   }
 
@@ -782,8 +782,8 @@ export default function ArticleDetail() {
                           })
                           setSubmitSuccess(true)
                           setCommentForm({ author_name: '', author_email: '', content: '' })
-                        } catch {
-                          setSubmitError('Une erreur est survenue. Veuillez réessayer.')
+                        } catch (err) {
+                          setSubmitError(err?.message || 'Une erreur est survenue. Veuillez reessayer.')
                         } finally {
                           setSubmitting(false)
                         }

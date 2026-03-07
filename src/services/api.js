@@ -9,6 +9,50 @@ let _refreshTokenFn = null
 let _logoutFn = null
 let _refreshInFlight = null
 
+/**
+ * Extrait les messages de validation d'un payload API.
+ * @param {unknown} payload Reponse d'erreur potentielle.
+ * @returns {string[]} Liste de messages utilisateur.
+ */
+function extractValidationMessages(payload) {
+  if (!payload || typeof payload !== 'object' || !Array.isArray(payload.errors)) {
+    return []
+  }
+
+  return Array.from(
+    new Set(
+      payload.errors
+        .map((item) => String(item?.msg || '').trim())
+        .filter(Boolean)
+    )
+  )
+}
+
+/**
+ * Construit une erreur applicative lisible a partir d'une reponse HTTP non OK.
+ * @param {number} status Code HTTP.
+ * @param {unknown} payload Corps JSON parse (si disponible).
+ * @returns {Error} Erreur enrichie.
+ */
+function buildApiError(status, payload) {
+  const validationMessages = extractValidationMessages(payload)
+  const payloadMessage =
+    payload && typeof payload === 'object' ? String(payload.error || '').trim() : ''
+  const message =
+    payloadMessage ||
+    (validationMessages.length > 0 ? validationMessages.join(' ') : `Erreur ${status}`)
+
+  const error = new Error(message)
+  error.status = status
+  if (validationMessages.length > 0) {
+    error.validationErrors = validationMessages
+  }
+  if (payload && typeof payload === 'object') {
+    error.payload = payload
+  }
+  return error
+}
+
 /* Injection des dependances d'authentification depuis le contexte */
 export function configureApi({ accessToken, refreshToken, logout }) {
   _accessToken = accessToken
@@ -73,14 +117,13 @@ async function request(method, path, body, retried = false) {
   }
 
   if (!response.ok) {
-    let errorMessage = `Erreur ${response.status}`
+    let payload = null
     try {
-      const data = await response.json()
-      errorMessage = data.error || errorMessage
+      payload = await response.json()
     } catch {
-      /* Impossible de parser le JSON */
+      /* Impossible de parser le JSON: fallback sur le statut HTTP. */
     }
-    throw new Error(errorMessage)
+    throw buildApiError(response.status, payload)
   }
 
   /* Retourne null pour les reponses 204 sans corps */
