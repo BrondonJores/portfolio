@@ -11,13 +11,66 @@ const { errorHandler } = require('./middleware/errorMiddleware')
 
 const app = express()
 
+/**
+ * Parse une liste CSV d'origines.
+ * @param {string | undefined} raw Valeur brute.
+ * @returns {string[]} Liste d'origines propres.
+ */
+function parseOrigins(raw) {
+  return String(raw || '')
+    .split(',')
+    .map((value) => value.trim().replace(/\/+$/, ''))
+    .filter(Boolean)
+}
+
+/**
+ * Retourne la liste des origines CORS autorisees.
+ * @returns {string[]} Liste d'origines.
+ */
+function getAllowedOrigins() {
+  const origins = new Set()
+
+  for (const origin of parseOrigins(process.env.FRONTEND_URL)) {
+    origins.add(origin)
+  }
+
+  for (const origin of parseOrigins(process.env.CORS_ORIGINS)) {
+    origins.add(origin)
+  }
+
+  for (const origin of parseOrigins(process.env.TRUSTED_ORIGINS)) {
+    origins.add(origin)
+  }
+
+  if (origins.size === 0) {
+    origins.add('http://localhost:3000')
+  }
+
+  return Array.from(origins)
+}
+
 /* En-tetes de securite HTTP */
 app.use(helmet())
 
 /* Configuration CORS restrictive */
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin(origin, callback) {
+      const allowedOrigins = getAllowedOrigins()
+
+      if (!origin) {
+        callback(null, true)
+        return
+      }
+
+      const normalizedOrigin = String(origin).replace(/\/+$/, '')
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        callback(null, true)
+        return
+      }
+
+      callback(null, false)
+    },
     credentials: true,
   })
 )

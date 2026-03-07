@@ -1,7 +1,8 @@
 /* Controleur HTTP auth : delegue le metier au service associe. */
 const {
   loginAdmin,
-  refreshAccessToken,
+  refreshAdminSession,
+  logoutAdminSession,
   getRefreshCookieOptions,
 } = require('../services/authService')
 
@@ -33,8 +34,9 @@ async function login(req, res, next) {
  */
 async function refresh(req, res, next) {
   try {
-    const result = refreshAccessToken(req.cookies.refresh_token)
-    return res.json(result)
+    const { accessToken, refreshToken } = await refreshAdminSession(req.cookies.refresh_token)
+    res.cookie('refresh_token', refreshToken, getRefreshCookieOptions())
+    return res.json({ accessToken })
   } catch (err) {
     next(err)
   }
@@ -42,13 +44,20 @@ async function refresh(req, res, next) {
 
 /**
  * Deconnecte l'utilisateur en supprimant le cookie de refresh token.
- * @param {import('express').Request} req Requete HTTP (non utilisee).
+ * Invalide egalement la version serveur du refresh token courant.
+ * @param {import('express').Request} req Requete HTTP.
  * @param {import('express').Response} res Reponse HTTP.
- * @returns {import('express').Response} Reponse JSON de confirmation.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres deconnexion.
  */
-function logout(req, res) {
-  res.clearCookie('refresh_token', getRefreshCookieOptions())
-  return res.json({ message: 'Deconnexion reussie.' })
+async function logout(req, res, next) {
+  try {
+    await logoutAdminSession(req.cookies.refresh_token)
+    res.clearCookie('refresh_token', getRefreshCookieOptions())
+    return res.json({ message: 'Deconnexion reussie.' })
+  } catch (err) {
+    next(err)
+  }
 }
 
 /**

@@ -1,9 +1,10 @@
-/* Tableau de bord administrateur enrichi et theme-aware. */
+/* Tableau de bord administrateur enrichi, filtrable et exportable CSV. */
 import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
+  ArrowDownTrayIcon,
   ChartPieIcon,
   ChatBubbleLeftRightIcon,
   ClockIcon,
@@ -49,6 +50,120 @@ const tooltipStyle = {
 }
 
 const axisTickStyle = { fill: 'var(--color-text-secondary)', fontSize: 12 }
+
+/**
+ * Echappe une cellule CSV.
+ * @param {unknown} value Valeur brute.
+ * @returns {string} Valeur CSV serialisee.
+ */
+function escapeCsvCell(value) {
+  const text = String(value ?? '')
+  if (!/[",\n]/.test(text)) {
+    return text
+  }
+  return `"${text.replace(/"/g, '""')}"`
+}
+
+/**
+ * Construit un contenu CSV a partir du snapshot stats.
+ * @param {object} stats Snapshot dashboard.
+ * @returns {string} Texte CSV.
+ */
+function buildDashboardCsv(stats) {
+  const summary = stats?.summary || {}
+  const trends = stats?.trends || {}
+  const chartData = Array.isArray(stats?.chartData) ? stats.chartData : []
+  const periodSeries = Array.isArray(stats?.periodSeries) ? stats.periodSeries : []
+  const topTags = Array.isArray(stats?.topTags) ? stats.topTags : []
+  const periodDays = stats?.filters?.periodDays || 30
+
+  const lines = []
+
+  lines.push('section,metric,value')
+  for (const [key, value] of Object.entries(summary)) {
+    lines.push([escapeCsvCell('summary'), escapeCsvCell(key), escapeCsvCell(value)].join(','))
+  }
+
+  lines.push('')
+  lines.push('section,metric,current,previous,delta,delta_percent,direction')
+  for (const [key, trend] of Object.entries(trends)) {
+    if (!trend || typeof trend !== 'object' || trend.current === undefined) continue
+    lines.push([
+      escapeCsvCell('trend'),
+      escapeCsvCell(key),
+      escapeCsvCell(trend.current),
+      escapeCsvCell(trend.previous),
+      escapeCsvCell(trend.delta),
+      escapeCsvCell(trend.deltaPercent),
+      escapeCsvCell(trend.direction),
+    ].join(','))
+  }
+
+  lines.push('')
+  lines.push('monthly,month,messages,abonnes,projets,articles,commentaires,campagnes')
+  for (const row of chartData) {
+    lines.push([
+      escapeCsvCell('monthly'),
+      escapeCsvCell(row.month),
+      escapeCsvCell(row.messages),
+      escapeCsvCell(row.abonnes),
+      escapeCsvCell(row.projets),
+      escapeCsvCell(row.articles),
+      escapeCsvCell(row.commentaires),
+      escapeCsvCell(row.campagnes),
+    ].join(','))
+  }
+
+  lines.push('')
+  lines.push(`period_${periodDays}j,day,messages,abonnes,contenu,projets,articles,commentaires,campagnes`)
+  for (const row of periodSeries) {
+    lines.push([
+      escapeCsvCell(`period_${periodDays}j`),
+      escapeCsvCell(row.day),
+      escapeCsvCell(row.messages),
+      escapeCsvCell(row.abonnes),
+      escapeCsvCell(row.contenu),
+      escapeCsvCell(row.projets),
+      escapeCsvCell(row.articles),
+      escapeCsvCell(row.commentaires),
+      escapeCsvCell(row.campagnes),
+    ].join(','))
+  }
+
+  lines.push('')
+  lines.push('top_tags,tag,count')
+  for (const tag of topTags) {
+    lines.push([
+      escapeCsvCell('top_tags'),
+      escapeCsvCell(tag.tag),
+      escapeCsvCell(tag.count),
+    ].join(','))
+  }
+
+  return lines.join('\n')
+}
+
+/**
+ * Telecharge un fichier CSV dans le navigateur.
+ * @param {string} filename Nom du fichier.
+ * @param {string} csvContent Contenu CSV.
+ * @returns {void}
+ */
+function downloadCsvFile(filename, csvContent) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
 
 /**
  * Carte KPI cliquable du dashboard.
@@ -99,14 +214,13 @@ function StatCard({ icon: Icon, label, value, hint, color, to, delay = 0 }) {
 }
 
 /**
- * Badges de tendance 30 jours.
+ * Badge de tendance entre deux periodes.
  * @param {object} props Proprietes du badge.
  * @returns {JSX.Element} Badge tendance.
  */
 function TrendPill({ label, trend }) {
   const safeTrend = trend || { current: 0, previous: 0, delta: 0, deltaPercent: 0, direction: 'flat' }
   const isUp = safeTrend.direction === 'up'
-  const isDown = safeTrend.direction === 'down'
   const prefix = safeTrend.delta > 0 ? '+' : ''
 
   return (
@@ -123,11 +237,7 @@ function TrendPill({ label, trend }) {
       <p
         className="text-xs font-medium"
         style={{
-          color: isUp
-            ? 'var(--color-accent)'
-            : isDown
-              ? 'var(--color-text-secondary)'
-              : 'var(--color-text-secondary)',
+          color: isUp ? 'var(--color-accent)' : 'var(--color-text-secondary)',
         }}
       >
         {safeTrend.direction === 'flat'
@@ -154,10 +264,37 @@ function formatDate(isoDate) {
   })
 }
 
+/**
+ * Petit bloc de metrique operationnelle.
+ * @param {object} props Proprietes de la metrique.
+ * @returns {JSX.Element} Bloc de metrique.
+ */
+function MetricTile({ label, value, helper }) {
+  return (
+    <div
+      className="rounded-lg border p-3"
+      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-card)' }}
+    >
+      <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+        {value}
+      </p>
+      {helper && (
+        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          {helper}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [stats, setStats] = useState(null)
+  const [periodDays, setPeriodDays] = useState(30)
 
   useEffect(() => {
     let active = true
@@ -166,7 +303,7 @@ export default function AdminDashboard() {
       try {
         setLoading(true)
         setError('')
-        const response = await getAdminStats()
+        const response = await getAdminStats({ periodDays })
         if (!active) return
         setStats(response?.data || null)
       } catch (err) {
@@ -182,14 +319,20 @@ export default function AdminDashboard() {
     return () => {
       active = false
     }
-  }, [])
+  }, [periodDays])
 
   const summary = stats?.summary || {}
   const trends = stats?.trends || {}
   const chartData = Array.isArray(stats?.chartData) ? stats.chartData : []
+  const periodSeries = Array.isArray(stats?.periodSeries) ? stats.periodSeries : []
   const recentMessages = Array.isArray(stats?.recentMessages) ? stats.recentMessages : []
   const topTags = Array.isArray(stats?.topTags) ? stats.topTags : []
   const lastSentCampaign = stats?.lastSentCampaign || null
+  const periodSummary = stats?.periodSummary || { current: {}, previous: {} }
+  const allowedPeriodDays = Array.isArray(stats?.filters?.allowedPeriodDays)
+    ? stats.filters.allowedPeriodDays
+    : [7, 30, 90]
+  const activePeriodDays = stats?.filters?.periodDays || periodDays
 
   const totalDistribution = useMemo(
     () => [
@@ -201,6 +344,16 @@ export default function AdminDashboard() {
     ],
     [summary]
   )
+
+  /**
+   * Exporte le dashboard courant en CSV.
+   * @returns {void}
+   */
+  const handleExportCsv = () => {
+    const csvContent = buildDashboardCsv(stats || {})
+    const dateStamp = new Date().toISOString().slice(0, 10)
+    downloadCsvFile(`dashboard-stats-${dateStamp}.csv`, csvContent)
+  }
 
   if (loading) {
     return (
@@ -228,7 +381,7 @@ export default function AdminDashboard() {
           className="mt-4 px-4 py-2 rounded-lg text-sm font-medium focus:outline-none"
           style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
         >
-          Recharger
+          Reessayer
         </button>
       </div>
     )
@@ -241,9 +394,43 @@ export default function AdminDashboard() {
       </Helmet>
 
       <div className="space-y-8">
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-          Tableau de bord
-        </h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+            Tableau de bord
+          </h1>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {allowedPeriodDays.map((days) => (
+              <button
+                key={days}
+                type="button"
+                onClick={() => setPeriodDays(days)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                style={{
+                  borderColor: periodDays === days ? 'var(--color-accent)' : 'var(--color-border)',
+                  color: periodDays === days ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                  backgroundColor: 'var(--color-bg-card)',
+                }}
+              >
+                {days}j
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border focus:outline-none"
+              style={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-secondary)',
+                backgroundColor: 'var(--color-bg-card)',
+              }}
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              Export CSV
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <StatCard
@@ -277,7 +464,7 @@ export default function AdminDashboard() {
             icon={UserGroupIcon}
             label="Abonnes newsletter"
             value={summary.subscribersTotal || 0}
-            hint={`${summary.subscribersConfirmed || 0} confirmes`}
+            hint={`${summary.subscribersConfirmed || 0} confirmes (${summary.subscriberConfirmationRate || 0}%)`}
             color="var(--color-text-secondary)"
             to="/admin/subscribers"
             delay={0.12}
@@ -286,7 +473,7 @@ export default function AdminDashboard() {
             icon={ChatBubbleLeftRightIcon}
             label="Commentaires a moderer"
             value={summary.commentsPending || 0}
-            hint="Commentaires en attente d'approbation"
+            hint={`${summary.commentApprovalRate || 0}% approuves`}
             color="var(--color-accent)"
             to="/admin/commentaires"
             delay={0.16}
@@ -306,23 +493,134 @@ export default function AdminDashboard() {
           className="rounded-xl border p-4"
           style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
         >
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+            <MetricTile
+              label="Pression inbox"
+              value={summary.responsePressure || 0}
+              helper="Messages non lus + commentaires en attente"
+            />
+            <MetricTile
+              label="Interactions totales"
+              value={summary.interactionTotal || 0}
+              helper="Messages + commentaires + abonnes"
+            />
+            <MetricTile
+              label="Moyenne mensuelle messages"
+              value={summary.avgMonthlyMessages || 0}
+              helper="Sur les 6 derniers mois"
+            />
+            <MetricTile
+              label="Moyenne mensuelle contenu"
+              value={summary.avgMonthlyContent || 0}
+              helper="Projets + articles publies"
+            />
+            <MetricTile
+              label="Moyenne mensuelle abonnes"
+              value={summary.avgMonthlySubscribers || 0}
+              helper="Sur les 6 derniers mois"
+            />
+          </div>
+        </section>
+
+        <section
+          className="rounded-xl border p-4"
+          style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
+        >
           <div className="flex items-center gap-2 mb-3">
             <ClockIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
             <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-              Tendances sur 30 jours
+              Tendances sur {activePeriodDays} jours
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <TrendPill label="Messages" trend={trends.messages30d} />
-            <TrendPill label="Nouveaux abonnes" trend={trends.subscribers30d} />
-            <TrendPill label="Contenus publies" trend={trends.content30d} />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+            <TrendPill label="Messages" trend={trends.messages} />
+            <TrendPill label="Nouveaux abonnes" trend={trends.subscribers} />
+            <TrendPill label="Contenus publies" trend={trends.content} />
+            <TrendPill label="Commentaires" trend={trends.comments} />
+            <TrendPill label="Campagnes envoyees" trend={trends.campaigns} />
           </div>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-            Analytiques
+            Fenetre active ({activePeriodDays} jours)
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div
+              className="rounded-xl border p-4"
+              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+            >
+              <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                Flux messages / abonnes
+              </h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={periodSeries}>
+                  <defs>
+                    <linearGradient id="periodColorMessages" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="periodColorSubscribers" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-accent-light)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="var(--color-accent-light)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                  <XAxis dataKey="day" tick={axisTickStyle} />
+                  <YAxis tick={axisTickStyle} />
+                  <Tooltip {...tooltipStyle} />
+                  <Legend />
+                  <Area type="monotone" dataKey="messages" stroke="var(--color-accent)" fill="url(#periodColorMessages)" />
+                  <Area type="monotone" dataKey="abonnes" stroke="var(--color-accent-light)" fill="url(#periodColorSubscribers)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div
+              className="rounded-xl border p-4"
+              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+            >
+              <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                Contenu / campagnes sur la periode
+              </h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={periodSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                  <XAxis dataKey="day" tick={axisTickStyle} />
+                  <YAxis tick={axisTickStyle} />
+                  <Tooltip {...tooltipStyle} />
+                  <Legend />
+                  <Bar dataKey="contenu" fill="var(--color-accent)" />
+                  <Bar dataKey="campagnes" fill="var(--color-accent-light)" />
+                  <Bar dataKey="commentaires" fill="var(--color-text-secondary)" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+            <MetricTile
+              label="Leads periode"
+              value={periodSummary.current?.leads || 0}
+              helper={`${periodSummary.current?.leadsPerDay || 0}/jour`}
+            />
+            <MetricTile
+              label="Conversion abonnes/messages"
+              value={`${periodSummary.current?.subscriberPerMessageRate || 0}%`}
+              helper="Nouveaux abonnes par rapport aux messages entrants"
+            />
+            <MetricTile
+              label="Leads periode precedente"
+              value={periodSummary.previous?.leads || 0}
+              helper="Pour comparer la traction"
+            />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
+            Analytiques 6 mois
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div
@@ -524,4 +822,3 @@ export default function AdminDashboard() {
     </>
   )
 }
-

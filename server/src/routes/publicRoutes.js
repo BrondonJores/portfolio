@@ -33,12 +33,20 @@ const subscribeLimiter = rateLimit({
   legacyHeaders: false,
 })
 
+const messageLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: { error: 'Trop de messages envoyes. Reessayez dans 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
 router.get('/projects', getProjects)
 router.get('/projects/:slug', getProjectBySlug)
 router.get('/articles', getArticles)
 router.get('/articles/:slug', getArticleBySlug)
 router.get('/skills', getSkills)
-router.post('/messages', validate(createMessageValidator), createMessage)
+router.post('/messages', messageLimiter, validate(createMessageValidator), createMessage)
 router.get('/testimonials', getTestimonials)
 router.get('/comments/:articleId', getByArticleId)
 router.post('/comments', commentLimiter, validate(createCommentValidator), createComment)

@@ -2,6 +2,7 @@
 const { Router } = require('express')
 const { login, refresh, logout, me } = require('../controllers/authController')
 const { authenticate } = require('../middleware/authMiddleware')
+const { requireTrustedOrigin } = require('../middleware/trustedOriginMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
 const { loginValidator } = require('../validators/authValidator')
 const rateLimit = require('express-rate-limit')
@@ -17,9 +18,18 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 })
 
-router.post('/login', authLimiter, validate(loginValidator), login)
-router.post('/refresh', refresh)
-router.post('/logout', logout)
+/* Rate limiter dedie aux routes session (refresh/logout) */
+const sessionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { error: 'Trop de requetes de session. Reessayez dans 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+router.post('/login', requireTrustedOrigin, authLimiter, validate(loginValidator), login)
+router.post('/refresh', requireTrustedOrigin, sessionLimiter, refresh)
+router.post('/logout', requireTrustedOrigin, sessionLimiter, logout)
 router.get('/me', authenticate, me)
 
 module.exports = router

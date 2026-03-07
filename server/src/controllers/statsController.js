@@ -10,7 +10,9 @@ const { getDashboardStats } = require('../services/statsService')
  */
 async function getStats(req, res, next) {
   try {
-    const data = await getDashboardStats()
+    const data = await getDashboardStats({
+      periodDays: req.query.period_days || req.query.periodDays,
+    })
     return res.json({ data })
   } catch (err) {
     next(err)

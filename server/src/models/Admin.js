@@ -25,6 +25,11 @@ const Admin = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
+    refresh_token_version: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
   },
   {
     tableName: 'admins',
