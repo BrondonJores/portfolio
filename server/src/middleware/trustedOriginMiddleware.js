@@ -1,4 +1,5 @@
 /* Middleware de verification d'origine pour les endpoints sensibles bases cookie. */
+const { logSecurityEventFromRequest } = require('../services/securityEventService')
 
 /**
  * Normalise une origine pour comparaison stricte.
@@ -90,6 +91,15 @@ function requireTrustedOrigin(req, res, next) {
   }
 
   if (!requestOrigin || !trustedOrigins.has(requestOrigin)) {
+    void logSecurityEventFromRequest(req, {
+      eventType: 'request.untrusted_origin',
+      severity: 'critical',
+      source: 'trusted_origin_middleware',
+      message: 'Requete bloquee: origine non autorisee.',
+      metadata: {
+        requestOrigin,
+      },
+    })
     res.status(403).json({ error: 'Origine non autorisee.' })
     return
   }

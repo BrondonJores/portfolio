@@ -11,6 +11,7 @@ const {
   logoutAdminSession,
   getRefreshCookieOptions,
 } = require('../services/authService')
+const { logSecurityEventFromRequest } = require('../services/securityEventService')
 
 /**
  * Authentifie un administrateur.
@@ -40,6 +41,15 @@ async function login(req, res, next) {
       user: result.user,
     })
   } catch (err) {
+    if (err?.statusCode === 401) {
+      await logSecurityEventFromRequest(req, {
+        eventType: 'auth.login_failed',
+        severity: 'warning',
+        source: 'auth_controller',
+        email: req.body?.email,
+        message: err.message || 'Echec de connexion admin.',
+      })
+    }
     next(err)
   }
 }
@@ -69,6 +79,18 @@ async function verifyTwoFactor(req, res, next) {
       recoveryCodesRemaining: result.recoveryCodesRemaining,
     })
   } catch (err) {
+    if (err?.statusCode === 401) {
+      await logSecurityEventFromRequest(req, {
+        eventType: 'auth.2fa_failed',
+        severity: 'warning',
+        source: 'auth_controller',
+        message: err.message || 'Echec verification 2FA.',
+        metadata: {
+          hasTotpCode: Boolean(req.body?.totp_code),
+          hasRecoveryCode: Boolean(req.body?.recovery_code),
+        },
+      })
+    }
     next(err)
   }
 }
@@ -220,4 +242,3 @@ module.exports = {
   logout,
   me,
 }
-

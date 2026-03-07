@@ -194,7 +194,7 @@ export default function Hero() {
             transition={{ duration: revealDuration }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Button variant="primary" href="projects">
+            <Button variant="primary" href="projets">
               Voir mes projets
             </Button>
             <Button variant="secondary" href="contact">

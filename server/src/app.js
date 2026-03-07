@@ -8,6 +8,7 @@ const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
 const routes = require('./routes')
 const { errorHandler } = require('./middleware/errorMiddleware')
+const { logSecurityEventFromRequest } = require('./services/securityEventService')
 
 const app = express()
 
@@ -173,6 +174,15 @@ const globalLimiter = rateLimit({
   message: { error: 'Trop de requetes. Reessayez dans 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  handler(req, res) {
+    void logSecurityEventFromRequest(req, {
+      eventType: 'request.rate_limited',
+      severity: 'warning',
+      source: 'global_rate_limiter',
+      message: 'Requete bloquee par le rate limiter global.',
+    })
+    res.status(429).json({ error: 'Trop de requetes. Reessayez dans 15 minutes.' })
+  },
 })
 app.use(globalLimiter)
 

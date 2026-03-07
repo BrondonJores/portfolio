@@ -14,6 +14,7 @@ import {
   NewspaperIcon,
   Squares2X2Icon,
   PaintBrushIcon,
+  ShieldExclamationIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../hooks/useAuth.jsx'
 
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { to: '/admin/newsletter', label: 'Newsletter', icon: NewspaperIcon },
   { to: '/admin/templates', label: 'Templates', icon: Squares2X2Icon },
   { to: '/admin/themes', label: 'Themes', icon: PaintBrushIcon },
+  { to: '/admin/security', label: 'Securite', icon: ShieldExclamationIcon },
   { to: '/admin/subscribers', label: 'Abonnes', icon: UsersIcon },
   { to: '/admin/parametres', label: 'Parametres', icon: Cog6ToothIcon },
 ]

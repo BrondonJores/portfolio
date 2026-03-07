@@ -12,6 +12,7 @@ const { getAll: getAllSubscribers, remove: deleteSubscriber } = require('../cont
 const { getAll: getAllCampaigns, create: createCampaign, update: updateCampaign, remove: deleteCampaign, send: sendCampaign } = require('../controllers/newsletterController')
 const { getAll: getAllBlockTemplates, create: createBlockTemplate, update: updateBlockTemplate, remove: deleteBlockTemplate } = require('../controllers/blockTemplateController')
 const { getAll: getAllThemePresets, create: createThemePreset, update: updateThemePreset, remove: deleteThemePreset, apply: applyThemePreset } = require('../controllers/themePresetController')
+const { listSecurityEvents, securitySummary } = require('../controllers/securityController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
 const { createProjectValidator, updateProjectValidator } = require('../validators/projectValidator')
@@ -64,6 +65,10 @@ router.delete('/comments/:id', deleteComment)
 /* Routes des parametres admin */
 router.get('/settings', getSettings)
 router.put('/settings', upsertSettings)
+
+/* Routes securite admin */
+router.get('/security/events', listSecurityEvents)
+router.get('/security/summary', securitySummary)
 
 /* Routes newsletter admin */
 router.get('/newsletter', getAllCampaigns)
