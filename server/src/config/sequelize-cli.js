@@ -10,7 +10,7 @@ function parseBooleanEnv(value, fallback = false) {
 const dbSslEnabled = parseBooleanEnv(process.env.DB_SSL, process.env.NODE_ENV === 'production')
 const dbSslRejectUnauthorized = parseBooleanEnv(process.env.DB_SSL_REJECT_UNAUTHORIZED, false)
 
-const config = {
+const sharedConfig = {
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
@@ -20,7 +20,7 @@ const config = {
 }
 
 if (dbSslEnabled) {
-  config.dialectOptions = {
+  sharedConfig.dialectOptions = {
     ssl: {
       require: true,
       rejectUnauthorized: dbSslRejectUnauthorized,
@@ -29,5 +29,7 @@ if (dbSslEnabled) {
 }
 
 module.exports = {
-  development: config,
+  development: { ...sharedConfig },
+  test: { ...sharedConfig },
+  production: { ...sharedConfig },
 }
