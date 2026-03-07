@@ -22,7 +22,9 @@ import {
   applyThemePreset,
   createThemePreset,
   deleteThemePreset,
+  exportThemePresetPackage,
   getThemePresets,
+  importThemePresetPackage,
   updateThemePreset,
 } from '../../services/themePresetService.js'
 import { getThemeMarketplace, importThemeFromMarketplace } from '../../services/themeMarketplaceService.js'
@@ -561,21 +563,25 @@ export default function AdminThemePresets() {
    * @param {object} preset Preset a exporter.
    * @returns {void}
    */
-  const exportOnePreset = (preset) => {
-    const payload = {
-      version: 1,
-      exported_at: new Date().toISOString(),
-      name: preset.name,
-      description: preset.description || '',
-      settings: pickThemeSettings(preset.settings || {}),
+  const exportOnePreset = async (preset) => {
+    try {
+      const response = await exportThemePresetPackage(preset.id)
+      const payload = response?.data
+
+      if (!payload || typeof payload !== 'object') {
+        throw new Error('Package preset invalide.')
+      }
+
+      const safeName = String(preset.name || 'preset')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+
+      downloadJsonFile(`theme-preset-package-${safeName || 'preset'}.json`, payload)
+      addToast('Package preset exporte.', 'success')
+    } catch (error) {
+      addToast(error.message || "Erreur pendant l'export du package preset.", 'error')
     }
-
-    const safeName = String(preset.name || 'preset')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-
-    downloadJsonFile(`theme-preset-${safeName || 'preset'}.json`, payload)
   }
 
   /**
@@ -601,6 +607,16 @@ export default function AdminThemePresets() {
     try {
       const rawContent = await file.text()
       const parsed = JSON.parse(rawContent)
+
+      if (parsed?.packageType === 'theme-preset-package') {
+        const response = await importThemePresetPackage(parsed)
+        const action = response?.data?.action || 'created'
+        await loadData()
+        await refreshThemePresets()
+        addToast(`Package preset importe (${action}).`, 'success')
+        return
+      }
+
       const candidates = toImportCandidates(parsed)
 
       if (candidates.length === 0) {

@@ -1,10 +1,14 @@
-/* Controleur HTTP des templates de blocs administrables. */
+﻿/* Controleur HTTP des templates de blocs administrables. */
 const {
   getAllBlockTemplates,
   createBlockTemplate,
   updateBlockTemplate,
   deleteBlockTemplate,
   importBlockTemplates,
+  getBlockTemplateReleases,
+  rollbackBlockTemplate,
+  exportBlockTemplatePackage,
+  importBlockTemplatePackage,
 } = require('../services/blockTemplateService')
 
 /**
@@ -89,4 +93,78 @@ async function importMany(req, res, next) {
   }
 }
 
-module.exports = { getAll, create, update, remove, importMany }
+/**
+ * Liste les releases d'un template.
+ * @param {import('express').Request} req Requete avec `params.id`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres envoi JSON.
+ */
+async function listReleases(req, res, next) {
+  try {
+    const releases = await getBlockTemplateReleases(req.params.id)
+    return res.json({ data: releases })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Effectue un rollback vers une release de template.
+ * @param {import('express').Request} req Requete avec `params.id` et `body.releaseId`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres rollback.
+ */
+async function rollback(req, res, next) {
+  try {
+    const result = await rollbackBlockTemplate(req.params.id, req.body?.releaseId)
+    return res.json({ data: result })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Exporte un template en package JSON.
+ * @param {import('express').Request} req Requete avec `params.id`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres export.
+ */
+async function exportPackage(req, res, next) {
+  try {
+    const data = await exportBlockTemplatePackage(req.params.id)
+    return res.json({ data })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Importe un package template (creation/mise a jour).
+ * @param {import('express').Request} req Requete avec payload package.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres import.
+ */
+async function importPackage(req, res, next) {
+  try {
+    const result = await importBlockTemplatePackage(req.body)
+    return res.status(200).json({ data: result })
+  } catch (err) {
+    next(err)
+  }
+}
+
+module.exports = {
+  getAll,
+  create,
+  update,
+  remove,
+  importMany,
+  listReleases,
+  rollback,
+  exportPackage,
+  importPackage,
+}

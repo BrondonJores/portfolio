@@ -10,8 +10,28 @@ const { getAll: getSettings, upsert: upsertSettings } = require('../controllers/
 const { getStats } = require('../controllers/statsController')
 const { getAll: getAllSubscribers, remove: deleteSubscriber } = require('../controllers/subscriberController')
 const { getAll: getAllCampaigns, create: createCampaign, update: updateCampaign, remove: deleteCampaign, send: sendCampaign } = require('../controllers/newsletterController')
-const { getAll: getAllBlockTemplates, create: createBlockTemplate, update: updateBlockTemplate, remove: deleteBlockTemplate, importMany: importBlockTemplates } = require('../controllers/blockTemplateController')
-const { getAll: getAllThemePresets, create: createThemePreset, update: updateThemePreset, remove: deleteThemePreset, apply: applyThemePreset } = require('../controllers/themePresetController')
+const {
+  getAll: getAllBlockTemplates,
+  create: createBlockTemplate,
+  update: updateBlockTemplate,
+  remove: deleteBlockTemplate,
+  importMany: importBlockTemplates,
+  listReleases: listBlockTemplateReleases,
+  rollback: rollbackBlockTemplate,
+  exportPackage: exportBlockTemplatePackage,
+  importPackage: importBlockTemplatePackage,
+} = require('../controllers/blockTemplateController')
+const {
+  getAll: getAllThemePresets,
+  create: createThemePreset,
+  update: updateThemePreset,
+  remove: deleteThemePreset,
+  apply: applyThemePreset,
+  listReleases: listThemePresetReleases,
+  rollback: rollbackThemePreset,
+  exportPackage: exportThemePresetPackage,
+  importPackage: importThemePresetPackage,
+} = require('../controllers/themePresetController')
 const { getAllAdmin: getThemeMarketplaceAdmin, importFromMarketplace: importThemeFromMarketplace } = require('../controllers/themeMarketplaceController')
 const { listSecurityEvents, securitySummary } = require('../controllers/securityController')
 const { authenticate } = require('../middleware/authMiddleware')
@@ -19,8 +39,22 @@ const { validate } = require('../middleware/validateMiddleware')
 const { createProjectValidator, updateProjectValidator } = require('../validators/projectValidator')
 const { createArticleValidator, updateArticleValidator } = require('../validators/articleValidator')
 const { createSkillValidator, updateSkillValidator } = require('../validators/skillValidator')
-const { listBlockTemplateValidator, createBlockTemplateValidator, updateBlockTemplateValidator, importBlockTemplatesValidator } = require('../validators/blockTemplateValidator')
-const { createThemePresetValidator, updateThemePresetValidator } = require('../validators/themePresetValidator')
+const {
+  blockTemplateIdParamValidator,
+  listBlockTemplateValidator,
+  createBlockTemplateValidator,
+  updateBlockTemplateValidator,
+  importBlockTemplatesValidator,
+  rollbackBlockTemplateValidator,
+  importBlockTemplatePackageValidator,
+} = require('../validators/blockTemplateValidator')
+const {
+  themePresetIdParamValidator,
+  createThemePresetValidator,
+  updateThemePresetValidator,
+  rollbackThemePresetValidator,
+  importThemePresetPackageValidator,
+} = require('../validators/themePresetValidator')
 const { marketplaceListValidator, importThemeMarketplaceValidator } = require('../validators/themeMarketplaceValidator')
 
 const router = Router()
@@ -87,15 +121,23 @@ router.delete('/subscribers/:id', deleteSubscriber)
 router.get('/block-templates', validate(listBlockTemplateValidator), getAllBlockTemplates)
 router.post('/block-templates', validate(createBlockTemplateValidator), createBlockTemplate)
 router.post('/block-templates/import', validate(importBlockTemplatesValidator), importBlockTemplates)
+router.post('/block-templates/import-package', validate(importBlockTemplatePackageValidator), importBlockTemplatePackage)
 router.put('/block-templates/:id', validate(updateBlockTemplateValidator), updateBlockTemplate)
-router.delete('/block-templates/:id', deleteBlockTemplate)
+router.delete('/block-templates/:id', validate(blockTemplateIdParamValidator), deleteBlockTemplate)
+router.get('/block-templates/:id/releases', validate(blockTemplateIdParamValidator), listBlockTemplateReleases)
+router.post('/block-templates/:id/rollback', validate(rollbackBlockTemplateValidator), rollbackBlockTemplate)
+router.get('/block-templates/:id/export-package', validate(blockTemplateIdParamValidator), exportBlockTemplatePackage)
 
 /* Routes presets de theme admin */
 router.get('/theme-presets', getAllThemePresets)
 router.post('/theme-presets', validate(createThemePresetValidator), createThemePreset)
 router.put('/theme-presets/:id', validate(updateThemePresetValidator), updateThemePreset)
-router.delete('/theme-presets/:id', deleteThemePreset)
-router.post('/theme-presets/:id/apply', applyThemePreset)
+router.delete('/theme-presets/:id', validate(themePresetIdParamValidator), deleteThemePreset)
+router.post('/theme-presets/:id/apply', validate(themePresetIdParamValidator), applyThemePreset)
+router.get('/theme-presets/:id/releases', validate(themePresetIdParamValidator), listThemePresetReleases)
+router.post('/theme-presets/:id/rollback', validate(rollbackThemePresetValidator), rollbackThemePreset)
+router.get('/theme-presets/:id/export-package', validate(themePresetIdParamValidator), exportThemePresetPackage)
+router.post('/theme-presets/import-package', validate(importThemePresetPackageValidator), importThemePresetPackage)
 router.get('/theme-marketplace', validate(marketplaceListValidator), getThemeMarketplaceAdmin)
 router.post('/theme-marketplace/:slug/import', validate(importThemeMarketplaceValidator), importThemeFromMarketplace)
 

@@ -26,6 +26,13 @@ export const createBlockTemplate = (data) => api.post('/admin/block-templates', 
 export const importBlockTemplates = (data) => api.post('/admin/block-templates/import', data)
 
 /**
+ * Importe un package template unique.
+ * @param {object} data Payload package.
+ * @returns {Promise<{data: {action:string,template:object}}>} Reponse API.
+ */
+export const importBlockTemplatePackage = (data) => api.post('/admin/block-templates/import-package', data)
+
+/**
  * Met a jour un template existant.
  * @param {number|string} id Identifiant du template.
  * @param {object} data Champs a mettre a jour.
@@ -39,3 +46,26 @@ export const updateBlockTemplate = (id, data) => api.put(`/admin/block-templates
  * @returns {Promise<null | object>} Reponse API.
  */
 export const deleteBlockTemplate = (id) => api.del(`/admin/block-templates/${id}`)
+
+/**
+ * Liste l'historique des releases d'un template.
+ * @param {number|string} id Identifiant template.
+ * @returns {Promise<{data: Array<object>}>} Reponse API.
+ */
+export const getBlockTemplateReleases = (id) => api.get(`/admin/block-templates/${id}/releases`)
+
+/**
+ * Rollback un template vers une release cible.
+ * @param {number|string} id Identifiant template.
+ * @param {number|string} releaseId Identifiant release.
+ * @returns {Promise<{data: {template: object, release: object}}>} Reponse API.
+ */
+export const rollbackBlockTemplate = (id, releaseId) =>
+  api.post(`/admin/block-templates/${id}/rollback`, { releaseId })
+
+/**
+ * Exporte un template sous forme de package versionne.
+ * @param {number|string} id Identifiant template.
+ * @returns {Promise<{data: object}>} Reponse API.
+ */
+export const exportBlockTemplatePackage = (id) => api.get(`/admin/block-templates/${id}/export-package`)

@@ -227,6 +227,60 @@ async function main() {
     )
   })
 
+  await runCase('importBlockTemplatePackage creates a template from package payload', async () => {
+    let createdPayload = null
+
+    const fakeModel = {
+      findOne: async () => null,
+      create: async (payload) => {
+        createdPayload = payload
+        return { id: 33, ...payload }
+      },
+    }
+
+    const service = createBlockTemplateService({ blockTemplateModel: fakeModel })
+
+    const result = await service.importBlockTemplatePackage({
+      packageType: 'block-template-package',
+      template: {
+        name: 'Template package',
+        context: 'project',
+        description: 'Desc',
+        blocks: [{ type: 'paragraph', content: 'Contenu' }],
+      },
+    })
+
+    assert.equal(result.action, 'created')
+    assert.equal(result.template.id, 33)
+    assert.equal(createdPayload.name, 'Template package')
+    assert.equal(createdPayload.context, 'project')
+  })
+
+  await runCase('exportBlockTemplatePackage returns metadata and snapshot', async () => {
+    const fakeModel = {
+      findByPk: async () => ({
+        id: 12,
+        name: 'Template export',
+        context: 'article',
+        description: 'Desc export',
+        blocks: [{ type: 'paragraph', content: 'Texte' }],
+      }),
+    }
+
+    const service = createBlockTemplateService({
+      blockTemplateModel: fakeModel,
+      now: () => new Date('2026-03-07T12:00:00.000Z'),
+    })
+
+    const pkg = await service.exportBlockTemplatePackage(12)
+
+    assert.equal(pkg.packageType, 'block-template-package')
+    assert.equal(pkg.manifest.slug, 'template-12')
+    assert.equal(pkg.manifest.context, 'article')
+    assert.equal(pkg.exportedAt, '2026-03-07T12:00:00.000Z')
+    assert.equal(pkg.template.name, 'Template export')
+  })
+
   if (failures > 0) {
     console.error(`\nDI unit tests failed: ${failures}`)
     process.exit(1)

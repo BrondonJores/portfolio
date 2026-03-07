@@ -41,3 +41,33 @@ export const deleteThemePreset = (id) => api.del(`/admin/theme-presets/${id}`)
  * @returns {Promise<{data: object, success: boolean}>} Reponse API.
  */
 export const applyThemePreset = (id) => api.post(`/admin/theme-presets/${id}/apply`, {})
+
+/**
+ * Liste l'historique des releases d'un preset.
+ * @param {number|string} id Identifiant preset.
+ * @returns {Promise<{data: Array<object>}>} Reponse API.
+ */
+export const getThemePresetReleases = (id) => api.get(`/admin/theme-presets/${id}/releases`)
+
+/**
+ * Rollback un preset vers une release cible.
+ * @param {number|string} id Identifiant preset.
+ * @param {number|string} releaseId Identifiant release.
+ * @returns {Promise<{data: {preset: object, release: object}}>} Reponse API.
+ */
+export const rollbackThemePreset = (id, releaseId) =>
+  api.post(`/admin/theme-presets/${id}/rollback`, { releaseId })
+
+/**
+ * Exporte un preset sous forme de package versionne.
+ * @param {number|string} id Identifiant preset.
+ * @returns {Promise<{data: object}>} Reponse API.
+ */
+export const exportThemePresetPackage = (id) => api.get(`/admin/theme-presets/${id}/export-package`)
+
+/**
+ * Importe un package de preset.
+ * @param {object} data Payload package.
+ * @returns {Promise<{data: {action:string,preset:object}}>} Reponse API.
+ */
+export const importThemePresetPackage = (data) => api.post('/admin/theme-presets/import-package', data)

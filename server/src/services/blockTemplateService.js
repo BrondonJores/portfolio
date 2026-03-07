@@ -1,6 +1,6 @@
-/* Service metier des templates de blocs (CRUD + normalisation). */
+﻿/* Service metier des templates de blocs (CRUD + normalisation + releases + package). */
 const { Op } = require('sequelize')
-const { BlockTemplate, MarketplaceItem } = require('../models')
+const { BlockTemplate, MarketplaceItem, BlockTemplateRelease } = require('../models')
 const { createHttpError } = require('../utils/httpError')
 
 const TEMPLATE_CONTEXTS = new Set(['article', 'project', 'newsletter', 'all'])
@@ -17,6 +17,33 @@ function canUseMarketplaceRepository(repository) {
       typeof repository.upsert === 'function' &&
       typeof repository.update === 'function'
   )
+}
+
+/**
+ * Verifie que le repository de releases expose les methodes minimales.
+ * @param {unknown} repository Repository potentiel.
+ * @returns {boolean} True si le repository est exploitable.
+ */
+function canUseBlockTemplateReleaseRepository(repository) {
+  return Boolean(
+    repository &&
+      typeof repository.create === 'function' &&
+      typeof repository.findAll === 'function' &&
+      typeof repository.findOne === 'function'
+  )
+}
+
+/**
+ * Convertit une valeur vers booleen permissif.
+ * @param {unknown} value Valeur brute.
+ * @param {boolean} [fallback=false] Valeur de repli.
+ * @returns {boolean} Booleen normalise.
+ */
+function toBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value
+  if (value === undefined || value === null || value === '') return fallback
+  const normalized = String(value).trim().toLowerCase()
+  return ['1', 'true', 'yes', 'on'].includes(normalized)
 }
 
 /**
@@ -213,6 +240,47 @@ function sanitizeTemplatePayload(payload) {
 }
 
 /**
+ * Construit un snapshot serialisable de template.
+ * @param {object} template Template source.
+ * @returns {{name:string,context:string,description:string,blocks:Array<object>}} Snapshot normalise.
+ */
+function buildTemplateSnapshot(template) {
+  return sanitizeTemplatePayload(template)
+}
+
+/**
+ * Extrait les donnees d'un package template importable.
+ * @param {unknown} payload Package brut.
+ * @returns {{snapshot: object, changeNote: string}|null} Payload package normalise ou null.
+ */
+function extractTemplatePackagePayload(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const packageTemplate =
+    payload.template && typeof payload.template === 'object'
+      ? payload.template
+      : payload
+
+  const snapshot = sanitizeTemplatePayload(packageTemplate)
+  if (!snapshot.name || snapshot.blocks.length === 0) {
+    return null
+  }
+
+  const changeNote = sanitizeText(
+    payload?.manifest?.changeNote || payload?.change_note,
+    255,
+    'Import package'
+  )
+
+  return {
+    snapshot,
+    changeNote,
+  }
+}
+
+/**
  * Extrait la collection de templates a importer.
  * Accepte:
  * - `{ templates: [...] }`
@@ -245,12 +313,16 @@ function resolveTemplatesToImport(payload) {
  * Construit le service template avec dependances injectables.
  * @param {object} [deps={}] Dependances optionnelles (tests/DI).
  * @param {object} [deps.blockTemplateModel] Modele Sequelize.
+ * @param {object} [deps.marketplaceItemModel] Modele marketplace.
+ * @param {object} [deps.blockTemplateReleaseModel] Modele releases templates.
  * @param {symbol|string} [deps.inOperator] Operateur SQL IN.
+ * @param {Function} [deps.now] Horloge injectee.
  * @returns {object} API du service template.
  */
 function createBlockTemplateService(deps = {}) {
   const blockTemplateModel = deps.blockTemplateModel || BlockTemplate
   const inOperator = deps.inOperator || Op.in
+  const now = deps.now || (() => new Date())
   const marketplaceItemModel =
     deps.marketplaceItemModel !== undefined
       ? deps.marketplaceItemModel
@@ -258,6 +330,69 @@ function createBlockTemplateService(deps = {}) {
         ? null
         : MarketplaceItem
   const marketplaceRepositoryEnabled = canUseMarketplaceRepository(marketplaceItemModel)
+
+  const blockTemplateReleaseModel =
+    deps.blockTemplateReleaseModel !== undefined
+      ? deps.blockTemplateReleaseModel
+      : deps.blockTemplateModel
+        ? null
+        : BlockTemplateRelease
+  const releaseRepositoryEnabled = canUseBlockTemplateReleaseRepository(blockTemplateReleaseModel)
+
+  /**
+   * Charge un template par id ou leve 404.
+   * @param {number|string} id Identifiant template.
+   * @returns {Promise<object>} Template charge.
+   * @throws {Error} Erreur 404 si introuvable.
+   */
+  async function ensureBlockTemplateById(id) {
+    const template = await blockTemplateModel.findByPk(id)
+    if (!template) {
+      throw createHttpError(404, 'Template introuvable.')
+    }
+    return template
+  }
+
+  /**
+   * Calcule la prochaine version release pour un template.
+   * @param {number|string} templateId Identifiant template.
+   * @returns {Promise<number>} Prochaine version.
+   */
+  async function getNextBlockTemplateReleaseVersion(templateId) {
+    if (!releaseRepositoryEnabled) return 1
+
+    const latest = await blockTemplateReleaseModel.findOne({
+      where: { block_template_id: templateId },
+      order: [['version_number', 'DESC']],
+    })
+
+    const currentVersion = Number.parseInt(String(latest?.version_number ?? 0), 10)
+    return (Number.isFinite(currentVersion) ? currentVersion : 0) + 1
+  }
+
+  /**
+   * Cree une release historisee du template courant.
+   * @param {object} template Template source.
+   * @param {string} [changeNote=''] Note de release.
+   * @returns {Promise<object|null>} Release creee ou null si repository indisponible.
+   */
+  async function createBlockTemplateReleaseEntry(template, changeNote = '') {
+    if (!releaseRepositoryEnabled) return null
+
+    const snapshot = buildTemplateSnapshot(template)
+    if (!snapshot.name || snapshot.blocks.length === 0) {
+      return null
+    }
+
+    const versionNumber = await getNextBlockTemplateReleaseVersion(template.id)
+
+    return blockTemplateReleaseModel.create({
+      block_template_id: template.id,
+      version_number: versionNumber,
+      change_note: sanitizeText(changeNote, 255, '') || null,
+      snapshot,
+    })
+  }
 
   /**
    * Synchronise un template dans marketplace_items sans bloquer le flux principal.
@@ -341,6 +476,10 @@ function createBlockTemplateService(deps = {}) {
 
     const template = await blockTemplateModel.create(sanitized)
     await syncTemplateToMarketplace(template)
+    await createBlockTemplateReleaseEntry(
+      template,
+      sanitizeText(payload?.change_note, 255, 'Creation du template')
+    )
     return template
   }
 
@@ -352,10 +491,7 @@ function createBlockTemplateService(deps = {}) {
    * @throws {Error} Erreur 404 si introuvable.
    */
   async function updateBlockTemplate(id, payload) {
-    const template = await blockTemplateModel.findByPk(id)
-    if (!template) {
-      throw createHttpError(404, 'Template introuvable.')
-    }
+    const template = await ensureBlockTemplateById(id)
 
     const updates = {}
 
@@ -381,6 +517,10 @@ function createBlockTemplateService(deps = {}) {
 
     await template.update(updates)
     await syncTemplateToMarketplace(template)
+    await createBlockTemplateReleaseEntry(
+      template,
+      sanitizeText(payload?.change_note, 255, 'Mise a jour du template')
+    )
     return template
   }
 
@@ -391,13 +531,163 @@ function createBlockTemplateService(deps = {}) {
    * @throws {Error} Erreur 404 si introuvable.
    */
   async function deleteBlockTemplate(id) {
-    const template = await blockTemplateModel.findByPk(id)
-    if (!template) {
-      throw createHttpError(404, 'Template introuvable.')
-    }
-
+    const template = await ensureBlockTemplateById(id)
     await template.destroy()
     await deactivateTemplateInMarketplace(template.id)
+  }
+
+  /**
+   * Liste les releases d'un template.
+   * @param {number|string} id Identifiant template.
+   * @returns {Promise<Array<object>>} Historique releases (desc).
+   */
+  async function getBlockTemplateReleases(id) {
+    const template = await ensureBlockTemplateById(id)
+    if (!releaseRepositoryEnabled) return []
+
+    return blockTemplateReleaseModel.findAll({
+      where: { block_template_id: template.id },
+      order: [
+        ['version_number', 'DESC'],
+        ['created_at', 'DESC'],
+      ],
+    })
+  }
+
+  /**
+   * Revient a une release precise d'un template.
+   * @param {number|string} id Identifiant template.
+   * @param {number|string} releaseId Identifiant release cible.
+   * @returns {Promise<{template: object, release: object}>} Template restaure + release cible.
+   * @throws {Error} Erreur 404/422 selon le cas.
+   */
+  async function rollbackBlockTemplate(id, releaseId) {
+    const template = await ensureBlockTemplateById(id)
+    if (!releaseRepositoryEnabled) {
+      throw createHttpError(422, 'Historique des releases indisponible.')
+    }
+
+    const safeReleaseId = Number.parseInt(String(releaseId), 10)
+    if (!Number.isFinite(safeReleaseId) || safeReleaseId <= 0) {
+      throw createHttpError(422, 'releaseId invalide.')
+    }
+
+    const release = await blockTemplateReleaseModel.findOne({
+      where: {
+        id: safeReleaseId,
+        block_template_id: template.id,
+      },
+    })
+
+    if (!release) {
+      throw createHttpError(404, 'Release introuvable.')
+    }
+
+    const snapshot = sanitizeTemplatePayload(release.snapshot || {})
+    if (!snapshot.name || snapshot.blocks.length === 0) {
+      throw createHttpError(422, 'Snapshot release invalide.')
+    }
+
+    await template.update(snapshot)
+    await syncTemplateToMarketplace(template)
+    await createBlockTemplateReleaseEntry(
+      template,
+      `Rollback vers v${release.version_number}`
+    )
+
+    return {
+      template,
+      release,
+    }
+  }
+
+  /**
+   * Exporte un template au format package versionne.
+   * @param {number|string} id Identifiant template.
+   * @returns {Promise<object>} Package JSON complet.
+   */
+  async function exportBlockTemplatePackage(id) {
+    const template = await ensureBlockTemplateById(id)
+    const releases = releaseRepositoryEnabled
+      ? await blockTemplateReleaseModel.findAll({
+        where: { block_template_id: template.id },
+        order: [['version_number', 'ASC']],
+      })
+      : []
+
+    const currentVersion = releases.length > 0
+      ? Number.parseInt(String(releases[releases.length - 1]?.version_number ?? 1), 10) || 1
+      : 1
+
+    return {
+      packageType: 'block-template-package',
+      packageVersion: 1,
+      exportedAt: now().toISOString(),
+      manifest: {
+        itemType: 'template',
+        source: 'admin',
+        name: sanitizeText(template.name, 160),
+        slug: buildTemplateMarketplaceSlug(template.id),
+        context: sanitizeContext(template.context, 'all'),
+        currentVersion,
+        releaseCount: releases.length,
+      },
+      template: buildTemplateSnapshot(template),
+      releases: releases.map((release) => ({
+        id: release.id,
+        versionNumber: release.version_number,
+        changeNote: release.change_note || '',
+        createdAt: release.created_at,
+      })),
+    }
+  }
+
+  /**
+   * Importe un package template (create/update).
+   * @param {object} payload Package JSON entrant.
+   * @returns {Promise<{action:string,template:object|null}>} Resultat d'import.
+   * @throws {Error} Erreur 422 si package invalide.
+   */
+  async function importBlockTemplatePackage(payload) {
+    const normalized = extractTemplatePackagePayload(payload)
+    if (!normalized) {
+      throw createHttpError(422, 'Package template invalide.')
+    }
+
+    const replaceExisting = toBoolean(payload?.replaceExisting, true)
+    const { snapshot, changeNote } = normalized
+
+    const existing = await blockTemplateModel.findOne({
+      where: {
+        name: snapshot.name,
+        context: snapshot.context,
+      },
+    })
+
+    let template = existing
+    let action = 'created'
+
+    if (template) {
+      if (!replaceExisting) {
+        action = 'skipped'
+      } else {
+        await template.update(snapshot)
+        action = 'updated'
+      }
+    } else {
+      template = await blockTemplateModel.create(snapshot)
+      action = 'created'
+    }
+
+    if (action !== 'skipped' && template) {
+      await syncTemplateToMarketplace(template)
+      await createBlockTemplateReleaseEntry(template, changeNote || 'Import package')
+    }
+
+    return {
+      action,
+      template,
+    }
   }
 
   /**
@@ -455,6 +745,10 @@ function createBlockTemplateService(deps = {}) {
           blocks: sanitized.blocks,
         })
         await syncTemplateToMarketplace(existing)
+        await createBlockTemplateReleaseEntry(
+          existing,
+          sanitizeText(payload?.change_note, 255, 'Import templates')
+        )
         updated += 1
         items.push(existing)
         continue
@@ -462,6 +756,10 @@ function createBlockTemplateService(deps = {}) {
 
       const createdTemplate = await blockTemplateModel.create(sanitized)
       await syncTemplateToMarketplace(createdTemplate)
+      await createBlockTemplateReleaseEntry(
+        createdTemplate,
+        sanitizeText(payload?.change_note, 255, 'Import templates')
+      )
       created += 1
       items.push(createdTemplate)
     }
@@ -484,6 +782,10 @@ function createBlockTemplateService(deps = {}) {
     createBlockTemplate,
     updateBlockTemplate,
     deleteBlockTemplate,
+    getBlockTemplateReleases,
+    rollbackBlockTemplate,
+    exportBlockTemplatePackage,
+    importBlockTemplatePackage,
     importBlockTemplates,
   }
 }

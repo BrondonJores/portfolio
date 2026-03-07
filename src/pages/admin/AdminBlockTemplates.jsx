@@ -1,7 +1,7 @@
 /* Page de gestion des templates de blocs personnalisables dans l'admin. */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon, PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
@@ -10,7 +10,9 @@ import Spinner from '../../components/ui/Spinner.jsx'
 import {
   createBlockTemplate,
   deleteBlockTemplate,
+  exportBlockTemplatePackage,
   getAdminBlockTemplates,
+  importBlockTemplatePackage,
   importBlockTemplates,
   updateBlockTemplate,
 } from '../../services/blockTemplateService.js'
@@ -103,6 +105,26 @@ function readFileAsText(file) {
     reader.onerror = () => reject(new Error('Impossible de lire le fichier JSON.'))
     reader.readAsText(file)
   })
+}
+
+/**
+ * Telecharge un objet JSON en fichier cote navigateur.
+ * @param {string} filename Nom du fichier de sortie.
+ * @param {unknown} payload Contenu JSON.
+ * @returns {void}
+ */
+function downloadJsonFile(filename, payload) {
+  if (typeof window === 'undefined') return
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = window.URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.URL.revokeObjectURL(url)
 }
 
 /**
@@ -308,6 +330,18 @@ export default function AdminBlockTemplates() {
     try {
       const rawText = await readFileAsText(file)
       const parsed = JSON.parse(rawText)
+
+      if (parsed?.packageType === 'block-template-package') {
+        const response = await importBlockTemplatePackage({
+          ...parsed,
+          replaceExisting: replaceExistingImport,
+        })
+        const action = response?.data?.action || 'created'
+        await loadTemplates()
+        addToast(`Package template importe (${action}).`, 'success')
+        return
+      }
+
       const normalized = normalizeImportPayload(parsed)
 
       if (!normalized || !Array.isArray(normalized.templates) || normalized.templates.length === 0) {
@@ -331,6 +365,32 @@ export default function AdminBlockTemplates() {
       addToast(error.message || "Erreur pendant l'import des templates.", 'error')
     } finally {
       setImporting(false)
+    }
+  }
+
+  /**
+   * Exporte un template unique au format package versionne.
+   * @param {object} template Template source.
+   * @returns {Promise<void>} Promise resolue apres telechargement.
+   */
+  const handleExportTemplatePackage = async (template) => {
+    try {
+      const response = await exportBlockTemplatePackage(template.id)
+      const payload = response?.data
+
+      if (!payload || typeof payload !== 'object') {
+        throw new Error('Package template invalide.')
+      }
+
+      const safeName = String(template.name || 'template')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+
+      downloadJsonFile(`block-template-package-${safeName || 'template'}.json`, payload)
+      addToast('Package template exporte.', 'success')
+    } catch (error) {
+      addToast(error.message || "Erreur pendant l'export du package template.", 'error')
     }
   }
 
@@ -444,6 +504,18 @@ export default function AdminBlockTemplates() {
                           {template.description}
                         </p>
                       )}
+
+                      <div className="mt-3">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => handleExportTemplatePackage(template)}
+                          className="w-full justify-center"
+                        >
+                          <ArrowDownTrayIcon className="h-4 w-4" />
+                          Export package
+                        </Button>
+                      </div>
                     </article>
                   ))}
                 </div>

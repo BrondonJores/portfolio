@@ -102,6 +102,73 @@ async function main() {
     )
   })
 
+  await runCase('importThemePresetPackage updates existing preset by name', async () => {
+    const existing = {
+      id: 8,
+      name: 'Ocean Light',
+      description: 'Old',
+      settings: { theme_dark_accent: '#000000' },
+      async update(patch) {
+        Object.assign(this, patch)
+        return this
+      },
+    }
+
+    const fakeThemePresetModel = {
+      findAll: async () => [existing],
+      create: async () => {
+        throw new Error('create should not be called')
+      },
+    }
+
+    const service = createThemePresetService({
+      themePresetModel: fakeThemePresetModel,
+    })
+
+    const result = await service.importThemePresetPackage({
+      packageType: 'theme-preset-package',
+      replaceExisting: true,
+      preset: {
+        name: 'Ocean Light',
+        description: 'New description',
+        settings: {
+          theme_dark_accent: '#11ffaa',
+          ui_font_scale: 1.1,
+        },
+      },
+    })
+
+    assert.equal(result.action, 'updated')
+    assert.equal(existing.description, 'New description')
+    assert.equal(existing.settings.theme_dark_accent, '#11ffaa')
+  })
+
+  await runCase('exportThemePresetPackage returns manifest and snapshot', async () => {
+    const fakeThemePresetModel = {
+      findByPk: async () => ({
+        id: 15,
+        name: 'Preset Export',
+        description: 'Desc export',
+        settings: {
+          theme_dark_accent: '#00ffaa',
+          ui_font_scale: '1.05',
+        },
+      }),
+    }
+
+    const service = createThemePresetService({
+      themePresetModel: fakeThemePresetModel,
+      now: () => new Date('2026-03-07T14:00:00.000Z'),
+    })
+
+    const pkg = await service.exportThemePresetPackage(15)
+
+    assert.equal(pkg.packageType, 'theme-preset-package')
+    assert.equal(pkg.manifest.slug, 'theme-preset-15')
+    assert.equal(pkg.exportedAt, '2026-03-07T14:00:00.000Z')
+    assert.equal(pkg.preset.name, 'Preset Export')
+  })
+
   if (failures > 0) {
     console.error(`\nDI unit tests failed: ${failures}`)
     process.exit(1)
