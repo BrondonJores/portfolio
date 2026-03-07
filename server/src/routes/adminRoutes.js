@@ -12,6 +12,7 @@ const { getAll: getAllSubscribers, remove: deleteSubscriber } = require('../cont
 const { getAll: getAllCampaigns, create: createCampaign, update: updateCampaign, remove: deleteCampaign, send: sendCampaign } = require('../controllers/newsletterController')
 const { getAll: getAllBlockTemplates, create: createBlockTemplate, update: updateBlockTemplate, remove: deleteBlockTemplate, importMany: importBlockTemplates } = require('../controllers/blockTemplateController')
 const { getAll: getAllThemePresets, create: createThemePreset, update: updateThemePreset, remove: deleteThemePreset, apply: applyThemePreset } = require('../controllers/themePresetController')
+const { getAllAdmin: getThemeMarketplaceAdmin, importFromMarketplace: importThemeFromMarketplace } = require('../controllers/themeMarketplaceController')
 const { listSecurityEvents, securitySummary } = require('../controllers/securityController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
@@ -20,6 +21,7 @@ const { createArticleValidator, updateArticleValidator } = require('../validator
 const { createSkillValidator, updateSkillValidator } = require('../validators/skillValidator')
 const { listBlockTemplateValidator, createBlockTemplateValidator, updateBlockTemplateValidator, importBlockTemplatesValidator } = require('../validators/blockTemplateValidator')
 const { createThemePresetValidator, updateThemePresetValidator } = require('../validators/themePresetValidator')
+const { marketplaceListValidator, importThemeMarketplaceValidator } = require('../validators/themeMarketplaceValidator')
 
 const router = Router()
 
@@ -94,5 +96,7 @@ router.post('/theme-presets', validate(createThemePresetValidator), createThemeP
 router.put('/theme-presets/:id', validate(updateThemePresetValidator), updateThemePreset)
 router.delete('/theme-presets/:id', deleteThemePreset)
 router.post('/theme-presets/:id/apply', applyThemePreset)
+router.get('/theme-marketplace', validate(marketplaceListValidator), getThemeMarketplaceAdmin)
+router.post('/theme-marketplace/:slug/import', validate(importThemeMarketplaceValidator), importThemeFromMarketplace)
 
 module.exports = router

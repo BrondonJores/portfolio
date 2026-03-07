@@ -9,6 +9,7 @@ import {
   PaintBrushIcon,
   PencilSquareIcon,
   PlusIcon,
+  SparklesIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
@@ -24,6 +25,7 @@ import {
   getThemePresets,
   updateThemePreset,
 } from '../../services/themePresetService.js'
+import { getThemeMarketplace, importThemeFromMarketplace } from '../../services/themeMarketplaceService.js'
 import { PAGE_THEME_TARGETS } from '../../utils/pageThemeTargets.js'
 import { DEFAULT_THEME_SETTINGS } from '../../utils/themeSettings.js'
 
@@ -34,6 +36,8 @@ const inputStyle = {
 }
 
 const THEME_KEYS = Object.keys(DEFAULT_THEME_SETTINGS)
+const MARKETPLACE_FAVORITES_SETTING_KEY = 'theme_marketplace_favorites'
+const MARKETPLACE_RATINGS_SETTING_KEY = 'theme_marketplace_ratings'
 
 /**
  * Extrait uniquement les cles de theme supportees.
@@ -128,19 +132,106 @@ function normalizeTextKey(value) {
   return String(value || '').trim().toLowerCase()
 }
 
+/**
+ * Construit un identifiant stable d'apercu pour un preset local.
+ * @param {number|string} presetId Identifiant preset.
+ * @returns {string} Cle d'apercu.
+ */
+function toPresetPreviewId(presetId) {
+  return `preset:${presetId}`
+}
+
+/**
+ * Construit un identifiant stable d'apercu pour un item marketplace.
+ * @param {string} slug Slug marketplace.
+ * @returns {string} Cle d'apercu.
+ */
+function toMarketplacePreviewId(slug) {
+  return `market:${slug}`
+}
+
+/**
+ * Parse une valeur JSON de setting avec fallback.
+ * @param {unknown} rawValue Valeur brute.
+ * @param {unknown} fallback Valeur de repli.
+ * @returns {unknown} JSON parse ou fallback.
+ */
+function parseJsonSetting(rawValue, fallback) {
+  if (typeof rawValue !== 'string' || !rawValue.trim()) {
+    return fallback
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue)
+    return parsed ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
+/**
+ * Lit les slugs favoris marketplace depuis les settings.
+ * @param {Record<string, unknown>} settings Settings admin.
+ * @returns {string[]} Liste des slugs favoris.
+ */
+function readMarketplaceFavoritesFromSettings(settings) {
+  const parsed = parseJsonSetting(settings?.[MARKETPLACE_FAVORITES_SETTING_KEY], [])
+  if (!Array.isArray(parsed)) {
+    return []
+  }
+
+  return parsed
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .slice(0, 200)
+}
+
+/**
+ * Lit la notation marketplace depuis les settings.
+ * @param {Record<string, unknown>} settings Settings admin.
+ * @returns {Record<string, number>} Map slug -> note (1..5).
+ */
+function readMarketplaceRatingsFromSettings(settings) {
+  const parsed = parseJsonSetting(settings?.[MARKETPLACE_RATINGS_SETTING_KEY], {})
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {}
+  }
+
+  const next = {}
+  for (const [slug, rawRating] of Object.entries(parsed)) {
+    const safeSlug = String(slug || '').trim()
+    const rating = Number.parseInt(String(rawRating ?? ''), 10)
+    if (!safeSlug) continue
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) continue
+    next[safeSlug] = rating
+  }
+
+  return next
+}
+
 export default function AdminThemePresets() {
   const addToast = useAdminToast()
   const { refreshSettings, refreshThemePresets, updateLocalSettings } = useSettings()
 
   const [presets, setPresets] = useState([])
+  const [marketplaceThemes, setMarketplaceThemes] = useState([])
   const [currentSettings, setCurrentSettings] = useState({})
   const [assignments, setAssignments] = useState({})
+  const [marketplaceFavorites, setMarketplaceFavorites] = useState([])
+  const [marketplaceRatings, setMarketplaceRatings] = useState({})
   const [loading, setLoading] = useState(true)
+  const [loadingMarketplace, setLoadingMarketplace] = useState(true)
   const [saving, setSaving] = useState(false)
   const [savingAssignments, setSavingAssignments] = useState(false)
+  const [savingMarketplacePrefs, setSavingMarketplacePrefs] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [marketplaceImportingSlug, setMarketplaceImportingSlug] = useState('')
+  const [marketplaceCategory, setMarketplaceCategory] = useState('all')
+  const [marketplaceQuery, setMarketplaceQuery] = useState('')
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false)
   const [applyingId, setApplyingId] = useState(null)
   const [previewingId, setPreviewingId] = useState(null)
+  const [previewingLabel, setPreviewingLabel] = useState('')
   const [confirmId, setConfirmId] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(() => createEmptyForm())
@@ -159,6 +250,61 @@ export default function AdminThemePresets() {
   )
 
   const snapshotCount = Object.keys(snapshotSettings).length
+  const marketplaceFavoriteSet = useMemo(
+    () => new Set(marketplaceFavorites),
+    [marketplaceFavorites]
+  )
+
+  const marketplaceCategories = useMemo(() => {
+    const values = new Set(
+      marketplaceThemes
+        .map((item) => String(item?.category || '').trim())
+        .filter(Boolean)
+    )
+    return ['all', ...Array.from(values)]
+  }, [marketplaceThemes])
+
+  const filteredMarketplaceThemes = useMemo(() => {
+    const term = marketplaceQuery.trim().toLowerCase()
+
+    return marketplaceThemes.filter((item) => {
+      if (showFavoritesOnly && !marketplaceFavoriteSet.has(item.slug)) {
+        return false
+      }
+
+      if (marketplaceCategory !== 'all' && item.category !== marketplaceCategory) {
+        return false
+      }
+
+      if (!term) {
+        return true
+      }
+
+      const haystack = [
+        item.name,
+        item.shortDescription,
+        item.description,
+        item.category,
+        item.style,
+        ...(Array.isArray(item.tags) ? item.tags : []),
+      ]
+        .map((value) => String(value || '').toLowerCase())
+        .join(' ')
+
+      return haystack.includes(term)
+    }).sort((a, b) => {
+      const aFavorite = marketplaceFavoriteSet.has(a.slug)
+      const bFavorite = marketplaceFavoriteSet.has(b.slug)
+
+      if (aFavorite !== bFavorite) {
+        return aFavorite ? -1 : 1
+      }
+      if (a.featured !== b.featured) {
+        return a.featured ? -1 : 1
+      }
+      return String(a.name || '').localeCompare(String(b.name || ''))
+    })
+  }, [marketplaceThemes, marketplaceCategory, marketplaceQuery, showFavoritesOnly, marketplaceFavoriteSet])
 
   const loadData = async () => {
     setLoading(true)
@@ -170,6 +316,8 @@ export default function AdminThemePresets() {
       setPresets(nextPresets)
       setCurrentSettings(nextSettings)
       setAssignments(readAssignmentsFromSettings(nextSettings))
+      setMarketplaceFavorites(readMarketplaceFavoritesFromSettings(nextSettings))
+      setMarketplaceRatings(readMarketplaceRatingsFromSettings(nextSettings))
     } catch (error) {
       addToast(error.message || 'Erreur lors du chargement des presets de theme.', 'error')
     } finally {
@@ -177,8 +325,24 @@ export default function AdminThemePresets() {
     }
   }
 
+  const loadMarketplace = async () => {
+    setLoadingMarketplace(true)
+    try {
+      const response = await getThemeMarketplace()
+      setMarketplaceThemes(Array.isArray(response?.data) ? response.data : [])
+    } catch (error) {
+      addToast(error.message || 'Erreur lors du chargement du marketplace themes.', 'error')
+    } finally {
+      setLoadingMarketplace(false)
+    }
+  }
+
   useEffect(() => {
     loadData()
+  }, [])
+
+  useEffect(() => {
+    loadMarketplace()
   }, [])
 
   useEffect(() => {
@@ -282,7 +446,7 @@ export default function AdminThemePresets() {
    * @param {object} preset Preset cible.
    * @returns {void}
    */
-  const startPreview = (preset) => {
+  const startPreview = (preset, options = {}) => {
     const previewPatch = pickThemeSettings(preset?.settings || {})
     if (Object.keys(previewPatch).length === 0) {
       addToast('Ce preset ne contient pas de theme exploitable.', 'error')
@@ -294,7 +458,8 @@ export default function AdminThemePresets() {
     }
 
     updateLocalSettings(previewPatch)
-    setPreviewingId(preset.id)
+    setPreviewingId(options.previewId || toPresetPreviewId(preset?.id || 'unknown'))
+    setPreviewingLabel(options.label || preset?.name || 'Theme')
   }
 
   /**
@@ -304,12 +469,14 @@ export default function AdminThemePresets() {
   const stopPreview = () => {
     if (!previewBaseRef.current) {
       setPreviewingId(null)
+      setPreviewingLabel('')
       return
     }
 
     updateLocalSettings(previewBaseRef.current)
     previewBaseRef.current = null
     setPreviewingId(null)
+    setPreviewingLabel('')
     addToast('Apercu annule, theme restaure.', 'success')
   }
 
@@ -326,10 +493,15 @@ export default function AdminThemePresets() {
       await refreshThemePresets()
 
       const fresh = await getAdminSettings()
-      setCurrentSettings(fresh?.data || {})
+      const nextSettings = fresh?.data || {}
+      setCurrentSettings(nextSettings)
+      setAssignments(readAssignmentsFromSettings(nextSettings))
+      setMarketplaceFavorites(readMarketplaceFavoritesFromSettings(nextSettings))
+      setMarketplaceRatings(readMarketplaceRatingsFromSettings(nextSettings))
 
       previewBaseRef.current = null
       setPreviewingId(null)
+      setPreviewingLabel('')
 
       addToast('Preset de theme applique.', 'success')
     } catch (error) {
@@ -355,7 +527,7 @@ export default function AdminThemePresets() {
       if (editingId === confirmId) {
         startCreate()
       }
-      if (previewingId === confirmId) {
+      if (previewingId === toPresetPreviewId(confirmId)) {
         stopPreview()
       }
     } catch (error) {
@@ -487,6 +659,141 @@ export default function AdminThemePresets() {
   }
 
   /**
+   * Importe un theme depuis le marketplace.
+   * @param {object} theme Theme marketplace cible.
+   * @param {boolean} [applyAfterImport=false] Applique immediatement apres import.
+   * @returns {Promise<void>} Promise d'import.
+   */
+  const handleImportMarketplaceTheme = async (theme, applyAfterImport = false) => {
+    if (!theme?.slug) {
+      addToast('Theme marketplace invalide.', 'error')
+      return
+    }
+
+    setMarketplaceImportingSlug(theme.slug)
+    try {
+      const response = await importThemeFromMarketplace(theme.slug, {
+        replaceExisting: true,
+        applyAfterImport,
+      })
+
+      const result = response?.data || {}
+      await Promise.all([loadData(), refreshThemePresets()])
+
+      if (applyAfterImport) {
+        await refreshSettings()
+        const fresh = await getAdminSettings()
+        const nextSettings = fresh?.data || {}
+        setCurrentSettings(nextSettings)
+        setAssignments(readAssignmentsFromSettings(nextSettings))
+        setMarketplaceFavorites(readMarketplaceFavoritesFromSettings(nextSettings))
+        setMarketplaceRatings(readMarketplaceRatingsFromSettings(nextSettings))
+        previewBaseRef.current = null
+        setPreviewingId(null)
+        setPreviewingLabel('')
+      }
+
+      const actionLabel = result.action === 'updated'
+        ? 'mis a jour'
+        : result.action === 'skipped'
+          ? 'deja present'
+          : 'importe'
+
+      addToast(
+        applyAfterImport
+          ? `Theme "${theme.name}" ${actionLabel} et applique.`
+          : `Theme "${theme.name}" ${actionLabel}.`,
+        'success'
+      )
+    } catch (error) {
+      addToast(error.message || "Erreur lors de l'import marketplace.", 'error')
+    } finally {
+      setMarketplaceImportingSlug('')
+    }
+  }
+
+  /**
+   * Persiste les preferences marketplace (favoris + notes) dans les settings.
+   * @param {string[]} nextFavorites Slugs favoris.
+   * @param {Record<string, number>} nextRatings Notes par slug.
+   * @returns {Promise<void>} Promise de persistance.
+   */
+  const saveMarketplacePreferences = async (nextFavorites, nextRatings) => {
+    setSavingMarketplacePrefs(true)
+    try {
+      const payload = {
+        [MARKETPLACE_FAVORITES_SETTING_KEY]: JSON.stringify(nextFavorites),
+        [MARKETPLACE_RATINGS_SETTING_KEY]: JSON.stringify(nextRatings),
+      }
+
+      await updateSettings(payload)
+      setCurrentSettings((prev) => ({
+        ...prev,
+        ...payload,
+      }))
+    } finally {
+      setSavingMarketplacePrefs(false)
+    }
+  }
+
+  /**
+   * Ajoute/retire un theme des favoris marketplace.
+   * @param {string} slug Slug du theme.
+   * @returns {Promise<void>} Promise resolue apres mise a jour.
+   */
+  const handleToggleMarketplaceFavorite = async (slug) => {
+    const safeSlug = String(slug || '').trim()
+    if (!safeSlug) return
+
+    const alreadyFavorite = marketplaceFavoriteSet.has(safeSlug)
+    const nextFavorites = alreadyFavorite
+      ? marketplaceFavorites.filter((item) => item !== safeSlug)
+      : [...marketplaceFavorites, safeSlug]
+
+    setMarketplaceFavorites(nextFavorites)
+
+    try {
+      await saveMarketplacePreferences(nextFavorites, marketplaceRatings)
+    } catch (error) {
+      setMarketplaceFavorites(marketplaceFavorites)
+      addToast(error.message || 'Erreur lors de la sauvegarde des favoris.', 'error')
+    }
+  }
+
+  /**
+   * Definit une note (1 a 5) pour un theme marketplace.
+   * Cliquer la meme note retire la notation.
+   * @param {string} slug Slug du theme.
+   * @param {number} rating Note cible.
+   * @returns {Promise<void>} Promise resolue apres mise a jour.
+   */
+  const handleSetMarketplaceRating = async (slug, rating) => {
+    const safeSlug = String(slug || '').trim()
+    const safeRating = Number.parseInt(String(rating ?? ''), 10)
+    if (!safeSlug || !Number.isInteger(safeRating) || safeRating < 1 || safeRating > 5) {
+      return
+    }
+
+    const currentRating = marketplaceRatings[safeSlug] || 0
+    const nextRatings = { ...marketplaceRatings }
+
+    if (currentRating === safeRating) {
+      delete nextRatings[safeSlug]
+    } else {
+      nextRatings[safeSlug] = safeRating
+    }
+
+    setMarketplaceRatings(nextRatings)
+
+    try {
+      await saveMarketplacePreferences(marketplaceFavorites, nextRatings)
+    } catch (error) {
+      setMarketplaceRatings(marketplaceRatings)
+      addToast(error.message || 'Erreur lors de la sauvegarde de la note.', 'error')
+    }
+  }
+
+  /**
    * Change localement l'affectation d'une page vers un preset.
    * @param {string} targetId Identifiant de cible.
    * @param {string} presetId Identifiant preset selectionne.
@@ -578,7 +885,7 @@ export default function AdminThemePresets() {
             style={{ borderColor: 'var(--color-accent)', backgroundColor: 'var(--color-bg-secondary)' }}
           >
             <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-              Apercu live actif: {presets.find((preset) => preset.id === previewingId)?.name || 'Preset'}
+              Apercu live actif: {previewingLabel || 'Theme'}
             </p>
             <Button type="button" variant="ghost" onClick={stopPreview}>
               <EyeSlashIcon className="h-4 w-4" />
@@ -592,7 +899,8 @@ export default function AdminThemePresets() {
             <Spinner size="lg" />
           </div>
         ) : (
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <>
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <section
               className="rounded-xl border p-4 space-y-3 h-fit"
               style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
@@ -608,7 +916,7 @@ export default function AdminThemePresets() {
               ) : (
                 <div className="space-y-2">
                   {presets.map((preset) => {
-                    const isPreviewing = previewingId === preset.id
+                    const isPreviewing = previewingId === toPresetPreviewId(preset.id)
 
                     return (
                       <article
@@ -645,7 +953,14 @@ export default function AdminThemePresets() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => (isPreviewing ? stopPreview() : startPreview(preset))}
+                              onClick={() => (
+                                isPreviewing
+                                  ? stopPreview()
+                                  : startPreview(preset, {
+                                    previewId: toPresetPreviewId(preset.id),
+                                    label: preset.name,
+                                  })
+                              )}
                               className="p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                               style={{ color: isPreviewing ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}
                               aria-label={isPreviewing ? `Arreter apercu ${preset.name}` : `Apercu ${preset.name}`}
@@ -811,7 +1126,242 @@ export default function AdminThemePresets() {
                 </div>
               </section>
             </div>
-          </div>
+            </div>
+
+            <section
+              className="rounded-xl border p-4 space-y-4"
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+                    <SparklesIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
+                    Marketplace de themes
+                  </h2>
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                    Catalogue de themes prets a importer, previsualiser et appliquer.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)_auto] gap-3 items-center">
+                <select
+                  value={marketplaceCategory}
+                  onChange={(event) => setMarketplaceCategory(event.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  style={inputStyle}
+                >
+                  {marketplaceCategories.map((category) => (
+                    <option key={category} value={category}>
+                      {category === 'all' ? 'Toutes les categories' : category}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="text"
+                  value={marketplaceQuery}
+                  onChange={(event) => setMarketplaceQuery(event.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                  style={inputStyle}
+                  placeholder="Rechercher un theme (nom, style, tag...)"
+                />
+
+                <label className="inline-flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                  <input
+                    type="checkbox"
+                    checked={showFavoritesOnly}
+                    onChange={(event) => setShowFavoritesOnly(event.target.checked)}
+                    style={{ accentColor: 'var(--color-accent)' }}
+                  />
+                  Favoris uniquement
+                </label>
+              </div>
+
+              {savingMarketplacePrefs && (
+                <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                  Sauvegarde des preferences marketplace...
+                </p>
+              )}
+
+              {loadingMarketplace ? (
+                <div className="flex justify-center py-8">
+                  <Spinner size="md" />
+                </div>
+              ) : filteredMarketplaceThemes.length === 0 ? (
+                <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  Aucun theme marketplace ne correspond a ce filtre.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {filteredMarketplaceThemes.map((theme) => {
+                    const isPreviewingMarketplace = previewingId === toMarketplacePreviewId(theme.slug)
+                    const isImportingMarketplace = marketplaceImportingSlug === theme.slug
+                    const isFavorite = marketplaceFavoriteSet.has(theme.slug)
+                    const rating = marketplaceRatings[theme.slug] || 0
+
+                    return (
+                      <article
+                        key={theme.slug}
+                        className="rounded-lg border p-3 space-y-3"
+                        style={{
+                          borderColor: isPreviewingMarketplace ? 'var(--color-accent-light)' : 'var(--color-border)',
+                          backgroundColor: 'var(--color-bg-primary)',
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                              {theme.name}
+                            </p>
+                            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                              {theme.category} · {theme.style} · {theme.settingsCount} cles
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleMarketplaceFavorite(theme.slug)}
+                              className="text-lg leading-none"
+                              style={{ color: isFavorite ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}
+                              aria-label={isFavorite ? `Retirer ${theme.name} des favoris` : `Ajouter ${theme.name} aux favoris`}
+                              title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                            >
+                              {isFavorite ? '★' : '☆'}
+                            </button>
+
+                            {theme.featured && (
+                              <span
+                                className="text-[10px] font-semibold px-2 py-1 rounded-full border"
+                                style={{
+                                  borderColor: 'var(--color-accent)',
+                                  color: 'var(--color-accent)',
+                                  backgroundColor: 'var(--color-accent-glow)',
+                                }}
+                              >
+                                Featured
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          {theme.shortDescription || theme.description}
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-5 w-5 rounded-full border"
+                            style={{ backgroundColor: theme.preview?.dark, borderColor: 'var(--color-border)' }}
+                            title="Fond sombre"
+                          />
+                          <span
+                            className="h-5 w-5 rounded-full border"
+                            style={{ backgroundColor: theme.preview?.light, borderColor: 'var(--color-border)' }}
+                            title="Fond clair"
+                          />
+                          <span
+                            className="h-5 w-5 rounded-full border"
+                            style={{ backgroundColor: theme.preview?.accent, borderColor: 'var(--color-border)' }}
+                            title="Accent"
+                          />
+                          <span
+                            className="h-5 w-5 rounded-full border"
+                            style={{ backgroundColor: theme.preview?.accentLight, borderColor: 'var(--color-border)' }}
+                            title="Accent light"
+                          />
+                        </div>
+
+                        {Array.isArray(theme.tags) && theme.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {theme.tags.map((tag) => (
+                              <span
+                                key={`${theme.slug}-${tag}`}
+                                className="text-[10px] px-2 py-1 rounded-full border"
+                                style={{
+                                  borderColor: 'var(--color-border)',
+                                  color: 'var(--color-text-secondary)',
+                                  backgroundColor: 'var(--color-bg-secondary)',
+                                }}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }).map((_, index) => {
+                            const value = index + 1
+                            const active = rating >= value
+
+                            return (
+                              <button
+                                key={`${theme.slug}-rating-${value}`}
+                                type="button"
+                                onClick={() => handleSetMarketplaceRating(theme.slug, value)}
+                                className="text-base leading-none"
+                                style={{ color: active ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}
+                                aria-label={`Donner ${value} etoile(s) a ${theme.name}`}
+                                title={`${value} etoile(s)`}
+                              >
+                                ★
+                              </button>
+                            )
+                          })}
+                          <span className="text-[10px] ml-2" style={{ color: 'var(--color-text-secondary)' }}>
+                            {rating > 0 ? `${rating}/5` : 'Non note'}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <Button
+                            type="button"
+                            variant={isPreviewingMarketplace ? 'primary' : 'ghost'}
+                            onClick={() => (
+                              isPreviewingMarketplace
+                                ? stopPreview()
+                                : startPreview(theme, {
+                                  previewId: toMarketplacePreviewId(theme.slug),
+                                  label: theme.name,
+                                })
+                            )}
+                            className="justify-center"
+                          >
+                            {isPreviewingMarketplace ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                            {isPreviewingMarketplace ? 'Stop preview' : 'Preview'}
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => handleImportMarketplaceTheme(theme, false)}
+                            disabled={isImportingMarketplace}
+                            className="justify-center"
+                          >
+                            {isImportingMarketplace ? <Spinner size="sm" /> : <ArrowUpTrayIcon className="h-4 w-4" />}
+                            Importer
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="primary"
+                            onClick={() => handleImportMarketplaceTheme(theme, true)}
+                            disabled={isImportingMarketplace}
+                            className="justify-center"
+                          >
+                            <PaintBrushIcon className="h-4 w-4" />
+                            Importer + appliquer
+                          </Button>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+          </>
         )}
       </div>
 
@@ -825,4 +1375,3 @@ export default function AdminThemePresets() {
     </>
   )
 }
-
