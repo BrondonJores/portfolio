@@ -7,12 +7,33 @@ const API_BASE = import.meta.env.VITE_API_URL || ''
 let _accessToken = null
 let _refreshTokenFn = null
 let _logoutFn = null
+let _refreshInFlight = null
 
 /* Injection des dependances d'authentification depuis le contexte */
 export function configureApi({ accessToken, refreshToken, logout }) {
   _accessToken = accessToken
   _refreshTokenFn = refreshToken
   _logoutFn = logout
+}
+
+/* Mutualise les rafraichissements pour eviter une rafale de /auth/refresh en parallele. */
+async function getFreshAccessToken() {
+  if (typeof _refreshTokenFn !== 'function') {
+    throw new Error('Session expiree. Reconnexion requise.')
+  }
+
+  if (!_refreshInFlight) {
+    _refreshInFlight = _refreshTokenFn()
+      .then((newToken) => {
+        _accessToken = newToken
+        return newToken
+      })
+      .finally(() => {
+        _refreshInFlight = null
+      })
+  }
+
+  return _refreshInFlight
 }
 
 /* Construction des en-tetes avec autorisation Bearer si token disponible */
@@ -41,8 +62,7 @@ async function request(method, path, body, retried = false) {
   /* Tentative de rafraichissement du token si 401 et non encore retente */
   if (response.status === 401 && !retried && _refreshTokenFn) {
     try {
-      const newToken = await _refreshTokenFn()
-      _accessToken = newToken
+      await getFreshAccessToken()
       return request(method, path, body, true)
     } catch {
       /* Rafraichissement echoue : deconnexion et redirection */

@@ -12,6 +12,48 @@ const { errorHandler } = require('./middleware/errorMiddleware')
 const app = express()
 
 /**
+ * Parse une valeur booleenne style env (`true`, `1`, `yes`, `on`).
+ * @param {unknown} value Valeur brute.
+ * @param {boolean} [fallback=false] Valeur de repli.
+ * @returns {boolean} Booleen normalise.
+ */
+function parseBooleanEnv(value, fallback = false) {
+  if (value === undefined || value === null || value === '') {
+    return fallback
+  }
+  return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase())
+}
+
+/**
+ * Parse une valeur entiere positive.
+ * @param {unknown} value Valeur brute.
+ * @param {number} fallback Valeur de repli.
+ * @returns {number} Entier normalise.
+ */
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+/**
+ * Parse la valeur trust proxy Express.
+ * @param {unknown} value Valeur brute env.
+ * @returns {boolean|number} Configuration trust proxy.
+ */
+function parseTrustProxy(value) {
+  if (value === undefined || value === null || value === '') {
+    return process.env.NODE_ENV === 'production' ? 1 : false
+  }
+
+  const trimmed = String(value).trim().toLowerCase()
+  if (/^\d+$/.test(trimmed)) {
+    return Number(trimmed)
+  }
+
+  return parseBooleanEnv(trimmed, false)
+}
+
+/**
  * Parse une liste CSV d'origines.
  * @param {string | undefined} raw Valeur brute.
  * @returns {string[]} Liste d'origines propres.
@@ -49,8 +91,46 @@ function getAllowedOrigins() {
   return Array.from(origins)
 }
 
+/* Rend la detection IP compatible Render/Reverse proxy pour le rate limit. */
+app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY))
+
 /* En-tetes de securite HTTP */
-app.use(helmet())
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        scriptSrc: [
+          "'self'",
+          'https://www.google.com',
+          'https://www.gstatic.com',
+          'https://www.recaptcha.net',
+        ],
+        frameSrc: [
+          "'self'",
+          'https://www.google.com',
+          'https://recaptcha.google.com',
+          'https://www.recaptcha.net',
+        ],
+        connectSrc: [
+          "'self'",
+          'https://www.google.com',
+          'https://www.gstatic.com',
+          'https://www.recaptcha.net',
+        ],
+        imgSrc: [
+          "'self'",
+          'data:',
+          'https:',
+        ],
+        workerSrc: [
+          "'self'",
+          'blob:',
+        ],
+      },
+    },
+  })
+)
 
 /* Configuration CORS restrictive */
 app.use(
@@ -86,10 +166,10 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'))
 }
 
-/* Rate limiter global : 100 requetes par 15 minutes */
+/* Rate limiter global configurable (plus large en production). */
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: parsePositiveInteger(process.env.RATE_LIMIT_GLOBAL_WINDOW_MS, 15 * 60 * 1000),
+  max: parsePositiveInteger(process.env.RATE_LIMIT_GLOBAL_MAX, process.env.NODE_ENV === 'production' ? 600 : 200),
   message: { error: 'Trop de requetes. Reessayez dans 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,

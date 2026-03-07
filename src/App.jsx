@@ -13,14 +13,35 @@ import { applyThemeSettings } from './utils/themeSettings.js'
 /* Politique de securite du contenu */
 const apiOrigin = import.meta.env.VITE_API_URL || ''
 const serverOrigin = import.meta.env.VITE_SERVER_URL || ''
+const RECAPTCHA_SCRIPT_ORIGINS = ['https://www.google.com', 'https://www.gstatic.com', 'https://www.recaptcha.net']
+const RECAPTCHA_FRAME_ORIGINS = ['https://www.google.com', 'https://recaptcha.google.com', 'https://www.recaptcha.net']
+const VERCEL_SCRIPT_ORIGINS = ['https://va.vercel-scripts.com']
+const VERCEL_CONNECT_ORIGINS = ['https://vitals.vercel-insights.com']
+
+function joinCspSources(values) {
+  return Array.from(new Set((Array.isArray(values) ? values : []).filter(Boolean))).join(' ')
+}
 
 const CSP_POLICY = [
   "default-src 'self'",
-  "script-src 'self'",
+  `script-src ${joinCspSources([
+    "'self'",
+    ...RECAPTCHA_SCRIPT_ORIGINS,
+    ...VERCEL_SCRIPT_ORIGINS,
+  ])}`,
   "style-src 'self' 'unsafe-inline'",
-  ["img-src 'self' data: https:", serverOrigin].filter(Boolean).join(' '),
-  "font-src 'self'",
-  ["connect-src 'self' https://api.resend.com", apiOrigin].filter(Boolean).join(' '),
+  `img-src ${joinCspSources(["'self'", 'data:', 'https:', serverOrigin, ...RECAPTCHA_SCRIPT_ORIGINS])}`,
+  `font-src ${joinCspSources(["'self'", 'data:'])}`,
+  `connect-src ${joinCspSources([
+    "'self'",
+    'https://api.resend.com',
+    apiOrigin,
+    ...RECAPTCHA_SCRIPT_ORIGINS,
+    ...VERCEL_CONNECT_ORIGINS,
+  ])}`,
+  `frame-src ${joinCspSources(["'self'", ...RECAPTCHA_FRAME_ORIGINS])}`,
+  "base-uri 'self'",
+  "object-src 'none'",
 ].join('; ')
 
 function normalizeBaseUrl(rawValue) {
