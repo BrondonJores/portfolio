@@ -21,7 +21,12 @@ import Badge from '../components/ui/Badge.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
 import RecaptchaNotice from '../components/ui/RecaptchaNotice.jsx'
-import { getArticleBySlug, getArticles } from '../services/articleService.js'
+import {
+  getArticleBySlug,
+  getArticles,
+  likeArticle,
+  unlikeArticle,
+} from '../services/articleService.js'
 import { getCommentsByArticle, postComment } from '../services/commentService.js'
 import { subscribe } from '../services/subscriberService.js'
 import { executeRecaptcha } from '../services/recaptchaService.js'
@@ -98,6 +103,42 @@ function getAvatarColor(name) {
   let hash = 0
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
   return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length]
+}
+
+const LIKED_ARTICLES_STORAGE_KEY = 'portfolio_liked_articles_v1'
+
+/**
+ * Lit les likes persistes en local pour eviter plusieurs likes du meme navigateur.
+ * @returns {Record<string, boolean>} Dictionnaire slug => liked.
+ */
+function readLikedArticlesMap() {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = window.localStorage.getItem(LIKED_ARTICLES_STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return {}
+    return parsed
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Persiste l'etat liked local d'un article.
+ * @param {string} articleSlug Slug article cible.
+ * @param {boolean} isLiked Etat liked a sauvegarder.
+ * @returns {void}
+ */
+function persistLikedArticle(articleSlug, isLiked) {
+  if (!articleSlug || typeof window === 'undefined') return
+  const currentMap = readLikedArticlesMap()
+  currentMap[articleSlug] = isLiked
+  try {
+    window.localStorage.setItem(LIKED_ARTICLES_STORAGE_KEY, JSON.stringify(currentMap))
+  } catch {
+    /* Ignore les erreurs quota/localStorage bloque. */
+  }
 }
 
 /* Barre de progression de lecture en haut de page */
@@ -202,7 +243,7 @@ function TableOfContents({ headings }) {
 }
 
 /* Sidebar de partage (desktop) */
-function ShareSidebar({ article, liked, likesCount, onLike, onCopyLink, copied, likeAnimKey }) {
+function ShareSidebar({ article, liked, likesCount, onLike, onCopyLink, copied, likeAnimKey, likePending }) {
   const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(article.title)}`
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`
 
@@ -263,7 +304,8 @@ function ShareSidebar({ article, liked, likesCount, onLike, onCopyLink, copied, 
         animate={{ scale: [1, 1.3, 1] }}
         whileTap={{ scale: 0.8 }}
         transition={{ duration: 0.3 }}
-        className="flex flex-col items-center gap-0.5 focus:outline-none"
+        disabled={likePending}
+        className="flex flex-col items-center gap-0.5 focus:outline-none disabled:opacity-60"
         aria-label={liked ? 'Retirer le like' : "J'aime cet article"}
       >
         <HeartIcon
@@ -435,6 +477,8 @@ export default function ArticleDetail() {
   const [liked, setLiked] = useState(false)
   const [likesCount, setLikesCount] = useState(0)
   const [likeAnimKey, setLikeAnimKey] = useState(0)
+  const [likePending, setLikePending] = useState(false)
+  const [likeError, setLikeError] = useState('')
 
   useEffect(() => {
     getArticleBySlug(slug)
@@ -445,7 +489,10 @@ export default function ArticleDetail() {
 
   useEffect(() => {
     if (!article) return
-    setLikesCount(article.likes || 0)
+    setLikesCount(Math.max(0, Number.parseInt(String(article.likes ?? 0), 10) || 0))
+    setLiked(Boolean(readLikedArticlesMap()[article.slug]))
+    setLikePending(false)
+    setLikeError('')
     getArticles({ limit: 4 })
       .then((res) => {
         const all = res?.data || []
@@ -467,12 +514,39 @@ export default function ArticleDetail() {
       .catch(() => {})
   }
 
-  /* Toggle like */
-  const handleLike = () => {
-    const newLiked = !liked
-    setLiked(newLiked)
-    setLikesCount((c) => newLiked ? c + 1 : c - 1)
+  /* Toggle like persiste cote API + navigateur */
+  const handleLike = async () => {
+    if (!article?.slug || likePending) return
+
+    const previousLiked = liked
+    const previousCount = likesCount
+    const nextLiked = !previousLiked
+    const optimisticCount = nextLiked
+      ? previousCount + 1
+      : Math.max(0, previousCount - 1)
+
+    setLikePending(true)
+    setLikeError('')
+    setLiked(nextLiked)
+    setLikesCount(optimisticCount)
     setLikeAnimKey((k) => k + 1)
+
+    try {
+      const response = nextLiked
+        ? await likeArticle(article.slug)
+        : await unlikeArticle(article.slug)
+      const apiLikes = Number.parseInt(String(response?.data?.likes ?? optimisticCount), 10)
+      const safeLikes = Number.isFinite(apiLikes) ? Math.max(0, apiLikes) : optimisticCount
+
+      setLikesCount(safeLikes)
+      persistLikedArticle(article.slug, nextLiked)
+    } catch (err) {
+      setLiked(previousLiked)
+      setLikesCount(previousCount)
+      setLikeError(err?.message || 'Impossible de mettre a jour le like pour le moment.')
+    } finally {
+      setLikePending(false)
+    }
   }
 
   if (loading) {
@@ -555,6 +629,7 @@ export default function ArticleDetail() {
                 onCopyLink={handleCopyLink}
                 copied={copied}
                 likeAnimKey={likeAnimKey}
+                likePending={likePending}
               />
             </aside>
 
@@ -665,7 +740,8 @@ export default function ArticleDetail() {
                   animate={{ scale: [1, 1.4, 1] }}
                   whileTap={{ scale: 0.8 }}
                   transition={{ duration: 0.3 }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full border transition-colors focus:outline-none"
+                  disabled={likePending}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border transition-colors focus:outline-none disabled:opacity-60"
                   style={{
                     borderColor: liked ? '#ef4444' : 'var(--color-border)',
                     color: liked ? '#ef4444' : 'var(--color-text-secondary)',
@@ -678,8 +754,13 @@ export default function ArticleDetail() {
                     style={{ fill: liked ? '#ef4444' : 'none' }}
                     aria-hidden="true"
                   />
-                  {liked ? 'Aimé' : "J'aime"} · {likesCount}
+                  {liked ? 'Aime' : "J'aime"} - {likesCount}
                 </motion.button>
+                {likeError && (
+                  <p className="text-sm" style={{ color: '#ef4444' }}>
+                    {likeError}
+                  </p>
+                )}
               </div>
 
               {/* Carte auteur */}
@@ -938,3 +1019,4 @@ export default function ArticleDetail() {
     </>
   )
 }
+

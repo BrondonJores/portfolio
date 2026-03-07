@@ -2,6 +2,8 @@
 const {
   getAllPublicArticles,
   getPublicArticleBySlug,
+  likeArticleBySlug,
+  unlikeArticleBySlug,
   getAllAdminArticles,
   createArticle,
   updateArticle,
@@ -40,6 +42,39 @@ async function getBySlug(req, res, next) {
   try {
     const article = await getPublicArticleBySlug(req.params.slug)
     return res.json({ data: article })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Ajoute un like a un article public via son slug.
+ * @param {import('express').Request} req Requete contenant `params.slug`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres mise a jour du compteur.
+ */
+async function likeBySlug(req, res, next) {
+  try {
+    const payload = await likeArticleBySlug(req.params.slug)
+    return res.json({ data: payload })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Retire un like d'un article public via son slug.
+ * Le compteur ne peut jamais passer sous 0.
+ * @param {import('express').Request} req Requete contenant `params.slug`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres mise a jour du compteur.
+ */
+async function unlikeBySlug(req, res, next) {
+  try {
+    const payload = await unlikeArticleBySlug(req.params.slug)
+    return res.json({ data: payload })
   } catch (err) {
     next(err)
   }
@@ -109,4 +144,13 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { getAllPublic, getBySlug, getAllAdmin, create, update, remove }
+module.exports = {
+  getAllPublic,
+  getBySlug,
+  likeBySlug,
+  unlikeBySlug,
+  getAllAdmin,
+  create,
+  update,
+  remove,
+}

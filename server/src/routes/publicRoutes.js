@@ -2,7 +2,12 @@
 const { Router } = require('express')
 const rateLimit = require('express-rate-limit')
 const { getAllPublic: getProjects, getBySlug: getProjectBySlug } = require('../controllers/projectController')
-const { getAllPublic: getArticles, getBySlug: getArticleBySlug } = require('../controllers/articleController')
+const {
+  getAllPublic: getArticles,
+  getBySlug: getArticleBySlug,
+  likeBySlug: likeArticleBySlug,
+  unlikeBySlug: unlikeArticleBySlug,
+} = require('../controllers/articleController')
 const { getAll: getSkills } = require('../controllers/skillController')
 const { create: createMessage } = require('../controllers/messageController')
 const { getAllPublic: getTestimonials } = require('../controllers/testimonialController')
@@ -45,6 +50,14 @@ const messageLimiter = rateLimit({
   legacyHeaders: false,
 })
 
+const likeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 80,
+  message: { error: 'Trop de likes envoyes. Reessayez dans 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
 const verifyMessageCaptcha = createRecaptchaGuard({ action: 'contact_message' })
 const verifyCommentCaptcha = createRecaptchaGuard({ action: 'comment_create' })
 const verifySubscribeCaptcha = createRecaptchaGuard({ action: 'newsletter_subscribe' })
@@ -54,6 +67,8 @@ router.get('/projects', getProjects)
 router.get('/projects/:slug', getProjectBySlug)
 router.get('/articles', getArticles)
 router.get('/articles/:slug', getArticleBySlug)
+router.post('/articles/:slug/likes', likeLimiter, likeArticleBySlug)
+router.delete('/articles/:slug/likes', likeLimiter, unlikeArticleBySlug)
 router.get('/skills', getSkills)
 router.post('/messages', messageLimiter, validate(createMessageValidator), verifyMessageCaptcha, createMessage)
 router.get('/testimonials', getTestimonials)

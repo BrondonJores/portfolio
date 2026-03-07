@@ -80,6 +80,55 @@ function createArticleService(deps = {}) {
   }
 
   /**
+   * Ajoute un like a un article public par slug.
+   * @param {string} slug Slug article public.
+   * @returns {Promise<{slug:string,likes:number}>} Compteur likes mis a jour.
+   * @throws {Error} Erreur 404 si article introuvable.
+   */
+  async function likeArticleBySlug(slug) {
+    const article = await getPublicArticleBySlug(slug)
+    await article.increment('likes', { by: 1 })
+    await article.reload()
+
+    return {
+      slug: article.slug,
+      likes: Number.parseInt(String(article.likes ?? 0), 10) || 0,
+    }
+  }
+
+  /**
+   * Retire un like a un article public par slug (sans descendre sous 0).
+   * @param {string} slug Slug article public.
+   * @returns {Promise<{slug:string,likes:number}>} Compteur likes mis a jour.
+   * @throws {Error} Erreur 404 si article introuvable.
+   */
+  async function unlikeArticleBySlug(slug) {
+    const article = await getPublicArticleBySlug(slug)
+    const currentLikes = Number.parseInt(String(article.likes ?? 0), 10) || 0
+
+    if (currentLikes <= 0) {
+      return {
+        slug: article.slug,
+        likes: 0,
+      }
+    }
+
+    await article.decrement('likes', { by: 1 })
+    await article.reload()
+
+    let nextLikes = Number.parseInt(String(article.likes ?? 0), 10) || 0
+    if (nextLikes < 0) {
+      await article.update({ likes: 0 })
+      nextLikes = 0
+    }
+
+    return {
+      slug: article.slug,
+      likes: nextLikes,
+    }
+  }
+
+  /**
    * Recupere tous les articles pour l'administration.
    * @returns {Promise<Array>} Liste complete des articles.
    */
@@ -156,6 +205,8 @@ function createArticleService(deps = {}) {
   return {
     getAllPublicArticles,
     getPublicArticleBySlug,
+    likeArticleBySlug,
+    unlikeArticleBySlug,
     getAllAdminArticles,
     createArticle,
     updateArticle,

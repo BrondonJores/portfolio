@@ -7,6 +7,8 @@ export const getArticles = (params) => {
   return api.get(`/articles${query}`)
 }
 export const getArticleBySlug = (slug) => api.get(`/articles/${slug}`)
+export const likeArticle = (slug) => api.post(`/articles/${slug}/likes`)
+export const unlikeArticle = (slug) => api.del(`/articles/${slug}/likes`)
 
 /* Fonctions admin */
 export const getAdminArticles = () => api.get('/admin/articles')
