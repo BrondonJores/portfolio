@@ -11,5 +11,6 @@ const Setting = require('./Setting')
 const Subscriber = require('./Subscriber')
 const NewsletterCampaign = require('./NewsletterCampaign')
 const BlockTemplate = require('./BlockTemplate')
+const ThemePreset = require('./ThemePreset')
 
-module.exports = { sequelize, Admin, Project, Article, Skill, Message, Testimonial, Comment, Setting, Subscriber, NewsletterCampaign, BlockTemplate }
+module.exports = { sequelize, Admin, Project, Article, Skill, Message, Testimonial, Comment, Setting, Subscriber, NewsletterCampaign, BlockTemplate, ThemePreset }

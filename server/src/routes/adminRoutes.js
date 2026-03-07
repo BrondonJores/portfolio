@@ -11,12 +11,14 @@ const { getStats } = require('../controllers/statsController')
 const { getAll: getAllSubscribers, remove: deleteSubscriber } = require('../controllers/subscriberController')
 const { getAll: getAllCampaigns, create: createCampaign, update: updateCampaign, remove: deleteCampaign, send: sendCampaign } = require('../controllers/newsletterController')
 const { getAll: getAllBlockTemplates, create: createBlockTemplate, update: updateBlockTemplate, remove: deleteBlockTemplate } = require('../controllers/blockTemplateController')
+const { getAll: getAllThemePresets, create: createThemePreset, update: updateThemePreset, remove: deleteThemePreset, apply: applyThemePreset } = require('../controllers/themePresetController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
 const { createProjectValidator, updateProjectValidator } = require('../validators/projectValidator')
 const { createArticleValidator, updateArticleValidator } = require('../validators/articleValidator')
 const { createSkillValidator, updateSkillValidator } = require('../validators/skillValidator')
 const { listBlockTemplateValidator, createBlockTemplateValidator, updateBlockTemplateValidator } = require('../validators/blockTemplateValidator')
+const { createThemePresetValidator, updateThemePresetValidator } = require('../validators/themePresetValidator')
 
 const router = Router()
 
@@ -79,5 +81,12 @@ router.get('/block-templates', validate(listBlockTemplateValidator), getAllBlock
 router.post('/block-templates', validate(createBlockTemplateValidator), createBlockTemplate)
 router.put('/block-templates/:id', validate(updateBlockTemplateValidator), updateBlockTemplate)
 router.delete('/block-templates/:id', deleteBlockTemplate)
+
+/* Routes presets de theme admin */
+router.get('/theme-presets', getAllThemePresets)
+router.post('/theme-presets', validate(createThemePresetValidator), createThemePreset)
+router.put('/theme-presets/:id', validate(updateThemePresetValidator), updateThemePreset)
+router.delete('/theme-presets/:id', deleteThemePreset)
+router.post('/theme-presets/:id/apply', applyThemePreset)
 
 module.exports = router

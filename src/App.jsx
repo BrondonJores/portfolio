@@ -2,12 +2,13 @@
 import { Helmet } from 'react-helmet-async'
 import { Outlet, useLocation } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { SpeedInsights } from "@vercel/speed-insights/react"
 import ScrollProgressBar from './components/ui/ScrollProgressBar.jsx'
 import AnimatedSpriteSystem from './components/ui/AnimatedSpriteSystem.jsx'
 import { useSettings } from './context/SettingsContext.jsx'
 import { getAnimationConfig, parseBooleanSetting } from './utils/animationSettings.js'
+import { applyThemeSettings } from './utils/themeSettings.js'
 
 /* Politique de securite du contenu */
 const apiOrigin = import.meta.env.VITE_API_URL || ''
@@ -58,12 +59,21 @@ function MaintenanceScreen({ siteName, tagline }) {
 
 /* Layout public */
 export default function App() {
-  const { settings } = useSettings()
+  const { settings, getThemeSettingsForPath } = useSettings()
   const location = useLocation()
   const prefersReducedMotion = useReducedMotion()
+  const activeThemeSettings = useMemo(
+    () => getThemeSettingsForPath(location.pathname),
+    [getThemeSettingsForPath, location.pathname]
+  )
+
+  useEffect(() => {
+    applyThemeSettings(activeThemeSettings)
+  }, [activeThemeSettings])
+
   const animationConfig = useMemo(
-    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
-    [settings, prefersReducedMotion]
+    () => getAnimationConfig(activeThemeSettings, Boolean(prefersReducedMotion)),
+    [activeThemeSettings, prefersReducedMotion]
   )
   const siteName = (settings.site_name || settings.hero_name || 'Portfolio').trim()
   const tagline = (settings.tagline || settings.hero_title || '').trim()
