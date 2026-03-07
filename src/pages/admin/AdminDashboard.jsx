@@ -11,7 +11,9 @@ import {
   DocumentTextIcon,
   EnvelopeIcon,
   FolderOpenIcon,
+  PaintBrushIcon,
   PaperAirplaneIcon,
+  Squares2X2Icon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline'
 import {
@@ -431,6 +433,48 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
+
+        <section
+          className="rounded-xl border p-4"
+          style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
+        >
+          <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+            Acces rapides marketplace
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Link
+              to="/admin/templates"
+              className="rounded-lg border p-4 transition-all hover:border-[var(--color-accent)]"
+              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+            >
+              <div className="flex items-center gap-2">
+                <Squares2X2Icon className="h-5 w-5" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  Marketplace Templates
+                </p>
+              </div>
+              <p className="text-xs mt-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                Gerer les templates de blocs et importer des packs.
+              </p>
+            </Link>
+
+            <Link
+              to="/admin/themes"
+              className="rounded-lg border p-4 transition-all hover:border-[var(--color-accent)]"
+              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+            >
+              <div className="flex items-center gap-2">
+                <PaintBrushIcon className="h-5 w-5" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  Marketplace Themes
+                </p>
+              </div>
+              <p className="text-xs mt-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                Parcourir, importer et appliquer des themes.
+              </p>
+            </Link>
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <StatCard

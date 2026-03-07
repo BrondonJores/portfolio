@@ -1,5 +1,6 @@
 /* Barre de navigation superieure du tableau de bord */
-import { Bars3Icon, SunIcon, MoonIcon } from '@heroicons/react/24/outline'
+import { Link } from 'react-router-dom'
+import { Bars3Icon, SunIcon, MoonIcon, Squares2X2Icon, PaintBrushIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../../hooks/useAuth.jsx'
 import { useTheme } from '../../context/ThemeContext.jsx'
 import NotificationBell from './NotificationBell.jsx'
@@ -39,6 +40,33 @@ export default function AdminNavbar({ onToggleSidebar }) {
 
       {/* Informations de l'administrateur et toggle theme */}
       <div className="flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-2">
+          <Link
+            to="/admin/templates"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+            style={{
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-secondary)',
+              backgroundColor: 'var(--color-bg-card)',
+            }}
+          >
+            <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
+            Templates
+          </Link>
+          <Link
+            to="/admin/themes"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+            style={{
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-secondary)',
+              backgroundColor: 'var(--color-bg-card)',
+            }}
+          >
+            <PaintBrushIcon className="h-4 w-4" aria-hidden="true" />
+            Themes
+          </Link>
+        </div>
+
         {/* Cloche de notification */}
         <NotificationBell />
 
