@@ -23,8 +23,10 @@ import {
   createThemePreset,
   deleteThemePreset,
   exportThemePresetPackage,
+  getThemePresetReleases,
   getThemePresets,
   importThemePresetPackage,
+  rollbackThemePreset,
   updateThemePreset,
 } from '../../services/themePresetService.js'
 import { getThemeMarketplace, importThemeFromMarketplace } from '../../services/themeMarketplaceService.js'
@@ -211,6 +213,69 @@ function readMarketplaceRatingsFromSettings(settings) {
   return next
 }
 
+/**
+ * Formate une date de release pour affichage admin.
+ * @param {unknown} value Date brute.
+ * @returns {string} Date lisible ou fallback.
+ */
+function formatReleaseDate(value) {
+  const date = new Date(value || '')
+  if (Number.isNaN(date.getTime())) return 'Date inconnue'
+  return date.toLocaleString('fr-FR')
+}
+
+/**
+ * Construit un resume des ecarts entre le preset courant et une release cible.
+ * @param {object | null} currentPreset Preset actuellement selectionne.
+ * @param {object | null} release Release cible.
+ * @returns {object | null} Resume de comparaison exploitable par l'UI.
+ */
+function buildThemeReleaseComparison(currentPreset, release) {
+  if (!currentPreset || !release) return null
+
+  const snapshot = release?.snapshot && typeof release.snapshot === 'object'
+    ? release.snapshot
+    : {}
+
+  const currentSettings = pickThemeSettings(currentPreset?.settings || {})
+  const targetSettings = pickThemeSettings(snapshot?.settings || {})
+  const settingKeys = Array.from(
+    new Set([...Object.keys(currentSettings), ...Object.keys(targetSettings)])
+  ).sort((a, b) => a.localeCompare(b))
+
+  const changedSettings = settingKeys
+    .map((key) => {
+      const currentValue = currentSettings[key]
+      const targetValue = targetSettings[key]
+      if (String(currentValue ?? '') === String(targetValue ?? '')) {
+        return null
+      }
+      return {
+        key,
+        currentValue: currentValue ?? '(vide)',
+        targetValue: targetValue ?? '(vide)',
+      }
+    })
+    .filter(Boolean)
+
+  const currentName = String(currentPreset?.name || '')
+  const targetName = String(snapshot?.name || '')
+  const currentDescription = String(currentPreset?.description || '')
+  const targetDescription = String(snapshot?.description || '')
+
+  return {
+    currentName,
+    targetName,
+    currentDescription,
+    targetDescription,
+    currentSettingsCount: Object.keys(currentSettings).length,
+    targetSettingsCount: Object.keys(targetSettings).length,
+    changedSettings,
+    nameChanged: currentName !== targetName,
+    descriptionChanged: currentDescription !== targetDescription,
+  }
+}
+
 export default function AdminThemePresets() {
   const addToast = useAdminToast()
   const { refreshSettings, refreshThemePresets, updateLocalSettings } = useSettings()
@@ -236,6 +301,10 @@ export default function AdminThemePresets() {
   const [previewingLabel, setPreviewingLabel] = useState('')
   const [confirmId, setConfirmId] = useState(null)
   const [editingId, setEditingId] = useState(null)
+  const [presetReleasesById, setPresetReleasesById] = useState({})
+  const [loadingReleasesId, setLoadingReleasesId] = useState(null)
+  const [rollingBackReleaseId, setRollingBackReleaseId] = useState(null)
+  const [comparingReleaseId, setComparingReleaseId] = useState(null)
   const [form, setForm] = useState(() => createEmptyForm())
 
   const importInputRef = useRef(null)
@@ -244,6 +313,21 @@ export default function AdminThemePresets() {
   const activePreset = useMemo(
     () => presets.find((preset) => preset.id === editingId) || null,
     [presets, editingId]
+  )
+  const activePresetReleases = useMemo(
+    () => (activePreset ? (presetReleasesById[activePreset.id] || []) : []),
+    [activePreset, presetReleasesById]
+  )
+  const activeComparedRelease = useMemo(
+    () =>
+      activePresetReleases.find(
+        (release) => Number.parseInt(String(release?.id ?? ''), 10) === comparingReleaseId
+      ) || null,
+    [activePresetReleases, comparingReleaseId]
+  )
+  const activeReleaseComparison = useMemo(
+    () => buildThemeReleaseComparison(activePreset, activeComparedRelease),
+    [activePreset, activeComparedRelease]
   )
 
   const snapshotSettings = useMemo(
@@ -357,12 +441,45 @@ export default function AdminThemePresets() {
   }, [updateLocalSettings])
 
   /**
+   * Charge l'historique de releases d'un preset.
+   * @param {number|string} presetId Identifiant preset.
+   * @param {{force?: boolean}} [options] Options de rechargement.
+   * @returns {Promise<void>} Promise resolue apres chargement.
+   */
+  const loadPresetReleases = async (presetId, options = {}) => {
+    const safeId = Number.parseInt(String(presetId), 10)
+    if (!Number.isInteger(safeId) || safeId <= 0) return
+
+    if (!options.force && Array.isArray(presetReleasesById[safeId])) {
+      return
+    }
+
+    setLoadingReleasesId(safeId)
+    try {
+      const response = await getThemePresetReleases(safeId)
+      const releases = Array.isArray(response?.data) ? response.data : []
+      setPresetReleasesById((prev) => ({ ...prev, [safeId]: releases }))
+    } catch (error) {
+      addToast(error.message || 'Impossible de charger les releases du preset.', 'error')
+    } finally {
+      setLoadingReleasesId((current) => (current === safeId ? null : current))
+    }
+  }
+
+  useEffect(() => {
+    if (!activePreset?.id) return
+    loadPresetReleases(activePreset.id)
+  }, [activePreset?.id])
+
+  /**
    * Passe en mode creation.
    * @returns {void}
    */
   const startCreate = () => {
     setEditingId(null)
     setForm(createEmptyForm())
+    setRollingBackReleaseId(null)
+    setComparingReleaseId(null)
   }
 
   /**
@@ -376,6 +493,8 @@ export default function AdminThemePresets() {
       name: preset.name || '',
       description: preset.description || '',
     })
+    setComparingReleaseId(null)
+    loadPresetReleases(preset.id)
   }
 
   /**
@@ -514,6 +633,49 @@ export default function AdminThemePresets() {
   }
 
   /**
+   * Revient a une release precise du preset en cours d'edition.
+   * @param {number|string} releaseId Identifiant release cible.
+   * @returns {Promise<void>} Promise resolue apres rollback.
+   */
+  const handleRollbackPreset = async (releaseId) => {
+    const presetId = Number.parseInt(String(activePreset?.id ?? ''), 10)
+    const safeReleaseId = Number.parseInt(String(releaseId), 10)
+
+    if (!Number.isInteger(presetId) || presetId <= 0) {
+      addToast('Selectionne un preset avant de lancer un rollback.', 'error')
+      return
+    }
+    if (!Number.isInteger(safeReleaseId) || safeReleaseId <= 0) {
+      addToast('Release invalide.', 'error')
+      return
+    }
+
+    setRollingBackReleaseId(safeReleaseId)
+    try {
+      const response = await rollbackThemePreset(presetId, safeReleaseId)
+      const rolledPreset = response?.data?.preset || null
+
+      await loadData()
+      await refreshThemePresets()
+      await loadPresetReleases(presetId, { force: true })
+
+      if (rolledPreset?.id) {
+        setEditingId(rolledPreset.id)
+        setForm({
+          name: rolledPreset.name || '',
+          description: rolledPreset.description || '',
+        })
+      }
+
+      addToast('Rollback du preset effectue.', 'success')
+    } catch (error) {
+      addToast(error.message || 'Erreur lors du rollback du preset.', 'error')
+    } finally {
+      setRollingBackReleaseId(null)
+    }
+  }
+
+  /**
    * Supprime le preset confirme.
    * @returns {Promise<void>} Promise de suppression.
    */
@@ -525,6 +687,11 @@ export default function AdminThemePresets() {
       addToast('Preset supprime.', 'success')
       await loadData()
       await refreshThemePresets()
+      setPresetReleasesById((prev) => {
+        const next = { ...prev }
+        delete next[confirmId]
+        return next
+      })
 
       if (editingId === confirmId) {
         startCreate()
@@ -1093,6 +1260,76 @@ export default function AdminThemePresets() {
                   <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                     Edition du preset: {activePreset.name}
                   </p>
+                )}
+
+                {activePreset && (
+                  <div
+                    className="rounded-lg border p-3 space-y-3"
+                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                        Historique des versions
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => loadPresetReleases(activePreset.id, { force: true })}
+                        disabled={loadingReleasesId === activePreset.id || Boolean(rollingBackReleaseId)}
+                      >
+                        Rafraichir
+                      </Button>
+                    </div>
+
+                    {loadingReleasesId === activePreset.id ? (
+                      <div className="flex justify-center py-2">
+                        <Spinner size="sm" />
+                      </div>
+                    ) : activePresetReleases.length === 0 ? (
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        Aucune release disponible pour ce preset.
+                      </p>
+                    ) : (
+                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                        {activePresetReleases.map((release) => {
+                          const releaseId = Number.parseInt(String(release?.id ?? ''), 10)
+                          const versionNumber = Number.parseInt(String(release?.version_number ?? ''), 10)
+                          const isRollingBack = rollingBackReleaseId === releaseId
+
+                          return (
+                            <div
+                              key={releaseId}
+                              className="rounded-lg border px-3 py-2 space-y-2"
+                              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                  Version v{Number.isInteger(versionNumber) ? versionNumber : '?'}
+                                </p>
+                                <p className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                                  {formatReleaseDate(release?.created_at)}
+                                </p>
+                              </div>
+
+                              <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                {release?.change_note || 'Sans note de changement.'}
+                              </p>
+
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => handleRollbackPreset(releaseId)}
+                                disabled={!Number.isInteger(releaseId) || Boolean(rollingBackReleaseId)}
+                                className="w-full justify-center"
+                              >
+                                {isRollingBack ? 'Rollback...' : `Rollback vers v${Number.isInteger(versionNumber) ? versionNumber : '?'}`}
+                              </Button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )}
               </section>
 
