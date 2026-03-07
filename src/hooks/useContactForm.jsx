@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { sanitizeInput } from '../utils/sanitize.js'
 import { sendMessage } from '../services/messageService.js'
+import { executeRecaptcha } from '../services/recaptchaService.js'
 
 const INITIAL_FIELDS = { name: '', email: '', message: '' }
 const INITIAL_STATUS = { loading: false, success: false, error: null }
@@ -33,7 +34,8 @@ export function useContactForm() {
     }
 
     try {
-      await sendMessage(sanitizedFields)
+      const captchaToken = await executeRecaptcha('contact_message')
+      await sendMessage({ ...sanitizedFields, captcha_token: captchaToken })
       setStatus({ loading: false, success: true, error: null })
       setFields(INITIAL_FIELDS)
     } catch (err) {

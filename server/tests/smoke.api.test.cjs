@@ -92,6 +92,7 @@ async function apiRequest(path, { method = 'GET', token, body } = {}) {
 
 async function startSmokeServer() {
   process.env.MAIL_DELIVERY_MODE = 'mock'
+  process.env.RECAPTCHA_ENABLED = 'false'
 
   const { startServer } = require('../src/app')
   const { sequelize } = require('../src/models')

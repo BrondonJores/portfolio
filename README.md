@@ -122,8 +122,8 @@ cp .env.example .env
 ```
 
 Renseigner au minimum:
-- Frontend: `VITE_API_URL`, `VITE_SERVER_URL` (ou laisser vide en dev).
-- Backend: `DB_*`, `JWT_*`, `FRONTEND_URL`.
+- Frontend: `VITE_API_URL`, `VITE_SERVER_URL`, `VITE_RECAPTCHA_SITE_KEY` (ou laisser vide en dev).
+- Backend: `DB_*`, `JWT_*`, `FRONTEND_URL`, `RECAPTCHA_*`.
 
 ### 4) Base de donnees
 
@@ -177,6 +177,27 @@ Dans `server/.env`:
 MAIL_DELIVERY_MODE=mock
 ```
 
+## Configuration reCAPTCHA (anti-spam)
+
+Frontend (`.env` racine):
+
+```env
+VITE_RECAPTCHA_SITE_KEY=...
+```
+
+Backend (`server/.env`):
+
+```env
+RECAPTCHA_ENABLED=true
+RECAPTCHA_SECRET_KEY=...
+RECAPTCHA_MIN_SCORE=0.5
+RECAPTCHA_ALLOWED_HOSTNAMES=votredomaine.com,www.votredomaine.com
+```
+
+Endpoints proteges:
+- `POST /api/messages`
+- `POST /api/comments`
+- `POST /api/subscribe`
 ## Scripts
 
 ### Frontend (racine)
@@ -213,6 +234,8 @@ Option smoke strict (CI):
 - Access token JWT jamais persiste en localStorage.
 - Refresh token en cookie HTTP-only.
 - Rate limiting global + route login.
+- Rotation + revocation serveur des refresh tokens.
+- Verification reCAPTCHA Google sur les endpoints publics sensibles (messages, commentaires, newsletter).
 - Validation serveur avec express-validator.
 - Sanitisation frontend pour rendu HTML.
 - Helmet + CORS restreint.
@@ -242,5 +265,7 @@ Option smoke strict (CI):
 - Le SSL DB est configurable via:
   - `DB_SSL=true|false`
   - `DB_SSL_REJECT_UNAUTHORIZED=true|false`
+
+
 
 

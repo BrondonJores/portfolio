@@ -18,6 +18,12 @@ const createMessageValidator = [
     .withMessage('Le message est obligatoire.')
     .isLength({ max: 5000 })
     .withMessage('Le message ne peut pas depasser 5000 caracteres.'),
+  body('captcha_token')
+    .optional({ checkFalsy: true })
+    .isString()
+    .withMessage('Le token reCAPTCHA est invalide.')
+    .isLength({ max: 4096 })
+    .withMessage('Le token reCAPTCHA est invalide.'),
 ]
 
 module.exports = { createMessageValidator }

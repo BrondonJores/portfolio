@@ -20,9 +20,11 @@ import Footer from '../components/sections/Footer.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
+import RecaptchaNotice from '../components/ui/RecaptchaNotice.jsx'
 import { getArticleBySlug, getArticles } from '../services/articleService.js'
 import { getCommentsByArticle, postComment } from '../services/commentService.js'
 import { subscribe } from '../services/subscriberService.js'
+import { executeRecaptcha } from '../services/recaptchaService.js'
 import { useScrollPosition } from '../hooks/useScrollPosition.jsx'
 import { useSettings } from '../context/SettingsContext.jsx'
 import { buildPageTitle } from '../utils/seoSettings.js'
@@ -343,8 +345,10 @@ function NewsletterCTA() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setStatus('loading')
+    setErrorMsg('')
     try {
-      await subscribe(email)
+      const captchaToken = await executeRecaptcha('newsletter_subscribe')
+      await subscribe({ email, captchaToken })
       setStatus('success')
     } catch {
       setStatus('error')
@@ -402,6 +406,9 @@ function NewsletterCTA() {
               {status === 'loading' ? 'Envoi...' : "S'abonner"}
             </button>
           </form>
+          <div className="mt-3">
+            <RecaptchaNotice />
+          </div>
           {status === 'error' && (
             <p className="text-xs mt-2" style={{ color: '#f87171' }}>{errorMsg}</p>
           )}
@@ -765,11 +772,13 @@ export default function ArticleDetail() {
                         setSubmitting(true)
                         setSubmitError('')
                         try {
+                          const captchaToken = await executeRecaptcha('comment_create')
                           await postComment({
                             article_id: article.id,
                             author_name: commentForm.author_name,
                             author_email: commentForm.author_email || undefined,
                             content: commentForm.content,
+                            captcha_token: captchaToken,
                           })
                           setSubmitSuccess(true)
                           setCommentForm({ author_name: '', author_email: '', content: '' })
@@ -824,6 +833,7 @@ export default function ArticleDetail() {
                           {submitError}
                         </p>
                       )}
+                      <RecaptchaNotice />
                       <button
                         type="submit"
                         disabled={submitting}

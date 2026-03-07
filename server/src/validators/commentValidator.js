@@ -23,6 +23,12 @@ const createCommentValidator = [
     .withMessage('Le commentaire est obligatoire.')
     .isLength({ max: 3000 })
     .withMessage('Le commentaire ne peut pas depasser 3000 caracteres.'),
+  body('captcha_token')
+    .optional({ checkFalsy: true })
+    .isString()
+    .withMessage('Le token reCAPTCHA est invalide.')
+    .isLength({ max: 4096 })
+    .withMessage('Le token reCAPTCHA est invalide.'),
 ]
 
 module.exports = { createCommentValidator }

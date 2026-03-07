@@ -11,6 +11,7 @@ const { getAll: getSettingsPublic } = require('../controllers/settingController'
 const { getAllPublic: getThemePresetsPublic } = require('../controllers/themePresetController')
 const { subscribe, unsubscribe } = require('../controllers/subscriberController')
 const { validate } = require('../middleware/validateMiddleware')
+const { createRecaptchaGuard } = require('../middleware/recaptchaMiddleware')
 const { createMessageValidator } = require('../validators/messageValidator')
 const { subscribeValidator } = require('../validators/subscriberValidator')
 const { createCommentValidator } = require('../validators/commentValidator')
@@ -41,18 +42,22 @@ const messageLimiter = rateLimit({
   legacyHeaders: false,
 })
 
+const verifyMessageCaptcha = createRecaptchaGuard({ action: 'contact_message' })
+const verifyCommentCaptcha = createRecaptchaGuard({ action: 'comment_create' })
+const verifySubscribeCaptcha = createRecaptchaGuard({ action: 'newsletter_subscribe' })
+
 router.get('/projects', getProjects)
 router.get('/projects/:slug', getProjectBySlug)
 router.get('/articles', getArticles)
 router.get('/articles/:slug', getArticleBySlug)
 router.get('/skills', getSkills)
-router.post('/messages', messageLimiter, validate(createMessageValidator), createMessage)
+router.post('/messages', messageLimiter, validate(createMessageValidator), verifyMessageCaptcha, createMessage)
 router.get('/testimonials', getTestimonials)
 router.get('/comments/:articleId', getByArticleId)
-router.post('/comments', commentLimiter, validate(createCommentValidator), createComment)
+router.post('/comments', commentLimiter, validate(createCommentValidator), verifyCommentCaptcha, createComment)
 router.get('/settings', getSettingsPublic)
 router.get('/theme-presets', getThemePresetsPublic)
-router.post('/subscribe', subscribeLimiter, validate(subscribeValidator), subscribe)
+router.post('/subscribe', subscribeLimiter, validate(subscribeValidator), verifySubscribeCaptcha, subscribe)
 router.get('/unsubscribe/:token', unsubscribe)
 
 module.exports = router

@@ -4,6 +4,7 @@ import AnimatedSection from '../ui/AnimatedSection.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Button from '../ui/Button.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
+import RecaptchaNotice from '../ui/RecaptchaNotice.jsx'
 import { useContactForm } from '../../hooks/useContactForm.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 
@@ -201,6 +202,8 @@ export default function Contact() {
                   {status.error}
                 </p>
               )}
+
+              <RecaptchaNotice />
 
               {/* Bouton de soumission */}
               <Button
