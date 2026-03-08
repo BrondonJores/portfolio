@@ -4,6 +4,7 @@ const mailerService = require('./mailerService')
 const settingService = require('./settingService')
 const subscriberService = require('./subscriberService')
 const { createHttpError } = require('../utils/httpError')
+const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../utils/pagination')
 
 /**
  * Construit le service newsletter avec dependances injectables.
@@ -52,10 +53,38 @@ function createNewsletterService(deps = {}) {
    * Liste les campagnes newsletter.
    * @returns {Promise<Array>} Campagnes triees.
    */
-  async function getAllCampaigns() {
-    return campaignModel.findAll({
-      order: [['created_at', 'DESC']],
+  async function getAllCampaigns(params = {}) {
+    const { limit, offset } = resolveLimitOffsetPagination(params, {
+      defaultLimit: 20,
+      maxLimit: 200,
     })
+
+    const result = await campaignModel.findAndCountAll({
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+    })
+
+    return buildPaginatedPayload({
+      items: result.rows,
+      total: result.count,
+      limit,
+      offset,
+    })
+  }
+
+  /**
+   * Recupere une campagne par identifiant.
+   * @param {number|string} id Identifiant campagne.
+   * @returns {Promise<object>} Campagne trouvee.
+   * @throws {Error} Erreur 404 si campagne introuvable.
+   */
+  async function getCampaignById(id) {
+    const campaign = await campaignModel.findByPk(id)
+    if (!campaign) {
+      throw createHttpError(404, 'Campagne introuvable.')
+    }
+    return campaign
   }
 
   /**
@@ -209,6 +238,7 @@ function createNewsletterService(deps = {}) {
 
   return {
     getAllCampaigns,
+    getCampaignById,
     createCampaign,
     updateCampaign,
     deleteCampaign,

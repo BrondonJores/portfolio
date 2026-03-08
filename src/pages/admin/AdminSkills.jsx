@@ -5,15 +5,19 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PencilSquareIcon, TrashIcon, PlusIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
+import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { getAdminSkills, createSkill, updateSkill, deleteSkill } from '../../services/skillService.js'
+import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPagination.js'
 import {
   isAdminEditorPopup,
   notifyAdminEditorSaved,
   openAdminEditorWindow,
   subscribeAdminEditorRefresh,
 } from '../../utils/adminEditorWindow.js'
+
+const PAGE_LIMIT = 20
 
 /* Formulaire inline pour une competence */
 function SkillForm({ initial, onSave, onCancel }) {
@@ -103,30 +107,55 @@ export default function AdminSkills() {
   const addToast = useAdminToast()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [grouped, setGrouped] = useState({})
+  const [skills, setSkills] = useState([])
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: PAGE_LIMIT,
+    offset: 0,
+  })
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState(null)
   const [confirmId, setConfirmId] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
   const editorParam = searchParams.get('editor')
 
-  const loadSkills = () => {
+  const loadSkills = (targetPage = page) => {
+    const offset = toOffsetFromPage(targetPage, PAGE_LIMIT)
     setLoading(true)
-    getAdminSkills()
-      .then((res) => setGrouped(res?.data || {}))
+    getAdminSkills({ limit: PAGE_LIMIT, offset })
+      .then((res) => {
+        const normalized = normalizeAdminPagePayload(res?.data, {
+          defaultLimit: PAGE_LIMIT,
+          requestedOffset: offset,
+        })
+        setSkills(normalized.items)
+        setPagination({
+          total: normalized.total,
+          limit: normalized.limit,
+          offset: normalized.offset,
+        })
+
+        const pages = Math.max(1, Math.ceil(normalized.total / normalized.limit))
+        if (targetPage > pages && normalized.total > 0) {
+          setPage(pages)
+        }
+      })
       .catch(() => addToast('Erreur lors du chargement.', 'error'))
       .finally(() => setLoading(false))
   }
 
-  useEffect(loadSkills, [])
+  useEffect(() => {
+    loadSkills(page)
+  }, [page])
 
   useEffect(() => {
     return subscribeAdminEditorRefresh((payload) => {
       if (payload?.entity === 'skills' || payload?.entity === 'global') {
-        loadSkills()
+        loadSkills(page)
       }
     })
-  }, [])
+  }, [page])
 
   /**
    * Ferme l'editeur popup ou revient a l'etat liste.
@@ -202,7 +231,7 @@ export default function AdminSkills() {
         return
       }
       closeEditorOrBack()
-      loadSkills()
+      loadSkills(page)
     } catch (err) {
       addToast(err.message || 'Erreur.', 'error')
     }
@@ -218,7 +247,7 @@ export default function AdminSkills() {
         return
       }
       closeEditorOrBack()
-      loadSkills()
+      loadSkills(page)
     } catch (err) {
       addToast(err.message || 'Erreur.', 'error')
     }
@@ -230,7 +259,7 @@ export default function AdminSkills() {
       await deleteSkill(confirmId)
       addToast('Competence supprimee.', 'success')
       notifyAdminEditorSaved('skills')
-      loadSkills()
+      loadSkills(page)
     } catch {
       addToast('Erreur lors de la suppression.', 'error')
     } finally {
@@ -238,8 +267,7 @@ export default function AdminSkills() {
     }
   }
 
-  /* Aplatissement des competences pour la liste */
-  const allSkills = Object.values(grouped).flat()
+  const allSkills = skills
 
   return (
     <>
@@ -385,6 +413,16 @@ export default function AdminSkills() {
             </table>
           </div>
         )}
+
+        <div className="mt-4">
+          <AdminPagination
+            total={pagination.total}
+            limit={pagination.limit}
+            offset={pagination.offset}
+            disabled={loading}
+            onPageChange={(nextPage) => setPage(nextPage)}
+          />
+        </div>
       </div>
 
       <ConfirmModal

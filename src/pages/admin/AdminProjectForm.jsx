@@ -22,7 +22,7 @@ import {
 } from '../../utils/adminVisualBuilderBridge.js'
 import {
   createProject,
-  getAdminProjects,
+  getAdminProjectById,
   updateProject,
 } from '../../services/projectService.js'
 import { deleteCurrentVisualBuilderDraft } from '../../services/adminVisualBuilderService.js'
@@ -210,9 +210,9 @@ export default function AdminProjectForm() {
   useEffect(() => {
     if (!isEdit) return
 
-    getAdminProjects()
+    getAdminProjectById(id)
       .then((res) => {
-        const project = (res?.data || []).find((entry) => String(entry.id) === String(id))
+        const project = res?.data
         if (!project) return
 
         const loadedForm = {

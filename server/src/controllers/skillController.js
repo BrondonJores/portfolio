@@ -1,6 +1,7 @@
 /* Controleur HTTP skill : delegue le metier au service associe. */
 const {
   getAllSkillsGrouped,
+  getAllAdminSkills,
   createSkill,
   updateSkill,
   deleteSkill,
@@ -16,6 +17,25 @@ const {
 async function getAll(req, res, next) {
   try {
     const skills = await getAllSkillsGrouped()
+    return res.json({ data: skills })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Retourne la liste admin des competences avec pagination.
+ * @param {import('express').Request} req Requete HTTP.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres envoi JSON.
+ */
+async function getAllAdmin(req, res, next) {
+  try {
+    const skills = await getAllAdminSkills({
+      limit: req.query.limit,
+      offset: req.query.offset,
+    })
     return res.json({ data: skills })
   } catch (err) {
     next(err)
@@ -70,4 +90,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { getAll, create, update, remove }
+module.exports = { getAll, getAllAdmin, create, update, remove }

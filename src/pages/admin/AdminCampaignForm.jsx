@@ -20,7 +20,7 @@ import {
 import { getArticles } from '../../services/articleService.js'
 import {
   createCampaign,
-  getNewsletterCampaigns,
+  getNewsletterCampaignById,
   sendCampaign,
   updateCampaign,
 } from '../../services/newsletterService.js'
@@ -427,9 +427,9 @@ export default function AdminCampaignForm() {
   useEffect(() => {
     if (!isEdit) return
 
-    getNewsletterCampaigns()
+    getNewsletterCampaignById(id)
       .then((res) => {
-        const campaign = (res?.data || []).find((entry) => String(entry.id) === String(id))
+        const campaign = res?.data
         if (!campaign) return
 
         const nextForm = {

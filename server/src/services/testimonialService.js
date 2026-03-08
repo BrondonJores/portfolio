@@ -1,6 +1,7 @@
 /* Service metier testimonial : regles applicatives et acces donnees. */
 const { Testimonial } = require('../models')
 const { createHttpError } = require('../utils/httpError')
+const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../utils/pagination')
 
 /**
  * Construit le service temoignage avec dependances injectables.
@@ -26,8 +27,24 @@ function createTestimonialService(deps = {}) {
    * Liste tous les temoignages cote admin.
    * @returns {Promise<Array>} Liste complete des temoignages.
    */
-  async function getAllTestimonialsAdmin() {
-    return testimonialModel.findAll({ order: [['created_at', 'DESC']] })
+  async function getAllTestimonialsAdmin(params = {}) {
+    const { limit, offset } = resolveLimitOffsetPagination(params, {
+      defaultLimit: 20,
+      maxLimit: 200,
+    })
+
+    const result = await testimonialModel.findAndCountAll({
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+    })
+
+    return buildPaginatedPayload({
+      items: result.rows,
+      total: result.count,
+      limit,
+      offset,
+    })
   }
 
   /**

@@ -1,6 +1,7 @@
 /* Controleur HTTP newsletter : delegue le metier au service associe. */
 const {
   getAllCampaigns,
+  getCampaignById,
   createCampaign,
   updateCampaign,
   deleteCampaign,
@@ -16,8 +17,27 @@ const {
  */
 async function getAll(req, res, next) {
   try {
-    const campaigns = await getAllCampaigns()
+    const campaigns = await getAllCampaigns({
+      limit: req.query.limit,
+      offset: req.query.offset,
+    })
     return res.json({ data: campaigns })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Recupere une campagne newsletter (admin) par identifiant.
+ * @param {import('express').Request} req Requete contenant `params.id`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres serialisation JSON.
+ */
+async function getById(req, res, next) {
+  try {
+    const campaign = await getCampaignById(req.params.id)
+    return res.json({ data: campaign })
   } catch (err) {
     next(err)
   }
@@ -95,4 +115,4 @@ async function send(req, res, next) {
   }
 }
 
-module.exports = { getAll, create, update, remove, send }
+module.exports = { getAll, getById, create, update, remove, send }

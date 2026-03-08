@@ -3,33 +3,62 @@ import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { CheckIcon, TrashIcon, ChatBubbleLeftIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
+import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import { getAdminComments, approveComment, deleteComment } from '../../services/commentService.js'
+import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPagination.js'
+
+const PAGE_LIMIT = 20
 
 export default function AdminComments() {
   const addToast = useAdminToast()
   const [comments, setComments] = useState([])
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: PAGE_LIMIT,
+    offset: 0,
+  })
   const [loading, setLoading] = useState(true)
   const [confirmId, setConfirmId] = useState(null)
 
-  const loadComments = () => {
+  const loadComments = (targetPage = page) => {
+    const offset = toOffsetFromPage(targetPage, PAGE_LIMIT)
     setLoading(true)
-    getAdminComments()
-      .then((res) => setComments(res?.data || []))
+    getAdminComments({ limit: PAGE_LIMIT, offset })
+      .then((res) => {
+        const normalized = normalizeAdminPagePayload(res?.data, {
+          defaultLimit: PAGE_LIMIT,
+          requestedOffset: offset,
+        })
+        setComments(normalized.items)
+        setPagination({
+          total: normalized.total,
+          limit: normalized.limit,
+          offset: normalized.offset,
+        })
+
+        const pages = Math.max(1, Math.ceil(normalized.total / normalized.limit))
+        if (targetPage > pages && normalized.total > 0) {
+          setPage(pages)
+        }
+      })
       .catch(() => addToast('Erreur lors du chargement.', 'error'))
       .finally(() => setLoading(false))
   }
 
-  useEffect(loadComments, [])
+  useEffect(() => {
+    loadComments(page)
+  }, [page])
 
   const handleApprove = async (id) => {
     try {
       await approveComment(id)
-      addToast('Commentaire approuvé.', 'success')
-      loadComments()
+      addToast('Commentaire approuve.', 'success')
+      loadComments(page)
     } catch {
-      addToast('Erreur lors de l\'approbation.', 'error')
+      addToast("Erreur lors de l'approbation.", 'error')
     }
   }
 
@@ -37,8 +66,8 @@ export default function AdminComments() {
     if (!confirmId) return
     try {
       await deleteComment(confirmId)
-      addToast('Commentaire supprimé.', 'success')
-      loadComments()
+      addToast('Commentaire supprime.', 'success')
+      loadComments(page)
     } catch {
       addToast('Erreur lors de la suppression.', 'error')
     } finally {
@@ -126,7 +155,7 @@ export default function AdminComments() {
                             : 'rgba(251, 146, 60, 0.1)',
                         }}
                       >
-                        {c.approved ? 'Approuvé' : 'En attente'}
+                        {c.approved ? 'Approuve' : 'En attente'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -161,6 +190,16 @@ export default function AdminComments() {
             </table>
           </div>
         )}
+
+        <div className="mt-4">
+          <AdminPagination
+            total={pagination.total}
+            limit={pagination.limit}
+            offset={pagination.offset}
+            disabled={loading}
+            onPageChange={(nextPage) => setPage(nextPage)}
+          />
+        </div>
       </div>
 
       <ConfirmModal
@@ -168,7 +207,7 @@ export default function AdminComments() {
         onConfirm={handleDelete}
         onCancel={() => setConfirmId(null)}
         title="Supprimer le commentaire"
-        message="Ce commentaire sera définitivement supprimé."
+        message="Ce commentaire sera definitivement supprime."
       />
     </>
   )

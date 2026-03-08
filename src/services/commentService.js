@@ -6,6 +6,9 @@ export const getCommentsByArticle = (articleId) => api.get(`/comments/${articleI
 export const postComment = (data) => api.post('/comments', data)
 
 /* Fonctions admin */
-export const getAdminComments = () => api.get('/admin/comments')
+export const getAdminComments = (params) => {
+  const query = params ? '?' + new URLSearchParams(params).toString() : ''
+  return api.get(`/admin/comments${query}`)
+}
 export const approveComment = (id) => api.put(`/admin/comments/${id}/approve`, {})
 export const deleteComment = (id) => api.del(`/admin/comments/${id}`)

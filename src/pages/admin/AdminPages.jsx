@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
+import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
 import {
@@ -19,7 +20,10 @@ import {
   unpublishCmsPage,
   deleteCmsPage,
 } from '../../services/cmsPageService.js'
+import { toOffsetFromPage } from '../../utils/adminPagination.js'
 import { openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/adminEditorWindow.js'
+
+const PAGE_LIMIT = 12
 
 /**
  * Formate une date en texte lisible FR.
@@ -37,6 +41,12 @@ export default function AdminPages() {
   const addToast = useAdminToast()
   const navigate = useNavigate()
   const [items, setItems] = useState([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: PAGE_LIMIT,
+    offset: 0,
+  })
   const [loading, setLoading] = useState(true)
   const [confirmId, setConfirmId] = useState(null)
   const [busyId, setBusyId] = useState(null)
@@ -45,11 +55,28 @@ export default function AdminPages() {
    * Charge la liste des pages CMS cote admin.
    * @returns {Promise<void>} Promise resolue apres chargement.
    */
-  const loadPages = async () => {
+  const loadPages = async (targetPage = currentPage) => {
+    const offset = toOffsetFromPage(targetPage, PAGE_LIMIT)
     setLoading(true)
     try {
-      const response = await getAdminCmsPages({ limit: 100, offset: 0 })
-      setItems(Array.isArray(response?.data?.items) ? response.data.items : [])
+      const response = await getAdminCmsPages({ limit: PAGE_LIMIT, offset })
+      const payload = response?.data || {}
+      const nextItems = Array.isArray(payload.items) ? payload.items : []
+      const nextTotal = Number(payload.total || 0)
+      const nextLimit = Number(payload.limit || PAGE_LIMIT)
+      const nextOffset = Number(payload.offset || offset)
+
+      setItems(nextItems)
+      setPagination({
+        total: nextTotal,
+        limit: nextLimit,
+        offset: nextOffset,
+      })
+
+      const pages = Math.max(1, Math.ceil(nextTotal / Math.max(nextLimit, 1)))
+      if (targetPage > pages && nextTotal > 0) {
+          setCurrentPage(pages)
+      }
     } catch {
       addToast('Erreur lors du chargement des pages CMS.', 'error')
     } finally {
@@ -58,16 +85,16 @@ export default function AdminPages() {
   }
 
   useEffect(() => {
-    void loadPages()
-  }, [])
+    void loadPages(currentPage)
+  }, [currentPage])
 
   useEffect(() => {
     return subscribeAdminEditorRefresh((payload) => {
       if (payload?.entity === 'pages' || payload?.entity === 'global') {
-        void loadPages()
+        void loadPages(currentPage)
       }
     })
-  }, [])
+  }, [currentPage])
 
   /**
    * Ouvre l'editeur page dans un onglet dedie (fallback route locale).
@@ -83,20 +110,20 @@ export default function AdminPages() {
 
   /**
    * Bascule le statut publie <-> draft d'une page.
-   * @param {object} page Page cible.
+   * @param {object} pageItem Page cible.
    * @returns {Promise<void>} Promise resolue apres operation.
    */
-  const togglePublish = async (page) => {
-    setBusyId(page.id)
+  const togglePublish = async (pageItem) => {
+    setBusyId(pageItem.id)
     try {
-      if (page.status === 'published') {
-        await unpublishCmsPage(page.id)
+      if (pageItem.status === 'published') {
+        await unpublishCmsPage(pageItem.id)
         addToast('Page depubliee.', 'success')
       } else {
-        await publishCmsPage(page.id)
+        await publishCmsPage(pageItem.id)
         addToast('Page publiee.', 'success')
       }
-      await loadPages()
+      await loadPages(currentPage)
     } catch (error) {
       addToast(error.message || 'Operation impossible pour cette page.', 'error')
     } finally {
@@ -115,7 +142,7 @@ export default function AdminPages() {
     try {
       await deleteCmsPage(confirmId)
       addToast('Page supprimee avec succes.', 'success')
-      await loadPages()
+      await loadPages(currentPage)
     } catch {
       addToast('Erreur lors de la suppression de la page.', 'error')
     } finally {
@@ -251,6 +278,16 @@ export default function AdminPages() {
             </table>
           </div>
         )}
+
+        <div className="mt-4">
+          <AdminPagination
+            total={pagination.total}
+            limit={pagination.limit}
+            offset={pagination.offset}
+            disabled={loading}
+            onPageChange={(nextPage) => setCurrentPage(nextPage)}
+          />
+        </div>
       </div>
 
       <ConfirmModal

@@ -30,7 +30,10 @@ async function create(req, res, next) {
  */
 async function getAll(req, res, next) {
   try {
-    const messages = await getAllMessages()
+    const messages = await getAllMessages({
+      limit: req.query.limit,
+      offset: req.query.offset,
+    })
     return res.json({ data: messages })
   } catch (err) {
     next(err)

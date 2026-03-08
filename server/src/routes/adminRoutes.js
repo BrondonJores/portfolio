@@ -1,15 +1,15 @@
 /* Routes protegees du tableau de bord administrateur */
 const { Router } = require('express')
-const { getAllAdmin: getProjects, create: createProject, update: updateProject, remove: deleteProject } = require('../controllers/projectController')
-const { getAllAdmin: getArticles, create: createArticle, update: updateArticle, remove: deleteArticle } = require('../controllers/articleController')
-const { getAll: getSkills, create: createSkill, update: updateSkill, remove: deleteSkill } = require('../controllers/skillController')
+const { getAllAdmin: getProjects, getByIdAdmin: getProjectByIdAdmin, create: createProject, update: updateProject, remove: deleteProject } = require('../controllers/projectController')
+const { getAllAdmin: getArticles, getByIdAdmin: getArticleByIdAdmin, create: createArticle, update: updateArticle, remove: deleteArticle } = require('../controllers/articleController')
+const { getAllAdmin: getSkills, create: createSkill, update: updateSkill, remove: deleteSkill } = require('../controllers/skillController')
 const { getAll: getMessages, markAsRead } = require('../controllers/messageController')
 const { getAllAdmin: getTestimonials, create: createTestimonial, update: updateTestimonial, remove: deleteTestimonial } = require('../controllers/testimonialController')
 const { getAll: getComments, approve: approveComment, remove: deleteComment } = require('../controllers/commentController')
 const { getAll: getSettings, upsert: upsertSettings } = require('../controllers/settingController')
 const { getStats } = require('../controllers/statsController')
 const { getAll: getAllSubscribers, remove: deleteSubscriber } = require('../controllers/subscriberController')
-const { getAll: getAllCampaigns, create: createCampaign, update: updateCampaign, remove: deleteCampaign, send: sendCampaign } = require('../controllers/newsletterController')
+const { getAll: getAllCampaigns, getById: getCampaignByIdAdmin, create: createCampaign, update: updateCampaign, remove: deleteCampaign, send: sendCampaign } = require('../controllers/newsletterController')
 const {
   getAll: getAllBlockTemplates,
   create: createBlockTemplate,
@@ -99,12 +99,14 @@ router.get('/stats', getStats)
 
 /* Routes des projets admin */
 router.get('/projects', getProjects)
+router.get('/projects/:id', getProjectByIdAdmin)
 router.post('/projects', validate(createProjectValidator), createProject)
 router.put('/projects/:id', validate(updateProjectValidator), updateProject)
 router.delete('/projects/:id', deleteProject)
 
 /* Routes des articles admin */
 router.get('/articles', getArticles)
+router.get('/articles/:id', getArticleByIdAdmin)
 router.post('/articles', validate(createArticleValidator), createArticle)
 router.put('/articles/:id', validate(updateArticleValidator), updateArticle)
 router.delete('/articles/:id', deleteArticle)
@@ -157,6 +159,7 @@ router.delete(
 
 /* Routes newsletter admin */
 router.get('/newsletter', getAllCampaigns)
+router.get('/newsletter/:id', getCampaignByIdAdmin)
 router.post('/newsletter', createCampaign)
 router.put('/newsletter/:id', updateCampaign)
 router.delete('/newsletter/:id', deleteCampaign)

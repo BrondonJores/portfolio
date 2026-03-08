@@ -3,6 +3,7 @@ const cryptoLib = require('crypto')
 const sequelizeLib = require('sequelize')
 const { Subscriber } = require('../models')
 const { createHttpError } = require('../utils/httpError')
+const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../utils/pagination')
 
 /**
  * Construit le service abonne avec dependances injectables.
@@ -135,8 +136,24 @@ function createSubscriberService(deps = {}) {
    * Liste tous les abonnes.
    * @returns {Promise<Array>} Liste des abonnes.
    */
-  async function getAllSubscribers() {
-    return subscriberModel.findAll({ order: [['created_at', 'DESC']] })
+  async function getAllSubscribers(params = {}) {
+    const { limit, offset } = resolveLimitOffsetPagination(params, {
+      defaultLimit: 25,
+      maxLimit: 200,
+    })
+
+    const result = await subscriberModel.findAndCountAll({
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+    })
+
+    return buildPaginatedPayload({
+      items: result.rows,
+      total: result.count,
+      limit,
+      offset,
+    })
   }
 
   /**

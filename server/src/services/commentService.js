@@ -1,6 +1,7 @@
 /* Service metier comment : regles applicatives et acces donnees. */
 const { Comment } = require('../models')
 const { createHttpError } = require('../utils/httpError')
+const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../utils/pagination')
 
 /**
  * Construit le service commentaire avec dependances injectables.
@@ -37,8 +38,24 @@ function createCommentService(deps = {}) {
    * Recupere tous les commentaires pour moderation.
    * @returns {Promise<Array>} Liste complete triee du plus recent au plus ancien.
    */
-  async function getAllComments() {
-    return commentModel.findAll({ order: [['created_at', 'DESC']] })
+  async function getAllComments(params = {}) {
+    const { limit, offset } = resolveLimitOffsetPagination(params, {
+      defaultLimit: 25,
+      maxLimit: 200,
+    })
+
+    const result = await commentModel.findAndCountAll({
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+    })
+
+    return buildPaginatedPayload({
+      items: result.rows,
+      total: result.count,
+      limit,
+      offset,
+    })
   }
 
   /**

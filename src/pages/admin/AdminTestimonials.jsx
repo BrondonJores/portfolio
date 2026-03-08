@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
+import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -20,8 +21,10 @@ import {
   updateTestimonial,
   deleteTestimonial,
 } from '../../services/testimonialService.js'
+import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPagination.js'
 
 const EMPTY = { author_name: '', author_role: '', content: '', visible: true }
+const PAGE_LIMIT = 12
 
 const inputStyle = {
   backgroundColor: 'var(--color-bg-primary)',
@@ -141,29 +144,54 @@ export default function AdminTestimonials() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [testimonials, setTestimonials] = useState([])
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: PAGE_LIMIT,
+    offset: 0,
+  })
   const [loading, setLoading] = useState(true)
   const [editItem, setEditItem] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [confirmId, setConfirmId] = useState(null)
   const editorParam = searchParams.get('editor')
 
-  const loadTestimonials = () => {
+  const loadTestimonials = (targetPage = page) => {
+    const offset = toOffsetFromPage(targetPage, PAGE_LIMIT)
     setLoading(true)
-    getAdminTestimonials()
-      .then((res) => setTestimonials(res?.data || []))
+    getAdminTestimonials({ limit: PAGE_LIMIT, offset })
+      .then((res) => {
+        const normalized = normalizeAdminPagePayload(res?.data, {
+          defaultLimit: PAGE_LIMIT,
+          requestedOffset: offset,
+        })
+        setTestimonials(normalized.items)
+        setPagination({
+          total: normalized.total,
+          limit: normalized.limit,
+          offset: normalized.offset,
+        })
+
+        const pages = Math.max(1, Math.ceil(normalized.total / normalized.limit))
+        if (targetPage > pages && normalized.total > 0) {
+          setPage(pages)
+        }
+      })
       .catch(() => addToast('Erreur lors du chargement.', 'error'))
       .finally(() => setLoading(false))
   }
 
-  useEffect(loadTestimonials, [])
+  useEffect(() => {
+    loadTestimonials(page)
+  }, [page])
 
   useEffect(() => {
     return subscribeAdminEditorRefresh((payload) => {
       if (payload?.entity === 'testimonials' || payload?.entity === 'global') {
-        loadTestimonials()
+        loadTestimonials(page)
       }
     })
-  }, [])
+  }, [page])
 
   useEffect(() => {
     if (!editorParam) return
@@ -247,7 +275,7 @@ export default function AdminTestimonials() {
         return
       }
       closeEditorOrBack()
-      loadTestimonials()
+      loadTestimonials(page)
     } catch (err) {
       addToast(err.message || 'Erreur.', 'error')
     }
@@ -259,7 +287,7 @@ export default function AdminTestimonials() {
       await deleteTestimonial(confirmId)
       addToast('Temoignage supprime.', 'success')
       notifyAdminEditorSaved('testimonials')
-      loadTestimonials()
+      loadTestimonials(page)
     } catch {
       addToast('Erreur lors de la suppression.', 'error')
     } finally {
@@ -390,6 +418,16 @@ export default function AdminTestimonials() {
             </table>
           </div>
         )}
+
+        <div className="mt-4">
+          <AdminPagination
+            total={pagination.total}
+            limit={pagination.limit}
+            offset={pagination.offset}
+            disabled={loading}
+            onPageChange={(nextPage) => setPage(nextPage)}
+          />
+        </div>
       </div>
 
       <TestimonialModal

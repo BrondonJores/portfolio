@@ -3,9 +3,13 @@ import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { EnvelopeIcon, EnvelopeOpenIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
+import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import { getAdminMessages, markMessageAsRead } from '../../services/messageService.js'
+import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPagination.js'
+
+const PAGE_LIMIT = 20
 
 /* Formatage de la date */
 function formatDate(d) {
@@ -16,18 +20,43 @@ function formatDate(d) {
 export default function AdminMessages() {
   const addToast = useAdminToast()
   const [messages, setMessages] = useState([])
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: PAGE_LIMIT,
+    offset: 0,
+  })
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
 
-  const loadMessages = () => {
+  const loadMessages = (targetPage = page) => {
+    const offset = toOffsetFromPage(targetPage, PAGE_LIMIT)
     setLoading(true)
-    getAdminMessages()
-      .then((res) => setMessages(res?.data || []))
+    getAdminMessages({ limit: PAGE_LIMIT, offset })
+      .then((res) => {
+        const normalized = normalizeAdminPagePayload(res?.data, {
+          defaultLimit: PAGE_LIMIT,
+          requestedOffset: offset,
+        })
+        setMessages(normalized.items)
+        setPagination({
+          total: normalized.total,
+          limit: normalized.limit,
+          offset: normalized.offset,
+        })
+
+        const pages = Math.max(1, Math.ceil(normalized.total / normalized.limit))
+        if (targetPage > pages && normalized.total > 0) {
+          setPage(pages)
+        }
+      })
       .catch(() => addToast('Erreur lors du chargement.', 'error'))
       .finally(() => setLoading(false))
   }
 
-  useEffect(loadMessages, [])
+  useEffect(() => {
+    loadMessages(page)
+  }, [page])
 
   /* Ouverture du detail et marquage comme lu */
   const handleOpen = async (msg) => {
@@ -144,6 +173,16 @@ export default function AdminMessages() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="mt-4">
+        <AdminPagination
+          total={pagination.total}
+          limit={pagination.limit}
+          offset={pagination.offset}
+          disabled={loading}
+          onPageChange={(nextPage) => setPage(nextPage)}
+        />
       </div>
 
       {/* Modal de detail du message */}

@@ -32,7 +32,10 @@ async function getAllPublic(req, res, next) {
  */
 async function getAllAdmin(req, res, next) {
   try {
-    const testimonials = await getAllTestimonialsAdmin()
+    const testimonials = await getAllTestimonialsAdmin({
+      limit: req.query.limit,
+      offset: req.query.offset,
+    })
     return res.json({ data: testimonials })
   } catch (err) {
     next(err)

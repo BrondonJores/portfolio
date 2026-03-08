@@ -48,7 +48,10 @@ async function create(req, res, next) {
  */
 async function getAll(req, res, next) {
   try {
-    const comments = await getAllComments()
+    const comments = await getAllComments({
+      limit: req.query.limit,
+      offset: req.query.offset,
+    })
     return res.json({ data: comments })
   } catch (err) {
     next(err)

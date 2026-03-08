@@ -11,7 +11,11 @@ export const likeArticle = (slug) => api.post(`/articles/${slug}/likes`)
 export const unlikeArticle = (slug) => api.del(`/articles/${slug}/likes`)
 
 /* Fonctions admin */
-export const getAdminArticles = () => api.get('/admin/articles')
+export const getAdminArticles = (params) => {
+  const query = params ? '?' + new URLSearchParams(params).toString() : ''
+  return api.get(`/admin/articles${query}`)
+}
+export const getAdminArticleById = (id) => api.get(`/admin/articles/${id}`)
 export const createArticle = (data) => api.post('/admin/articles', data)
 export const updateArticle = (id, data) => api.put(`/admin/articles/${id}`, data)
 export const deleteArticle = (id) => api.del(`/admin/articles/${id}`)

@@ -1,6 +1,7 @@
 /* Service metier skill : regles applicatives et acces donnees. */
 const { Skill } = require('../models')
 const { createHttpError } = require('../utils/httpError')
+const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../utils/pagination')
 
 /**
  * Regroupe les competences par categorie.
@@ -34,6 +35,31 @@ function createSkillService(deps = {}) {
   async function getAllSkillsGrouped() {
     const skills = await skillModel.findAll({ order: [['category', 'ASC'], ['sort_order', 'ASC']] })
     return groupByCategory(skills)
+  }
+
+  /**
+   * Retourne la liste admin des competences avec pagination.
+   * @param {object} [params={}] Parametres de pagination.
+   * @returns {Promise<{items:Array<object>,total:number,limit:number,offset:number}>} Liste paginee.
+   */
+  async function getAllAdminSkills(params = {}) {
+    const { limit, offset } = resolveLimitOffsetPagination(params, {
+      defaultLimit: 30,
+      maxLimit: 200,
+    })
+
+    const result = await skillModel.findAndCountAll({
+      order: [['category', 'ASC'], ['sort_order', 'ASC'], ['created_at', 'DESC']],
+      limit,
+      offset,
+    })
+
+    return buildPaginatedPayload({
+      items: result.rows,
+      total: result.count,
+      limit,
+      offset,
+    })
   }
 
   /**
@@ -79,6 +105,7 @@ function createSkillService(deps = {}) {
 
   return {
     getAllSkillsGrouped,
+    getAllAdminSkills,
     createSkill,
     updateSkill,
     deleteSkill,

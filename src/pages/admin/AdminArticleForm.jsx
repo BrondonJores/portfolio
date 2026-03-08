@@ -22,7 +22,7 @@ import {
 } from '../../utils/adminVisualBuilderBridge.js'
 import {
   createArticle,
-  getAdminArticles,
+  getAdminArticleById,
   updateArticle,
 } from '../../services/articleService.js'
 import { deleteCurrentVisualBuilderDraft } from '../../services/adminVisualBuilderService.js'
@@ -189,9 +189,9 @@ export default function AdminArticleForm() {
   useEffect(() => {
     if (!isEdit) return
 
-    getAdminArticles()
+    getAdminArticleById(id)
       .then((res) => {
-        const article = (res?.data || []).find((entry) => String(entry.id) === String(id))
+        const article = res?.data
         if (!article) return
 
         const loadedForm = {

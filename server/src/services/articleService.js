@@ -2,6 +2,7 @@
 const slugifyLib = require('slugify')
 const { Article } = require('../models')
 const { createHttpError } = require('../utils/httpError')
+const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../utils/pagination')
 
 /**
  * Convertit une valeur en entier strictement positif.
@@ -132,8 +133,38 @@ function createArticleService(deps = {}) {
    * Recupere tous les articles pour l'administration.
    * @returns {Promise<Array>} Liste complete des articles.
    */
-  async function getAllAdminArticles() {
-    return articleModel.findAll({ order: [['created_at', 'DESC']] })
+  async function getAllAdminArticles(params = {}) {
+    const { limit, offset } = resolveLimitOffsetPagination(params, {
+      defaultLimit: 20,
+      maxLimit: 200,
+    })
+
+    const result = await articleModel.findAndCountAll({
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+    })
+
+    return buildPaginatedPayload({
+      items: result.rows,
+      total: result.count,
+      limit,
+      offset,
+    })
+  }
+
+  /**
+   * Recupere un article admin par identifiant.
+   * @param {number|string} id Identifiant article.
+   * @returns {Promise<object>} Article trouve.
+   * @throws {Error} Erreur 404 si article introuvable.
+   */
+  async function getAdminArticleById(id) {
+    const article = await articleModel.findByPk(id)
+    if (!article) {
+      throw createHttpError(404, 'Article introuvable.')
+    }
+    return article
   }
 
   /**
@@ -208,6 +239,7 @@ function createArticleService(deps = {}) {
     likeArticleBySlug,
     unlikeArticleBySlug,
     getAllAdminArticles,
+    getAdminArticleById,
     createArticle,
     updateArticle,
     deleteArticle,

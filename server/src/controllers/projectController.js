@@ -3,6 +3,7 @@ const {
   getAllPublicProjects,
   getPublicProjectBySlug,
   getAllAdminProjects,
+  getAdminProjectById,
   createProject,
   updateProject,
   deleteProject,
@@ -55,8 +56,27 @@ async function getBySlug(req, res, next) {
  */
 async function getAllAdmin(req, res, next) {
   try {
-    const projects = await getAllAdminProjects()
+    const projects = await getAllAdminProjects({
+      limit: req.query.limit,
+      offset: req.query.offset,
+    })
     return res.json({ data: projects })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Recupere un projet admin par identifiant.
+ * @param {import('express').Request} req Requete contenant `params.id`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres serialisation JSON.
+ */
+async function getByIdAdmin(req, res, next) {
+  try {
+    const project = await getAdminProjectById(req.params.id)
+    return res.json({ data: project })
   } catch (err) {
     next(err)
   }
@@ -110,4 +130,4 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { getAllPublic, getBySlug, getAllAdmin, create, update, remove }
+module.exports = { getAllPublic, getBySlug, getAllAdmin, getByIdAdmin, create, update, remove }

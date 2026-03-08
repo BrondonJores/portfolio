@@ -1,6 +1,7 @@
 /* Hook de polling des messages non lus pour l'espace admin */
 import { useState, useEffect, useCallback } from 'react'
 import { getAdminMessages, markMessageAsRead } from '../services/messageService.js'
+import { normalizeAdminPagePayload } from '../utils/adminPagination.js'
 
 const POLL_INTERVAL = 30_000 /* 30 secondes */
 
@@ -14,7 +15,8 @@ export function useUnreadMessages() {
   const refresh = useCallback(async () => {
     try {
       const response = await getAdminMessages()
-      const all = response?.data ?? []
+      const normalized = normalizeAdminPagePayload(response?.data)
+      const all = normalized.items
       setUnreadMessages(all.filter((m) => m.read_at === null))
     } catch {
       /* Erreur silencieuse : on ne bloque pas l'interface */

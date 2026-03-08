@@ -9,7 +9,11 @@ export const getProjects = (params) => {
 export const getProjectBySlug = (slug) => api.get(`/projects/${slug}`)
 
 /* Fonctions admin */
-export const getAdminProjects = () => api.get('/admin/projects')
+export const getAdminProjects = (params) => {
+  const query = params ? '?' + new URLSearchParams(params).toString() : ''
+  return api.get(`/admin/projects${query}`)
+}
+export const getAdminProjectById = (id) => api.get(`/admin/projects/${id}`)
 export const createProject = (data) => api.post('/admin/projects', data)
 export const updateProject = (id, data) => api.put(`/admin/projects/${id}`, data)
 export const deleteProject = (id) => api.del(`/admin/projects/${id}`)

@@ -83,7 +83,10 @@ async function unsubscribe(req, res, next) {
  */
 async function getAll(req, res, next) {
   try {
-    const subscribers = await getAllSubscribers()
+    const subscribers = await getAllSubscribers({
+      limit: req.query.limit,
+      offset: req.query.offset,
+    })
     return res.json({ data: subscribers })
   } catch (err) {
     next(err)

@@ -5,6 +5,7 @@ const {
   likeArticleBySlug,
   unlikeArticleBySlug,
   getAllAdminArticles,
+  getAdminArticleById,
   createArticle,
   updateArticle,
   deleteArticle,
@@ -89,8 +90,27 @@ async function unlikeBySlug(req, res, next) {
  */
 async function getAllAdmin(req, res, next) {
   try {
-    const articles = await getAllAdminArticles()
+    const articles = await getAllAdminArticles({
+      limit: req.query.limit,
+      offset: req.query.offset,
+    })
     return res.json({ data: articles })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * Recupere un article admin par identifiant.
+ * @param {import('express').Request} req Requete contenant `params.id`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres serialisation JSON.
+ */
+async function getByIdAdmin(req, res, next) {
+  try {
+    const article = await getAdminArticleById(req.params.id)
+    return res.json({ data: article })
   } catch (err) {
     next(err)
   }
@@ -150,6 +170,7 @@ module.exports = {
   likeBySlug,
   unlikeBySlug,
   getAllAdmin,
+  getByIdAdmin,
   create,
   update,
   remove,

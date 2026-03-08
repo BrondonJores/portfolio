@@ -3,6 +3,7 @@ const { Op } = require('sequelize')
 const slugifyLib = require('slugify')
 const { Project } = require('../models')
 const { createHttpError } = require('../utils/httpError')
+const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../utils/pagination')
 
 /**
  * Convertit une valeur en entier strictement positif.
@@ -94,8 +95,38 @@ function createProjectService(deps = {}) {
    * Liste tous les projets (admin).
    * @returns {Promise<Array>} Liste complete.
    */
-  async function getAllAdminProjects() {
-    return projectModel.findAll({ order: [['created_at', 'DESC']] })
+  async function getAllAdminProjects(params = {}) {
+    const { limit, offset } = resolveLimitOffsetPagination(params, {
+      defaultLimit: 20,
+      maxLimit: 200,
+    })
+
+    const result = await projectModel.findAndCountAll({
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+    })
+
+    return buildPaginatedPayload({
+      items: result.rows,
+      total: result.count,
+      limit,
+      offset,
+    })
+  }
+
+  /**
+   * Recupere un projet admin par identifiant.
+   * @param {number|string} id Identifiant projet.
+   * @returns {Promise<object>} Projet trouve.
+   * @throws {Error} Erreur 404 si projet introuvable.
+   */
+  async function getAdminProjectById(id) {
+    const project = await projectModel.findByPk(id)
+    if (!project) {
+      throw createHttpError(404, 'Projet introuvable.')
+    }
+    return project
   }
 
   /**
@@ -164,6 +195,7 @@ function createProjectService(deps = {}) {
     getAllPublicProjects,
     getPublicProjectBySlug,
     getAllAdminProjects,
+    getAdminProjectById,
     createProject,
     updateProject,
     deleteProject,

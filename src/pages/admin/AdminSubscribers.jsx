@@ -3,31 +3,60 @@ import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { TrashIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
+import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import { getAdminSubscribers, deleteSubscriber } from '../../services/subscriberService.js'
+import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPagination.js'
+
+const PAGE_LIMIT = 20
 
 export default function AdminSubscribers() {
   const addToast = useAdminToast()
   const [subscribers, setSubscribers] = useState([])
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: PAGE_LIMIT,
+    offset: 0,
+  })
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState(null)
 
-  const loadSubscribers = () => {
+  const loadSubscribers = (targetPage = page) => {
+    const offset = toOffsetFromPage(targetPage, PAGE_LIMIT)
     setLoading(true)
-    getAdminSubscribers()
-      .then((res) => setSubscribers(res?.data || []))
+    getAdminSubscribers({ limit: PAGE_LIMIT, offset })
+      .then((res) => {
+        const normalized = normalizeAdminPagePayload(res?.data, {
+          defaultLimit: PAGE_LIMIT,
+          requestedOffset: offset,
+        })
+        setSubscribers(normalized.items)
+        setPagination({
+          total: normalized.total,
+          limit: normalized.limit,
+          offset: normalized.offset,
+        })
+
+        const pages = Math.max(1, Math.ceil(normalized.total / normalized.limit))
+        if (targetPage > pages && normalized.total > 0) {
+          setPage(pages)
+        }
+      })
       .catch(() => addToast('Erreur lors du chargement.', 'error'))
       .finally(() => setLoading(false))
   }
 
-  useEffect(loadSubscribers, [])
+  useEffect(() => {
+    loadSubscribers(page)
+  }, [page])
 
   const handleDelete = async (id) => {
     try {
       await deleteSubscriber(id)
       addToast('Abonne supprime.', 'success')
       setDeletingId(null)
-      loadSubscribers()
+      loadSubscribers(page)
     } catch {
       addToast('Erreur lors de la suppression.', 'error')
     }
@@ -48,7 +77,7 @@ export default function AdminSubscribers() {
       <div>
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {subscribers.length} abonne{subscribers.length !== 1 ? 'e(s)' : '(e)'}
+            {pagination.total} abonne{pagination.total !== 1 ? 'e(s)' : '(e)'}
           </h1>
         </div>
 
@@ -122,6 +151,16 @@ export default function AdminSubscribers() {
             </table>
           </div>
         )}
+
+        <div className="mt-4">
+          <AdminPagination
+            total={pagination.total}
+            limit={pagination.limit}
+            offset={pagination.offset}
+            disabled={loading}
+            onPageChange={(nextPage) => setPage(nextPage)}
+          />
+        </div>
       </div>
     </>
   )
