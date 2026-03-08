@@ -34,6 +34,11 @@ const {
 } = require('../controllers/themePresetController')
 const { getAllAdmin: getThemeMarketplaceAdmin, importFromMarketplace: importThemeFromMarketplace } = require('../controllers/themeMarketplaceController')
 const { listSecurityEvents, securitySummary } = require('../controllers/securityController')
+const {
+  getCurrent: getCurrentVisualBuilderDraft,
+  upsertCurrent: upsertCurrentVisualBuilderDraft,
+  removeCurrent: deleteCurrentVisualBuilderDraft,
+} = require('../controllers/visualBuilderDraftController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
 const { createProjectValidator, updateProjectValidator } = require('../validators/projectValidator')
@@ -56,6 +61,10 @@ const {
   importThemePresetPackageValidator,
 } = require('../validators/themePresetValidator')
 const { marketplaceListValidator, importThemeMarketplaceValidator } = require('../validators/themeMarketplaceValidator')
+const {
+  currentVisualBuilderDraftQueryValidator,
+  upsertVisualBuilderDraftValidator,
+} = require('../validators/visualBuilderDraftValidator')
 
 const router = Router()
 
@@ -105,6 +114,23 @@ router.put('/settings', upsertSettings)
 /* Routes securite admin */
 router.get('/security/events', listSecurityEvents)
 router.get('/security/summary', securitySummary)
+
+/* Routes persistance visual builder admin */
+router.get(
+  '/visual-builder/current',
+  validate(currentVisualBuilderDraftQueryValidator),
+  getCurrentVisualBuilderDraft
+)
+router.put(
+  '/visual-builder/current',
+  validate(upsertVisualBuilderDraftValidator),
+  upsertCurrentVisualBuilderDraft
+)
+router.delete(
+  '/visual-builder/current',
+  validate(currentVisualBuilderDraftQueryValidator),
+  deleteCurrentVisualBuilderDraft
+)
 
 /* Routes newsletter admin */
 router.get('/newsletter', getAllCampaigns)

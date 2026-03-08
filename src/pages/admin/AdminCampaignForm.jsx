@@ -24,6 +24,7 @@ import {
   sendCampaign,
   updateCampaign,
 } from '../../services/newsletterService.js'
+import { deleteCurrentVisualBuilderDraft } from '../../services/adminVisualBuilderService.js'
 
 const EMPTY = {
   subject: '',
@@ -543,6 +544,10 @@ export default function AdminCampaignForm() {
       }
 
       clearDraft()
+      void deleteCurrentVisualBuilderDraft({
+        entity: 'newsletter',
+        channel: builderChannel,
+      }).catch(() => {})
       notifyAdminEditorSaved('newsletter')
       closeEditorOrBack()
     } catch (error) {
@@ -564,6 +569,10 @@ export default function AdminCampaignForm() {
       await updateCampaign(id, { ...form, body_html: blocksToHtml(blocks) })
       await sendCampaign(id)
       clearDraft()
+      void deleteCurrentVisualBuilderDraft({
+        entity: 'newsletter',
+        channel: builderChannel,
+      }).catch(() => {})
       notifyAdminEditorSaved('newsletter')
       addToast('Campagne envoyee avec succes.', 'success')
       closeEditorOrBack()

@@ -27,6 +27,10 @@ import {
   subscribeBuilderChannel,
   writeBuilderChannelSnapshot,
 } from '../../utils/adminVisualBuilderBridge.js'
+import {
+  getCurrentVisualBuilderDraft,
+  upsertCurrentVisualBuilderDraft,
+} from '../../services/adminVisualBuilderService.js'
 
 const ENTITY_CONFIG = {
   article: {
@@ -59,6 +63,7 @@ const VIEWPORT_MODES = {
 }
 
 const MAX_HISTORY_ENTRIES = 100
+const SERVER_AUTOSAVE_DEBOUNCE_MS = 3500
 
 const inputStyle = {
   backgroundColor: 'var(--color-bg-primary)',
@@ -186,6 +191,19 @@ function formatClock(date) {
   return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
+/**
+ * Construit une signature stable du brouillon courant.
+ * @param {string} title Titre courant.
+ * @param {Array<object>} blocks Blocs courants.
+ * @returns {string} Signature serialisee.
+ */
+function buildPersistenceSignature(title, blocks) {
+  return JSON.stringify({
+    title: String(title || ''),
+    blocks: normalizeBlocks(blocks),
+  })
+}
+
 export default function AdminVisualBuilder() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -199,6 +217,8 @@ export default function AdminVisualBuilder() {
   const [viewportMode, setViewportMode] = useState('desktop')
   const [statusMessage, setStatusMessage] = useState('')
   const [lastSyncAt, setLastSyncAt] = useState(null)
+  const [lastServerSaveAt, setLastServerSaveAt] = useState(null)
+  const [isPersistingServer, setIsPersistingServer] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
   const [commandQuery, setCommandQuery] = useState('')
 
@@ -208,6 +228,8 @@ export default function AdminVisualBuilder() {
   const [historyCursor, setHistoryCursor] = useState(historyCursorRef.current)
   const commandInputRef = useRef(null)
   const initializedChannelRef = useRef('')
+  const hasBootstrappedRef = useRef(false)
+  const lastPersistedSignatureRef = useRef('')
 
   const { templates: contextTemplates } = useAdminBlockTemplates({
     context: entityConfig.context,
@@ -293,7 +315,7 @@ export default function AdminVisualBuilder() {
    * @param {object | null | undefined} payload Donnees source.
    * @returns {void}
    */
-  const hydrateFromPayload = useCallback((payload) => {
+  const hydrateFromPayload = useCallback((payload, options = {}) => {
     const payloadBlocks = normalizeBlocks(payload?.blocks || [])
     const nextBlocks = payloadBlocks.length > 0 ? payloadBlocks : normalizeBlocks([createBlockByType('paragraph')])
     const nextTitle = String(payload?.title || entityConfig.defaultTitle)
@@ -306,32 +328,87 @@ export default function AdminVisualBuilder() {
     setBlocks(nextBlocks)
     setActiveBlockId(nextBlocks[0]?.id || null)
     resetHistory(nextBlocks)
+    if (options.markAsPersisted === true) {
+      lastPersistedSignatureRef.current = buildPersistenceSignature(nextTitle, nextBlocks)
+    } else {
+      lastPersistedSignatureRef.current = ''
+    }
+    hasBootstrappedRef.current = true
   }, [contextTemplates, entityConfig.defaultTitle, resetHistory])
 
   useEffect(() => {
+    let cancelled = false
     const channelIdentity = `${entityConfig.key}|${channel}`
     if (initializedChannelRef.current === channelIdentity) return
     initializedChannelRef.current = channelIdentity
+    hasBootstrappedRef.current = false
+    lastPersistedSignatureRef.current = ''
+    setStatusMessage('')
+    setLastSyncAt(null)
+    setLastServerSaveAt(null)
 
-    const snapshot = readBuilderChannelSnapshot(channel)
-    if (snapshot?.payload) {
-      hydrateFromPayload(snapshot.payload)
-      return
+    /**
+     * Initialise le builder depuis le snapshot local ou la persistance serveur.
+     * @returns {Promise<void>} Promise resolue apres hydratation.
+     */
+    const bootstrapBuilder = async () => {
+      const snapshot = readBuilderChannelSnapshot(channel)
+      if (snapshot?.payload) {
+        hydrateFromPayload(snapshot.payload, { markAsPersisted: false })
+        return
+      }
+
+      try {
+        const response = await getCurrentVisualBuilderDraft({
+          entity: entityConfig.key,
+          channel,
+        })
+        if (cancelled) return
+
+        const draft = response?.data || null
+        if (draft) {
+          hydrateFromPayload(
+            {
+              title: draft.title,
+              blocks: draft.blocks,
+              templates: contextTemplates,
+            },
+            { markAsPersisted: true }
+          )
+          if (draft.updatedAt) {
+            setLastServerSaveAt(new Date(draft.updatedAt))
+          }
+          setStatusMessage(`Brouillon serveur charge (v${draft.versionNumber}).`)
+          return
+        }
+      } catch {
+        if (!cancelled) {
+          setStatusMessage('Mode local actif: brouillon serveur indisponible.')
+        }
+      }
+
+      if (cancelled) return
+      const bootstrapBlocks = normalizeBlocks([createBlockByType('paragraph')])
+      setTitle(entityConfig.defaultTitle)
+      setTemplates(contextTemplates)
+      setBlocks(bootstrapBlocks)
+      setActiveBlockId(bootstrapBlocks[0]?.id || null)
+      resetHistory(bootstrapBlocks)
+      hasBootstrappedRef.current = true
+      lastPersistedSignatureRef.current = ''
     }
 
-    const bootstrapBlocks = normalizeBlocks([createBlockByType('paragraph')])
-    setTitle(entityConfig.defaultTitle)
-    setTemplates(contextTemplates)
-    setBlocks(bootstrapBlocks)
-    setActiveBlockId(bootstrapBlocks[0]?.id || null)
-    resetHistory(bootstrapBlocks)
+    void bootstrapBuilder()
+    return () => {
+      cancelled = true
+    }
   }, [channel, entityConfig.key, entityConfig.defaultTitle, contextTemplates, hydrateFromPayload, resetHistory])
 
   useEffect(() => {
     return subscribeBuilderChannel(channel, (snapshot) => {
       const payload = snapshot?.payload
       if (!payload || payload.type !== 'builder-init') return
-      hydrateFromPayload(payload)
+      hydrateFromPayload(payload, { markAsPersisted: false })
     })
   }, [channel, hydrateFromPayload])
 
@@ -354,6 +431,58 @@ export default function AdminVisualBuilder() {
 
     return () => clearTimeout(timer)
   }, [channel, entityConfig.key, title, blocks, templates])
+
+  useEffect(() => {
+    if (!hasBootstrappedRef.current) return
+    const signature = buildPersistenceSignature(title, blocks)
+    if (signature === lastPersistedSignatureRef.current) return
+
+    const timer = setTimeout(async () => {
+      setIsPersistingServer(true)
+      try {
+        await upsertCurrentVisualBuilderDraft({
+          entity: entityConfig.key,
+          channel,
+          title,
+          blocks,
+        })
+        lastPersistedSignatureRef.current = signature
+        setLastServerSaveAt(new Date())
+      } catch (error) {
+        setStatusMessage(error?.message || 'Impossible de persister le brouillon sur le serveur.')
+      } finally {
+        setIsPersistingServer(false)
+      }
+    }, SERVER_AUTOSAVE_DEBOUNCE_MS)
+
+    return () => clearTimeout(timer)
+  }, [channel, entityConfig.key, title, blocks])
+
+  /**
+   * Persiste le brouillon courant immediatement sur le serveur.
+   * @returns {Promise<void>} Promise resolue apres tentative de persistance.
+   */
+  const persistDraftNow = useCallback(async () => {
+    if (!hasBootstrappedRef.current) return
+    const signature = buildPersistenceSignature(title, blocks)
+    if (signature === lastPersistedSignatureRef.current) return
+
+    setIsPersistingServer(true)
+    try {
+      await upsertCurrentVisualBuilderDraft({
+        entity: entityConfig.key,
+        channel,
+        title,
+        blocks,
+      })
+      lastPersistedSignatureRef.current = signature
+      setLastServerSaveAt(new Date())
+    } catch (error) {
+      setStatusMessage(error?.message || 'Impossible de persister le brouillon sur le serveur.')
+    } finally {
+      setIsPersistingServer(false)
+    }
+  }, [blocks, channel, entityConfig.key, title])
 
   useEffect(() => {
     /**
@@ -416,7 +545,8 @@ export default function AdminVisualBuilder() {
    * Envoie les modifications vers le formulaire source.
    * @returns {void}
    */
-  const handleSaveToForm = () => {
+  const handleSaveToForm = useCallback(async () => {
+    await persistDraftNow()
     writeBuilderChannelSnapshot(channel, {
       type: 'builder-save',
       entity: entityConfig.key,
@@ -427,7 +557,7 @@ export default function AdminVisualBuilder() {
     notifyAdminEditorSaved(entityConfig.notifyEntity)
     setLastSyncAt(new Date())
     setStatusMessage('Modifications synchronisees avec le formulaire.')
-  }
+  }, [persistDraftNow, channel, entityConfig.key, title, blocks, templates, entityConfig.notifyEntity])
 
   /**
    * Insere un nouveau bloc apres le bloc actif.
@@ -606,14 +736,21 @@ export default function AdminVisualBuilder() {
           </div>
         </header>
 
-        {(statusMessage || lastSyncAt) && (
+        {(statusMessage || lastSyncAt || lastServerSaveAt || isPersistingServer) && (
           <div
             className="mx-4 mt-3 rounded-xl border px-3 py-2 text-xs flex items-center gap-2"
             style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}
           >
             <CheckCircleIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
-            <span>{statusMessage || 'Derniere synchronisation effectuee.'}</span>
-            {lastSyncAt && <span className="ml-auto">{formatClock(lastSyncAt)}</span>}
+            <span>
+              {isPersistingServer
+                ? 'Sauvegarde serveur en cours...'
+                : statusMessage || 'Brouillon pret.'}
+            </span>
+            <span className="ml-auto flex items-center gap-3">
+              {lastServerSaveAt && <span>Cloud: {formatClock(lastServerSaveAt)}</span>}
+              {lastSyncAt && <span>Formulaire: {formatClock(lastSyncAt)}</span>}
+            </span>
           </div>
         )}
 

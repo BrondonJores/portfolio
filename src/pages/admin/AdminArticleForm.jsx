@@ -25,6 +25,7 @@ import {
   getAdminArticles,
   updateArticle,
 } from '../../services/articleService.js'
+import { deleteCurrentVisualBuilderDraft } from '../../services/adminVisualBuilderService.js'
 
 const EMPTY = {
   title: '',
@@ -307,6 +308,10 @@ export default function AdminArticleForm() {
       }
 
       clearDraft()
+      void deleteCurrentVisualBuilderDraft({
+        entity: 'article',
+        channel: builderChannel,
+      }).catch(() => {})
       notifyAdminEditorSaved('articles')
       closeEditorOrBack()
     } catch (error) {

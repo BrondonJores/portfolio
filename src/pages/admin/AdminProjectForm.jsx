@@ -25,6 +25,7 @@ import {
   getAdminProjects,
   updateProject,
 } from '../../services/projectService.js'
+import { deleteCurrentVisualBuilderDraft } from '../../services/adminVisualBuilderService.js'
 
 const EMPTY = {
   title: '',
@@ -330,6 +331,10 @@ export default function AdminProjectForm() {
       }
 
       clearDraft()
+      void deleteCurrentVisualBuilderDraft({
+        entity: 'project',
+        channel: builderChannel,
+      }).catch(() => {})
       notifyAdminEditorSaved('projects')
       closeEditorOrBack()
     } catch (error) {

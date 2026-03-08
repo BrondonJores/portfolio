@@ -16,6 +16,7 @@ const SecurityEvent = require('./SecurityEvent')
 const MarketplaceItem = require('./MarketplaceItem')
 const ThemePresetRelease = require('./ThemePresetRelease')
 const BlockTemplateRelease = require('./BlockTemplateRelease')
+const VisualBuilderDraft = require('./VisualBuilderDraft')
 
 module.exports = {
   sequelize,
@@ -33,6 +34,7 @@ module.exports = {
   ThemePreset,
   ThemePresetRelease,
   BlockTemplateRelease,
+  VisualBuilderDraft,
   SecurityEvent,
   MarketplaceItem,
 }
