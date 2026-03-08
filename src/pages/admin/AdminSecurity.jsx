@@ -1,7 +1,7 @@
 /* Page admin securite: surveillance intrusion, abus et evenements sensibles. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { ShieldExclamationIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { ShieldExclamationIcon, ArrowPathIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import Spinner from '../../components/ui/Spinner.jsx'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import { getSecurityEvents, getSecuritySummary } from '../../services/securityService.js'
@@ -71,10 +71,26 @@ function StatCard({ label, value }) {
   )
 }
 
+function SectionHeader({ title, description = '' }) {
+  return (
+    <div className="space-y-1 mb-3">
+      <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+        {title}
+      </h2>
+      {description && (
+        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          {description}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function AdminSecurity() {
   const addToast = useAdminToast()
   const [windowHours, setWindowHours] = useState(24)
   const [severity, setSeverity] = useState('')
+  const [eventQuery, setEventQuery] = useState('')
   const [summary, setSummary] = useState(null)
   const [events, setEvents] = useState([])
   const [totalEvents, setTotalEvents] = useState(0)
@@ -82,6 +98,26 @@ export default function AdminSecurity() {
   const [loadingMore, setLoadingMore] = useState(false)
 
   const hasMore = events.length < totalEvents
+  const normalizedEventQuery = String(eventQuery || '').trim().toLowerCase()
+  const filteredEvents = useMemo(() => {
+    if (!normalizedEventQuery) {
+      return events
+    }
+
+    return events.filter((event) => {
+      const haystack = [
+        event?.event_type,
+        event?.severity,
+        event?.ip_address,
+        event?.message,
+        event?.request_path,
+      ]
+        .map((value) => String(value || '').toLowerCase())
+        .join(' ')
+
+      return haystack.includes(normalizedEventQuery)
+    })
+  }, [events, normalizedEventQuery])
 
   const loadSecurityData = useCallback(
     async ({ resetList = true } = {}) => {
@@ -141,21 +177,29 @@ export default function AdminSecurity() {
 
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <ShieldExclamationIcon className="h-6 w-6" style={{ color: 'var(--color-accent)' }} />
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-              Securite & Intrusion
-            </h1>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <ShieldExclamationIcon className="h-6 w-6" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+              <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                Securite & Intrusion
+              </h1>
+            </div>
+            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              Surveillance des evenements sensibles, abus et signaux de risque.
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div
+            className="rounded-xl border p-3 grid grid-cols-1 sm:grid-cols-[auto_auto_minmax(220px,1fr)_auto] gap-2 items-center"
+            style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+          >
             <select
               value={windowHours}
               onChange={(e) => setWindowHours(Number(e.target.value))}
               className="px-3 py-2 rounded-lg border text-sm"
               style={{
                 borderColor: 'var(--color-border)',
-                backgroundColor: 'var(--color-bg-secondary)',
+                backgroundColor: 'var(--color-bg-primary)',
                 color: 'var(--color-text-primary)',
               }}
             >
@@ -172,7 +216,7 @@ export default function AdminSecurity() {
               className="px-3 py-2 rounded-lg border text-sm"
               style={{
                 borderColor: 'var(--color-border)',
-                backgroundColor: 'var(--color-bg-secondary)',
+                backgroundColor: 'var(--color-bg-primary)',
                 color: 'var(--color-text-primary)',
               }}
             >
@@ -183,17 +227,37 @@ export default function AdminSecurity() {
               ))}
             </select>
 
+            <div className="relative">
+              <MagnifyingGlassIcon
+                className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: 'var(--color-text-secondary)' }}
+                aria-hidden="true"
+              />
+              <input
+                type="text"
+                value={eventQuery}
+                onChange={(event) => setEventQuery(event.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-bg-primary)',
+                  color: 'var(--color-text-primary)',
+                }}
+                placeholder="Rechercher type, IP, route..."
+              />
+            </div>
+
             <button
               type="button"
               onClick={() => loadSecurityData({ resetList: true })}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border"
+              className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border"
               style={{
                 borderColor: 'var(--color-border)',
                 color: 'var(--color-text-secondary)',
-                backgroundColor: 'var(--color-bg-secondary)',
+                backgroundColor: 'var(--color-bg-primary)',
               }}
             >
-              <ArrowPathIcon className="h-4 w-4" />
+              <ArrowPathIcon className="h-4 w-4" aria-hidden="true" />
               Rafraichir
             </button>
           </div>
@@ -216,9 +280,7 @@ export default function AdminSecurity() {
                 className="rounded-xl border p-4"
                 style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
               >
-                <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
-                  Top types d&apos;evenements
-                </h2>
+                <SectionHeader title="Top types d evenements" />
                 {Array.isArray(summary?.topEventTypes) && summary.topEventTypes.length > 0 ? (
                   <div className="space-y-2">
                     {summary.topEventTypes.map((entry) => (
@@ -245,9 +307,7 @@ export default function AdminSecurity() {
                 className="rounded-xl border p-4"
                 style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
               >
-                <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
-                  Top adresses IP
-                </h2>
+                <SectionHeader title="Top adresses IP" />
                 {Array.isArray(summary?.topIps) && summary.topIps.length > 0 ? (
                   <div className="space-y-2">
                     {summary.topIps.map((entry) => (
@@ -280,11 +340,16 @@ export default function AdminSecurity() {
                 style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
               >
                 Logs recents ({totalEvents} evenements)
+                {normalizedEventQuery ? ` - filtres: ${filteredEvents.length}` : ''}
               </div>
 
               {events.length === 0 ? (
                 <p className="p-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                   Aucun evenement sur cette fenetre.
+                </p>
+              ) : filteredEvents.length === 0 ? (
+                <p className="p-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  Aucun evenement ne correspond a cette recherche.
                 </p>
               ) : (
                 <div className="overflow-x-auto">
@@ -300,7 +365,7 @@ export default function AdminSecurity() {
                       </tr>
                     </thead>
                     <tbody>
-                      {events.map((event) => (
+                      {filteredEvents.map((event) => (
                         <tr
                           key={event.id}
                           className="border-t"

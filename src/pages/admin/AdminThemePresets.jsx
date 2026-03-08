@@ -7,12 +7,15 @@ import {
   ArrowUpTrayIcon,
   EyeIcon,
   EyeSlashIcon,
+  MagnifyingGlassIcon,
   PaintBrushIcon,
   PencilSquareIcon,
   PlusIcon,
   SparklesIcon,
+  StarIcon as StarOutlineIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline'
+import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
@@ -53,6 +56,30 @@ const MARKETPLACE_FAVORITES_SETTING_KEY = 'theme_marketplace_favorites'
 const MARKETPLACE_RATINGS_SETTING_KEY = 'theme_marketplace_ratings'
 const PRESETS_PAGE_LIMIT = 8
 const MARKETPLACE_PAGE_LIMIT = 6
+
+function SectionHeader({ title, description = '', icon: Icon = null }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        {Icon && (
+          <Icon
+            className="h-4 w-4"
+            style={{ color: 'var(--color-accent)' }}
+            aria-hidden="true"
+          />
+        )}
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+          {title}
+        </h2>
+      </div>
+      {description && (
+        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          {description}
+        </p>
+      )}
+    </div>
+  )
+}
 
 /**
  * Extrait uniquement les cles de theme supportees.
@@ -355,6 +382,15 @@ export default function AdminThemePresets() {
   const marketplaceFavoriteSet = useMemo(
     () => new Set(marketplaceFavorites),
     [marketplaceFavorites]
+  )
+  const overviewStats = useMemo(
+    () => [
+      { id: 'presets', label: 'Presets locaux', value: presets.length },
+      { id: 'snapshot', label: 'Cles snapshot', value: snapshotCount },
+      { id: 'marketplace', label: 'Themes marketplace', value: marketplaceThemes.length },
+      { id: 'favorites', label: 'Favoris marketplace', value: marketplaceFavoriteSet.size },
+    ],
+    [marketplaceFavoriteSet.size, marketplaceThemes.length, presets.length, snapshotCount]
   )
 
   const marketplaceCategories = useMemo(() => {
@@ -1197,9 +1233,14 @@ export default function AdminThemePresets() {
 
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            Presets de theme
-          </h1>
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+              Presets de theme
+            </h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+              Centralise presets locaux, affectations par page et imports marketplace.
+            </p>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="secondary" type="button" onClick={exportAllPresets} disabled={presets.length === 0}>
@@ -1232,6 +1273,23 @@ export default function AdminThemePresets() {
           className="hidden"
         />
 
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {overviewStats.map((card) => (
+            <div
+              key={card.id}
+              className="rounded-xl border p-3"
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+            >
+              <p className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+                {card.label}
+              </p>
+              <p className="text-xl font-bold mt-1" style={{ color: 'var(--color-text-primary)' }}>
+                {card.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
         {previewingId && (
           <div
             className="rounded-xl border p-3 flex flex-wrap items-center justify-between gap-3"
@@ -1241,7 +1299,7 @@ export default function AdminThemePresets() {
               Apercu live actif: {previewingLabel || 'Theme'}
             </p>
             <Button type="button" variant="ghost" onClick={stopPreview}>
-              <EyeSlashIcon className="h-4 w-4" />
+              <EyeSlashIcon className="h-4 w-4" aria-hidden="true" />
               Arreter l'apercu
             </Button>
           </div>
@@ -1258,9 +1316,11 @@ export default function AdminThemePresets() {
               className="rounded-xl border p-4 space-y-3 h-fit"
               style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
             >
-              <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                Presets disponibles
-              </p>
+              <SectionHeader
+                title="Presets disponibles"
+                description="Liste locale des presets prives du portfolio."
+                icon={PaintBrushIcon}
+              />
 
               {presets.length === 0 ? (
                 <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
@@ -1307,7 +1367,7 @@ export default function AdminThemePresets() {
                               style={{ color: 'var(--color-text-secondary)' }}
                               aria-label={`Modifier ${preset.name}`}
                             >
-                              <PencilSquareIcon className="h-4 w-4" />
+                              <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
                             </button>
                             <button
                               type="button"
@@ -1323,7 +1383,9 @@ export default function AdminThemePresets() {
                               style={{ color: isPreviewing ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}
                               aria-label={isPreviewing ? `Arreter apercu ${preset.name}` : `Apercu ${preset.name}`}
                             >
-                              {isPreviewing ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                              {isPreviewing
+                                ? <EyeSlashIcon className="h-4 w-4" aria-hidden="true" />
+                                : <EyeIcon className="h-4 w-4" aria-hidden="true" />}
                             </button>
                             <button
                               type="button"
@@ -1332,7 +1394,7 @@ export default function AdminThemePresets() {
                               style={{ color: 'var(--color-text-secondary)' }}
                               aria-label={`Supprimer ${preset.name}`}
                             >
-                              <TrashIcon className="h-4 w-4" />
+                              <TrashIcon className="h-4 w-4" aria-hidden="true" />
                             </button>
                           </div>
                         </div>
@@ -1351,7 +1413,7 @@ export default function AdminThemePresets() {
                             disabled={applyingId === preset.id}
                             className="justify-center"
                           >
-                            <PaintBrushIcon className="h-4 w-4" />
+                            <PaintBrushIcon className="h-4 w-4" aria-hidden="true" />
                             {applyingId === preset.id ? 'Application...' : 'Appliquer'}
                           </Button>
                           <Button
@@ -1360,7 +1422,7 @@ export default function AdminThemePresets() {
                             onClick={() => exportOnePreset(preset)}
                             className="justify-center"
                           >
-                            <ArrowDownTrayIcon className="h-4 w-4" />
+                            <ArrowDownTrayIcon className="h-4 w-4" aria-hidden="true" />
                             Exporter
                           </Button>
                         </div>
@@ -1578,14 +1640,11 @@ export default function AdminThemePresets() {
                 className="rounded-xl border p-4 space-y-4"
                 style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
               >
-                <div className="space-y-1">
-                  <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                    Affectation par page
-                  </h2>
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    Choisis un preset pour chaque page publique. Vide = theme global actuel.
-                  </p>
-                </div>
+                <SectionHeader
+                  title="Affectation par page"
+                  description="Choisis un preset pour chaque page publique. Vide = theme global actuel."
+                  icon={PaintBrushIcon}
+                />
 
                 <div className="space-y-3">
                   {PAGE_THEME_TARGETS.map((target) => (
@@ -1628,13 +1687,11 @@ export default function AdminThemePresets() {
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
-                    <SparklesIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
-                    Marketplace de themes
-                  </h2>
-                  <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                    Catalogue de themes prets a importer, previsualiser et appliquer.
-                  </p>
+                  <SectionHeader
+                    title="Marketplace de themes"
+                    description="Catalogue de themes prets a importer, previsualiser et appliquer."
+                    icon={SparklesIcon}
+                  />
                 </div>
               </div>
 
@@ -1652,14 +1709,21 @@ export default function AdminThemePresets() {
                   ))}
                 </select>
 
-                <input
-                  type="text"
-                  value={marketplaceQuery}
-                  onChange={(event) => setMarketplaceQuery(event.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                  style={inputStyle}
-                  placeholder="Rechercher un theme (nom, style, tag...)"
-                />
+                <div className="relative">
+                  <MagnifyingGlassIcon
+                    className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    aria-hidden="true"
+                  />
+                  <input
+                    type="text"
+                    value={marketplaceQuery}
+                    onChange={(event) => setMarketplaceQuery(event.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                    style={inputStyle}
+                    placeholder="Rechercher un theme (nom, style, tag...)"
+                  />
+                </div>
 
                 <label className="inline-flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                   <input
@@ -1710,7 +1774,7 @@ export default function AdminThemePresets() {
                               {theme.name}
                             </p>
                             <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                              {theme.category} · {theme.style} · {theme.settingsCount} cles
+                              {theme.category} - {theme.style} - {theme.settingsCount} cles
                             </p>
                           </div>
 
@@ -1723,7 +1787,11 @@ export default function AdminThemePresets() {
                               aria-label={isFavorite ? `Retirer ${theme.name} des favoris` : `Ajouter ${theme.name} aux favoris`}
                               title={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                             >
-                              {isFavorite ? '★' : '☆'}
+                              {isFavorite ? (
+                                <StarSolidIcon className="h-4 w-4" aria-hidden="true" />
+                              ) : (
+                                <StarOutlineIcon className="h-4 w-4" aria-hidden="true" />
+                              )}
                             </button>
 
                             {theme.featured && (
@@ -1801,7 +1869,7 @@ export default function AdminThemePresets() {
                                 aria-label={`Donner ${value} etoile(s) a ${theme.name}`}
                                 title={`${value} etoile(s)`}
                               >
-                                ★
+                                <StarSolidIcon className="h-4 w-4" aria-hidden="true" />
                               </button>
                             )
                           })}
@@ -1824,7 +1892,9 @@ export default function AdminThemePresets() {
                             )}
                             className="justify-center"
                           >
-                            {isPreviewingMarketplace ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                            {isPreviewingMarketplace
+                              ? <EyeSlashIcon className="h-4 w-4" aria-hidden="true" />
+                              : <EyeIcon className="h-4 w-4" aria-hidden="true" />}
                             {isPreviewingMarketplace ? 'Stop preview' : 'Preview'}
                           </Button>
 
@@ -1835,7 +1905,9 @@ export default function AdminThemePresets() {
                             disabled={isImportingMarketplace}
                             className="justify-center"
                           >
-                            {isImportingMarketplace ? <Spinner size="sm" /> : <ArrowUpTrayIcon className="h-4 w-4" />}
+                            {isImportingMarketplace
+                              ? <Spinner size="sm" />
+                              : <ArrowUpTrayIcon className="h-4 w-4" aria-hidden="true" />}
                             Importer
                           </Button>
 
@@ -1846,7 +1918,7 @@ export default function AdminThemePresets() {
                             disabled={isImportingMarketplace}
                             className="justify-center"
                           >
-                            <PaintBrushIcon className="h-4 w-4" />
+                            <PaintBrushIcon className="h-4 w-4" aria-hidden="true" />
                             Importer + appliquer
                           </Button>
                         </div>
@@ -1877,3 +1949,4 @@ export default function AdminThemePresets() {
     </>
   )
 }
+

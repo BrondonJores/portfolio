@@ -54,6 +54,35 @@ const tooltipStyle = {
 const axisTickStyle = { fill: 'var(--color-text-secondary)', fontSize: 12 }
 
 /**
+ * Entete standard de section dashboard.
+ * @param {object} props Proprietes d'affichage.
+ * @returns {JSX.Element} Entete harmonise.
+ */
+function SectionHeader({ title, description = '', icon: Icon = null }) {
+  return (
+    <div className="mb-3">
+      <div className="flex items-center gap-2">
+        {Icon && (
+          <Icon
+            className="h-4 w-4"
+            style={{ color: 'var(--color-accent)' }}
+            aria-hidden="true"
+          />
+        )}
+        <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+          {title}
+        </h2>
+      </div>
+      {description && (
+        <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+          {description}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
  * Echappe une cellule CSV.
  * @param {unknown} value Valeur brute.
  * @returns {string} Valeur CSV serialisee.
@@ -335,6 +364,7 @@ export default function AdminDashboard() {
     ? stats.filters.allowedPeriodDays
     : [7, 30, 90]
   const activePeriodDays = stats?.filters?.periodDays || periodDays
+  const activePeriodLabel = `${activePeriodDays} jours`
 
   const totalDistribution = useMemo(
     () => [
@@ -396,41 +426,55 @@ export default function AdminDashboard() {
       </Helmet>
 
       <div className="space-y-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            Tableau de bord
-          </h1>
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto] gap-3 items-start">
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+              Tableau de bord
+            </h1>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+              Pilotage global du portfolio sur la fenetre active ({activePeriodLabel}).
+            </p>
+          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {allowedPeriodDays.map((days) => (
+          <div
+            className="rounded-xl border p-3 space-y-2"
+            style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+              Periode et export
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {allowedPeriodDays.map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setPeriodDays(days)}
+                  aria-pressed={periodDays === days}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                  style={{
+                    borderColor: periodDays === days ? 'var(--color-accent)' : 'var(--color-border)',
+                    color: periodDays === days ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                    backgroundColor: 'var(--color-bg-card)',
+                  }}
+                >
+                  {days}j
+                </button>
+              ))}
+
               <button
-                key={days}
                 type="button"
-                onClick={() => setPeriodDays(days)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                onClick={handleExportCsv}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border focus:outline-none"
                 style={{
-                  borderColor: periodDays === days ? 'var(--color-accent)' : 'var(--color-border)',
-                  color: periodDays === days ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-secondary)',
                   backgroundColor: 'var(--color-bg-card)',
                 }}
               >
-                {days}j
+                <ArrowDownTrayIcon className="h-4 w-4" aria-hidden="true" />
+                Export CSV
               </button>
-            ))}
-
-            <button
-              type="button"
-              onClick={handleExportCsv}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border focus:outline-none"
-              style={{
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-secondary)',
-                backgroundColor: 'var(--color-bg-card)',
-              }}
-            >
-              <ArrowDownTrayIcon className="h-4 w-4" />
-              Export CSV
-            </button>
+            </div>
           </div>
         </div>
 
@@ -438,9 +482,10 @@ export default function AdminDashboard() {
           className="rounded-xl border p-4"
           style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
         >
-          <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
-            Acces rapides marketplace
-          </h2>
+          <SectionHeader
+            title="Acces rapides marketplace"
+            description="Templates et themes pour accelerer la production de pages."
+          />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Link
               to="/admin/templates"
@@ -570,12 +615,11 @@ export default function AdminDashboard() {
           className="rounded-xl border p-4"
           style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
         >
-          <div className="flex items-center gap-2 mb-3">
-            <ClockIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-              Tendances sur {activePeriodDays} jours
-            </h2>
-          </div>
+          <SectionHeader
+            title={`Tendances sur ${activePeriodDays} jours`}
+            description="Comparaison avec la periode precedente pour mesurer l'evolution."
+            icon={ClockIcon}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
             <TrendPill label="Messages" trend={trends.messages} />
@@ -587,9 +631,11 @@ export default function AdminDashboard() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-            Fenetre active ({activePeriodDays} jours)
-          </h2>
+          <SectionHeader
+            title={`Fenetre active (${activePeriodDays} jours)`}
+            description="Lecture detaillee sur la periode selectionnee."
+            icon={ClockIcon}
+          />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div
               className="rounded-xl border p-4"
@@ -663,16 +709,18 @@ export default function AdminDashboard() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>
-            Analytiques 6 mois
-          </h2>
+          <SectionHeader
+            title="Analytiques 6 mois"
+            description="Vision macro des tendances messages, contenus et repartition."
+            icon={ChartPieIcon}
+          />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div
               className="rounded-xl border p-4"
               style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <EnvelopeIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
+                <EnvelopeIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                   Messages et abonnes
                 </h3>
@@ -705,7 +753,7 @@ export default function AdminDashboard() {
               style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <DocumentTextIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
+                <DocumentTextIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                   Production de contenu
                 </h3>
@@ -729,7 +777,7 @@ export default function AdminDashboard() {
               style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <ChartPieIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
+                <ChartPieIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                   Repartition globale
                 </h3>
