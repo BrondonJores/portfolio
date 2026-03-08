@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
+import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Spinner from '../ui/Spinner.jsx'
@@ -82,6 +83,7 @@ export default function Skills() {
       className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
     >
       <AnimatedMascots scope="skills" sceneKey="skills" />
+      <AnimatedSceneAsset scope="skills" sceneKey="skills" />
 
       <div className="max-w-6xl mx-auto relative z-20">
         <div className="flex items-center gap-3 mb-2">

@@ -1,87 +1,66 @@
 import { motion, useReducedMotion } from 'framer-motion'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
+import {
+  detectAnimationAssetMode,
+  normalizeAnimationAssetFit,
+  sanitizeAnimationAssetUrl,
+} from '../../utils/animationAsset.js'
 
 const SECTION_MASCOT_PRESETS = {
   about: {
     position: { top: '10%', left: '2%' },
     sizeFactor: 1.02,
-    type: 'human',
     driftX: 8,
   },
   skills: {
     position: { top: '10%', right: '2%' },
     sizeFactor: 1,
-    type: 'human',
     driftX: -8,
   },
   projects: {
     position: { top: '8%', left: '2%' },
     sizeFactor: 1,
-    type: 'human',
     driftX: 8,
   },
   blog: {
     position: { top: '8%', right: '2%' },
     sizeFactor: 0.96,
-    type: 'human',
     driftX: -8,
   },
   contact: {
     position: { top: '8%', left: '2%' },
     sizeFactor: 1,
-    type: 'human',
     driftX: 8,
   },
   section: {
     position: { top: '8%', right: '2%' },
     sizeFactor: 1,
-    type: 'human',
     driftX: -8,
   },
 }
 
 const BUBBLE_SCOPE_SET = new Set(['about', 'skills', 'projects', 'blog', 'contact', 'section'])
+const MascotLottiePlayer = lazy(() => import('./MascotLottiePlayer.jsx'))
+const MascotRivePlayer = lazy(() => import('./MascotRivePlayer.jsx'))
 
 /**
  * Retourne le preset de placement d'une mascotte pour une section donnee.
  * @param {string} scope Cle de section.
- * @returns {{position: object, sizeFactor: number, type: string, driftX: number}} Preset de rendu.
+ * @returns {{position: object, sizeFactor: number, driftX: number}} Preset de rendu.
  */
 function getScopePreset(scope) {
   return SECTION_MASCOT_PRESETS[scope] || SECTION_MASCOT_PRESETS.section
 }
 
 /**
- * Filtre une URL externe pour eviter les protocoles dangereux.
- * @param {unknown} rawValue URL brute provenant des settings.
- * @returns {string} URL nettoyee, ou chaine vide si invalide.
- */
-function sanitizeAssetUrl(rawValue) {
-  if (typeof rawValue !== 'string') {
-    return ''
-  }
-
-  const value = rawValue.trim()
-  if (!value) {
-    return ''
-  }
-
-  if (/^https?:\/\//i.test(value) || value.startsWith('/')) {
-    return value
-  }
-
-  return ''
-}
-
-/**
- * Resolve l'URL d'asset a utiliser pour la section.
+ * Resolve l'asset de mascotte a utiliser pour une section.
  * @param {object} config Configuration animation.
  * @param {string} scope Cle de section.
- * @returns {string} URL finalement retenue.
+ * @returns {{url:string, mode:'video'|'image'|'lottie'|'rive'|'unsupported', fit:'contain'|'cover'}} Meta d'affichage.
  */
-function resolveSectionAssetUrl(config, scope) {
+function resolveSectionAsset(config, scope) {
   const byScope = {
     about: config.mascotAssetAboutUrl,
     skills: config.mascotAssetSkillsUrl,
@@ -90,108 +69,81 @@ function resolveSectionAssetUrl(config, scope) {
     contact: config.mascotAssetContactUrl,
   }
 
-  const scoped = sanitizeAssetUrl(byScope[scope])
-  if (scoped) {
-    return scoped
+  const scoped = sanitizeAnimationAssetUrl(byScope[scope])
+  const fallback = sanitizeAnimationAssetUrl(config.mascotAssetDefaultUrl)
+  const url = scoped || fallback
+
+  return {
+    url,
+    mode: detectAnimationAssetMode(url),
+    fit: normalizeAnimationAssetFit(config.mascotAssetFit),
   }
-  return sanitizeAssetUrl(config.mascotAssetDefaultUrl)
 }
 
 /**
- * Detecte le mode de rendu d'un asset media.
- * @param {string} url URL asset.
- * @returns {'video'|'image'|'unsupported'} Type de rendu.
+ * Rend un media mascotte selon son type.
+ * @param {{url:string, mode:'video'|'image'|'lottie'|'rive'|'unsupported', fit:'contain'|'cover', onError:() => void}} props Props rendu.
+ * @returns {JSX.Element | null} Rendu du media.
  */
-function detectAssetMode(url) {
-  const clean = String(url || '').split('?')[0].toLowerCase()
-  if (!clean) return 'unsupported'
-
-  if (/\.(webm|mp4|m4v|ogg|mov)$/.test(clean)) {
-    return 'video'
+function MascotAssetRenderer({ url, mode, fit, onError }) {
+  if (!url || mode === 'unsupported') {
+    return null
   }
 
-  if (/\.(gif|webp|png|jpg|jpeg|svg|avif)$/.test(clean)) {
-    return 'image'
-  }
-
-  return 'unsupported'
-}
-
-function resolveMascotType(styleToken, scope) {
-  if (styleToken === 'robot' || styleToken === 'blob' || styleToken === 'human') {
-    return styleToken
-  }
-
-  if (styleToken === 'mixed') {
-    return scope === 'blog' ? 'blob' : 'human'
-  }
-
-  return getScopePreset(scope).type
-}
-
-function RobotMascot({ accent, accentLight, textColor }) {
-  return (
-    <svg viewBox="0 0 120 120" className="w-full h-full" aria-hidden="true">
-      <rect x="22" y="26" width="76" height="70" rx="18" fill="color-mix(in srgb, var(--color-bg-card) 88%, white)" stroke={accent} strokeWidth="3" />
-      <rect x="35" y="42" width="50" height="30" rx="12" fill="color-mix(in srgb, var(--color-bg-secondary) 80%, black)" />
-      <circle cx="50" cy="57" r="5.5" fill={accentLight} />
-      <circle cx="70" cy="57" r="5.5" fill={accentLight} />
-      <rect x="50" y="14" width="20" height="12" rx="5" fill={accent} />
-      <circle cx="60" cy="12" r="6" fill={accentLight} />
-      <rect x="46" y="76" width="28" height="6" rx="3" fill={textColor} opacity="0.5" />
-    </svg>
-  )
-}
-
-function BlobMascot({ accent, accentLight, textColor }) {
-  return (
-    <svg viewBox="0 0 120 120" className="w-full h-full" aria-hidden="true">
-      <path
-        d="M64.5 16.5c17.7 2.7 32.3 17.3 36.6 35 4.2 17.3-2.6 37-17.4 48.1-14.4 10.7-36.6 13.2-52.3 4.5-16-8.8-25.1-29-21.2-47.1 3.8-18 20.3-33.6 37.8-38.8 4.9-1.4 10.3-2.2 16.5-1.7Z"
-        fill="color-mix(in srgb, var(--color-accent-glow) 55%, var(--color-bg-card))"
-        stroke={accent}
-        strokeWidth="2.8"
+  if (mode === 'video') {
+    return (
+      <video
+        src={url}
+        className="w-full h-full"
+        style={{ objectFit: fit }}
+        muted
+        autoPlay
+        loop
+        playsInline
+        preload="metadata"
+        onError={onError}
       />
-      <circle cx="46" cy="58" r="6" fill={accentLight} />
-      <circle cx="71" cy="56" r="6" fill={accentLight} />
-      <path d="M43 76c9 9 23 9 33 0" stroke={textColor} strokeWidth="4" strokeLinecap="round" fill="none" opacity="0.65" />
-    </svg>
-  )
+    )
+  }
+
+  if (mode === 'image') {
+    return (
+      <img
+        src={url}
+        alt="Mascotte animee"
+        className="w-full h-full"
+        style={{ objectFit: fit }}
+        loading="lazy"
+        decoding="async"
+        onError={onError}
+      />
+    )
+  }
+
+  if (mode === 'lottie') {
+    return (
+      <Suspense fallback={null}>
+        <MascotLottiePlayer url={url} fit={fit} onError={onError} />
+      </Suspense>
+    )
+  }
+
+  if (mode === 'rive') {
+    return (
+      <Suspense fallback={null}>
+        <MascotRivePlayer url={url} fit={fit} onError={onError} />
+      </Suspense>
+    )
+  }
+
+  return null
 }
 
-function HumanMascot({ accent, accentLight, textColor, pace = 1 }) {
-  const swingDuration = 1.1 / Math.max(0.55, pace)
-
-  return (
-    <motion.svg
-      viewBox="0 0 120 120"
-      className="w-full h-full"
-      aria-hidden="true"
-      animate={{ y: [0, -2, 0] }}
-      transition={{ duration: 1.2 / Math.max(0.5, pace), repeat: Infinity, ease: 'easeInOut' }}
-    >
-      <circle cx="60" cy="24" r="11" fill="color-mix(in srgb, var(--color-bg-card) 60%, #ffe2c2)" stroke={accent} strokeWidth="2.3" />
-      <rect x="43" y="37" width="34" height="30" rx="11" fill="color-mix(in srgb, var(--color-bg-card) 82%, white)" stroke={accent} strokeWidth="2.4" />
-      <rect x="49" y="66" width="22" height="7" rx="3.5" fill={accentLight} opacity="0.72" />
-
-      <motion.g
-        style={{ transformOrigin: '48px 43px' }}
-        animate={{ rotate: [-12, 14, -12] }}
-        transition={{ duration: swingDuration, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <rect x="42" y="43" width="9" height="30" rx="4.5" fill="color-mix(in srgb, var(--color-bg-card) 78%, white)" stroke={accent} strokeWidth="1.4" />
-      </motion.g>
-
-      <rect x="69" y="43" width="9" height="28" rx="4.5" fill="color-mix(in srgb, var(--color-bg-card) 78%, white)" stroke={accent} strokeWidth="1.4" />
-      <rect x="50" y="72" width="9" height="32" rx="4.5" fill="color-mix(in srgb, var(--color-bg-secondary) 65%, black)" />
-      <rect x="61" y="72" width="9" height="32" rx="4.5" fill="color-mix(in srgb, var(--color-bg-secondary) 65%, black)" />
-      <rect x="46" y="104" width="16" height="5" rx="2.5" fill={accent} />
-      <rect x="58" y="104" width="16" height="5" rx="2.5" fill={accent} />
-      <path d="M52 28c4 3 12 3 16 0" stroke={textColor} strokeWidth="2.2" strokeLinecap="round" opacity="0.58" />
-    </motion.svg>
-  )
-}
-
+/**
+ * Affiche les mascottes de section en mode assets reels (dotLottie/Rive/video/image).
+ * @param {{scope?: string, sceneKey?: string}} props Props composant.
+ * @returns {JSX.Element | null} Overlay de mascotte ou null.
+ */
 export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
@@ -203,6 +155,17 @@ export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
 
   const [bubbleCursor, setBubbleCursor] = useState(0)
   const [assetLoadFailed, setAssetLoadFailed] = useState(false)
+  const asset = useMemo(
+    () => resolveSectionAsset(animationConfig, scope),
+    [animationConfig, scope]
+  )
+  const handleAssetError = useCallback(() => {
+    setAssetLoadFailed(true)
+  }, [])
+
+  useEffect(() => {
+    setAssetLoadFailed(false)
+  }, [asset.url])
 
   const isHero = scope === 'hero'
   const canDisplayMascot = (!isHero || animationConfig.mascotShowHero)
@@ -212,21 +175,11 @@ export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
   const preset = getScopePreset(scope)
   const count = Math.min(animationConfig.mascotCount, 1)
   const shouldAnimate = animationConfig.canAnimate
-  const accent = 'var(--color-accent)'
-  const accentLight = 'var(--color-accent-light)'
-  const textColor = 'var(--color-text-primary)'
   const supportsBubbles = BUBBLE_SCOPE_SET.has(scope)
   const bubbleCount = animationConfig.mascotBubblesEnabled && supportsBubbles
     ? Math.min(count, animationConfig.mascotBubbleMaxVisible)
     : 0
-
-  const assetUrl = resolveSectionAssetUrl(animationConfig, scope)
-  const assetMode = detectAssetMode(assetUrl)
-  const canUseAsset = Boolean(assetUrl) && assetMode !== 'unsupported' && !assetLoadFailed
-
-  useEffect(() => {
-    setAssetLoadFailed(false)
-  }, [assetUrl])
+  const canUseAsset = Boolean(asset.url) && asset.mode !== 'unsupported' && !assetLoadFailed
 
   useEffect(() => {
     if (!shouldAnimate || !animationConfig.mascotBubblesEnabled) {
@@ -240,14 +193,13 @@ export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
     return () => window.clearInterval(timer)
   }, [shouldAnimate, animationConfig.mascotBubblesEnabled, animationConfig.mascotBubbleIntervalMs])
 
-  if (!canDisplayMascot) {
+  if (!canDisplayMascot || !canUseAsset) {
     return null
   }
 
   return (
     <div className="absolute inset-0 pointer-events-none z-10 overflow-visible" aria-hidden="true">
       {Array.from({ length: count }).map((_, index) => {
-        const type = resolveMascotType(animationConfig.mascotStyle, scope)
         const size = Math.max(160, animationConfig.mascotSizePx * preset.sizeFactor)
         const travel = Math.max(6, 10 * preset.sizeFactor)
         const duration = 8.2 / Math.max(0.4, animationConfig.mascotSpeed)
@@ -312,45 +264,12 @@ export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
               </motion.div>
             )}
 
-            {canUseAsset && assetMode === 'video' && (
-              <video
-                src={assetUrl}
-                className="w-full h-full"
-                style={{ objectFit: animationConfig.mascotAssetFit }}
-                muted
-                autoPlay
-                loop
-                playsInline
-                onError={() => setAssetLoadFailed(true)}
-              />
-            )}
-
-            {canUseAsset && assetMode === 'image' && (
-              <img
-                src={assetUrl}
-                alt="Mascotte animee"
-                className="w-full h-full"
-                style={{ objectFit: animationConfig.mascotAssetFit }}
-                loading="lazy"
-                decoding="async"
-                onError={() => setAssetLoadFailed(true)}
-              />
-            )}
-
-            {!canUseAsset && type === 'robot' && (
-              <RobotMascot accent={accent} accentLight={accentLight} textColor={textColor} />
-            )}
-            {!canUseAsset && type === 'blob' && (
-              <BlobMascot accent={accent} accentLight={accentLight} textColor={textColor} />
-            )}
-            {!canUseAsset && type === 'human' && (
-              <HumanMascot
-                accent={accent}
-                accentLight={accentLight}
-                textColor={textColor}
-                pace={animationConfig.mascotSpeed}
-              />
-            )}
+            <MascotAssetRenderer
+              url={asset.url}
+              mode={asset.mode}
+              fit={asset.fit}
+              onError={handleAssetError}
+            />
           </motion.div>
         )
       })}

@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import ImageUploader from '../../components/ui/ImageUploader.jsx'
+import MascotAssetUploader from '../../components/ui/MascotAssetUploader.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getAdminSettings, updateSettings } from '../../services/settingService.js'
 import {
@@ -22,7 +23,6 @@ import {
   ANIMATION_EASE_OPTIONS,
   ANIMATION_PROFILE_OPTIONS,
   CINEMATIC_PRESET_OPTIONS,
-  MASCOT_STYLE_OPTIONS,
   REDUCE_MOTION_OPTIONS,
   SECTION_SCENE_OPTIONS,
   SECTION_SCENE_TARGETS,
@@ -144,6 +144,42 @@ const inputStyle = {
 const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 const DEFAULT_CINEMATIC_PRESET = 'cine-portfolio'
 const MAX_ANIMATION_PRESET_FILE_BYTES = 512 * 1024
+const ANIMATION_ASSET_MAPPING_KEYS = [
+  'anim_scene_assets_enabled',
+  'anim_scene_asset_show_hero',
+  'anim_scene_asset_mobile_enabled',
+  'anim_scene_asset_size',
+  'anim_scene_asset_opacity',
+  'anim_scene_asset_speed',
+  'anim_scene_asset_fit',
+  'anim_scene_asset_default_url',
+  'anim_scene_asset_hero_url',
+  'anim_scene_asset_about_url',
+  'anim_scene_asset_skills_url',
+  'anim_scene_asset_projects_url',
+  'anim_scene_asset_blog_url',
+  'anim_scene_asset_contact_url',
+  'anim_mascots_enabled',
+  'anim_mascot_show_hero',
+  'anim_mascot_size',
+  'anim_mascot_opacity',
+  'anim_mascot_speed',
+  'anim_mascot_asset_fit',
+  'anim_mascot_asset_default_url',
+  'anim_mascot_asset_about_url',
+  'anim_mascot_asset_skills_url',
+  'anim_mascot_asset_projects_url',
+  'anim_mascot_asset_blog_url',
+  'anim_mascot_asset_contact_url',
+  'anim_sprite_wander_enabled',
+  'anim_sprite_side_enabled',
+  'anim_sprite_style',
+  'anim_sprite_asset_fit',
+  'anim_sprite_asset_default_url',
+  'anim_sprite_asset_wander_url',
+  'anim_sprite_asset_side_left_url',
+  'anim_sprite_asset_side_right_url',
+]
 
 const DARK_COLOR_FIELDS = [
   { key: 'theme_dark_bg_primary', label: 'Fond principal (sombre)' },
@@ -853,11 +889,30 @@ export default function AdminSettings() {
   }
 
   const createAnimationPresetPayload = () => ({
-    version: 1,
+    version: 2,
     type: 'portfolio-animation-preset',
     generated_at: new Date().toISOString(),
     settings: extractAnimationSettings(settings),
   })
+
+  const createAnimationAssetMappingPayload = () => {
+    const allAnimationSettings = extractAnimationSettings(settings)
+    const mappedSettings = {}
+
+    ANIMATION_ASSET_MAPPING_KEYS.forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(allAnimationSettings, key)) {
+        mappedSettings[key] = allAnimationSettings[key]
+      }
+    })
+
+    return {
+      version: 1,
+      type: 'portfolio-animation-asset-pack',
+      generated_at: new Date().toISOString(),
+      description: 'Mapping assets section->animation exporte depuis AdminSettings.',
+      settings: mappedSettings,
+    }
+  }
 
   const applyParsedAnimationPreset = (parsed, successMessage = 'Preset animation importe.') => {
     const rawSettings =
@@ -904,6 +959,23 @@ export default function AdminSettings() {
     document.body.removeChild(link)
     URL.revokeObjectURL(downloadUrl)
     addToast('Fichier JSON exporte.', 'success')
+  }
+
+  const handleExportAnimationAssetMappingFile = () => {
+    const payload = createAnimationAssetMappingPayload()
+    const serialized = JSON.stringify(payload, null, 2)
+    const blob = new Blob([serialized], { type: 'application/json' })
+    const downloadUrl = URL.createObjectURL(blob)
+    const dateStamp = new Date().toISOString().slice(0, 10)
+
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = `animation-asset-pack-${dateStamp}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(downloadUrl)
+    addToast('Pack assets actuel exporte.', 'success')
   }
 
   const handleOpenAnimationPresetFilePicker = () => {
@@ -1719,6 +1791,14 @@ export default function AdminSettings() {
                     </button>
                     <button
                       type="button"
+                      onClick={handleExportAnimationAssetMappingFile}
+                      className="px-4 py-2.5 rounded-lg text-sm font-medium border"
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                    >
+                      Exporter pack assets actuels
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleImportAnimationPreset}
                       className="px-4 py-2.5 rounded-lg text-sm font-medium border"
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
@@ -1863,21 +1943,133 @@ export default function AdminSettings() {
               </CardSection>
 
               <CardSection>
+                <SectionTitle>Assets DotLottie/Rive Par Section</SectionTitle>
+                <InlineTip>
+                  Ajoute une grande animation par section (Hero/About/Skills/Projects/Blog/Contact). Ces assets remplacent les anciens effets decoratifs locaux.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox
+                    label="Activer les assets de section"
+                    fieldKey="anim_scene_assets_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldCheckbox
+                    label="Afficher aussi dans le Hero"
+                    fieldKey="anim_scene_asset_show_hero"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldCheckbox
+                    label="Afficher aussi sur mobile"
+                    fieldKey="anim_scene_asset_mobile_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldSelect
+                    label="Mode de cadrage asset section"
+                    fieldKey="anim_scene_asset_fit"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={[
+                      { value: 'contain', label: 'Contain (recommande)' },
+                      { value: 'cover', label: 'Cover' },
+                    ]}
+                  />
+                  <FieldRange
+                    label="Taille asset section"
+                    fieldKey="anim_scene_asset_size"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={220}
+                    max={760}
+                    step={1}
+                    unit="px"
+                    defaultValue={360}
+                  />
+                  <FieldRange
+                    label="Opacite asset section"
+                    fieldKey="anim_scene_asset_opacity"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.2}
+                    max={1}
+                    step={0.05}
+                    defaultValue={0.9}
+                  />
+                  <FieldRange
+                    label="Vitesse flottement asset"
+                    fieldKey="anim_scene_asset_speed"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.5}
+                    max={2.5}
+                    step={0.05}
+                    unit="x"
+                    defaultValue={1}
+                  />
+
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset section global (fallback)"
+                      value={settings.anim_scene_asset_default_url || ''}
+                      onUpload={(url) => handleChange('anim_scene_asset_default_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset section Hero"
+                      value={settings.anim_scene_asset_hero_url || ''}
+                      onUpload={(url) => handleChange('anim_scene_asset_hero_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset section About"
+                      value={settings.anim_scene_asset_about_url || ''}
+                      onUpload={(url) => handleChange('anim_scene_asset_about_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset section Skills"
+                      value={settings.anim_scene_asset_skills_url || ''}
+                      onUpload={(url) => handleChange('anim_scene_asset_skills_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset section Projects"
+                      value={settings.anim_scene_asset_projects_url || ''}
+                      onUpload={(url) => handleChange('anim_scene_asset_projects_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset section Blog"
+                      value={settings.anim_scene_asset_blog_url || ''}
+                      onUpload={(url) => handleChange('anim_scene_asset_blog_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset section Contact"
+                      value={settings.anim_scene_asset_contact_url || ''}
+                      onUpload={(url) => handleChange('anim_scene_asset_contact_url', url)}
+                    />
+                  </div>
+                </div>
+              </CardSection>
+
+              <CardSection>
                 <SectionTitle>Mascottes Animees (Petits Bonhommes)</SectionTitle>
                 <InlineTip>
-                  Branche ici des assets humains reels (Humaaans/Open Peeps/Storyset/Lottie exportee en GIF ou WebM) : 1 mascotte tres grande par section.
+                  Branche ici des assets humains reels (dotLottie/Rive/video/image). Formats supportes: GIF, WebM, MP4, JSON, LOTTIE et RIV.
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox label="Activer les mascottes" fieldKey="anim_mascots_enabled" settings={settings} onChange={handleChange} />
                   <FieldCheckbox label="Afficher aussi dans le Hero" fieldKey="anim_mascot_show_hero" settings={settings} onChange={handleChange} />
                   <FieldCheckbox label="Bulles de dialogue mascottes" fieldKey="anim_mascot_bubbles_enabled" settings={settings} onChange={handleChange} />
-                  <FieldSelect
-                    label="Style de mascotte"
-                    fieldKey="anim_mascot_style"
-                    settings={settings}
-                    onChange={handleChange}
-                    options={MASCOT_STYLE_OPTIONS}
-                  />
                   <FieldRange
                     label="Mascotte par section (0 ou 1)"
                     fieldKey="anim_mascot_count"
@@ -1952,76 +2144,74 @@ export default function AdminSettings() {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <FieldInput
-                      label="Asset URL par defaut (utilise si une section n'a pas d'override)"
-                      fieldKey="anim_mascot_asset_default_url"
-                      settings={settings}
-                      onChange={handleChange}
-                      placeholder="https://.../mascot-human.webp"
+                    <MascotAssetUploader
+                      label="Mascotte par defaut (fallback global)"
+                      value={settings.anim_mascot_asset_default_url || ''}
+                      onUpload={(url) => handleChange('anim_mascot_asset_default_url', url)}
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <FieldInput
-                      label="Asset URL section About"
-                      fieldKey="anim_mascot_asset_about_url"
-                      settings={settings}
-                      onChange={handleChange}
-                      placeholder="https://.../about-human.gif"
+                    <MascotAssetUploader
+                      label="Mascotte section About"
+                      value={settings.anim_mascot_asset_about_url || ''}
+                      onUpload={(url) => handleChange('anim_mascot_asset_about_url', url)}
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <FieldInput
-                      label="Asset URL section Skills"
-                      fieldKey="anim_mascot_asset_skills_url"
-                      settings={settings}
-                      onChange={handleChange}
-                      placeholder="https://.../skills-human.webm"
+                    <MascotAssetUploader
+                      label="Mascotte section Skills"
+                      value={settings.anim_mascot_asset_skills_url || ''}
+                      onUpload={(url) => handleChange('anim_mascot_asset_skills_url', url)}
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <FieldInput
-                      label="Asset URL section Projects"
-                      fieldKey="anim_mascot_asset_projects_url"
-                      settings={settings}
-                      onChange={handleChange}
-                      placeholder="https://.../projects-human.webp"
+                    <MascotAssetUploader
+                      label="Mascotte section Projects"
+                      value={settings.anim_mascot_asset_projects_url || ''}
+                      onUpload={(url) => handleChange('anim_mascot_asset_projects_url', url)}
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <FieldInput
-                      label="Asset URL section Blog"
-                      fieldKey="anim_mascot_asset_blog_url"
-                      settings={settings}
-                      onChange={handleChange}
-                      placeholder="https://.../blog-human.gif"
+                    <MascotAssetUploader
+                      label="Mascotte section Blog"
+                      value={settings.anim_mascot_asset_blog_url || ''}
+                      onUpload={(url) => handleChange('anim_mascot_asset_blog_url', url)}
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <FieldInput
-                      label="Asset URL section Contact"
-                      fieldKey="anim_mascot_asset_contact_url"
-                      settings={settings}
-                      onChange={handleChange}
-                      placeholder="https://.../contact-human.webm"
+                    <MascotAssetUploader
+                      label="Mascotte section Contact"
+                      value={settings.anim_mascot_asset_contact_url || ''}
+                      onUpload={(url) => handleChange('anim_mascot_asset_contact_url', url)}
                     />
                   </div>
                 </div>
               </CardSection>
 
               <CardSection>
-                <SectionTitle>Sprites SVG Dynamiques</SectionTitle>
+                <SectionTitle>Sprites Assets Dynamiques</SectionTitle>
                 <InlineTip>
-                  Active des petits bonhommes SVG: un sprite principal qui se balade + des sprites lateraux qui apparaissent puis disparaissent.
+                  Remplace les anciens sprites locaux par des assets pro: un sprite principal baladeur et des sprites lateraux apparition/disparition.
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox label="Sprite principal baladeur" fieldKey="anim_sprite_wander_enabled" settings={settings} onChange={handleChange} />
                   <FieldCheckbox label="Sprites lateraux apparition/disparition" fieldKey="anim_sprite_side_enabled" settings={settings} onChange={handleChange} />
                   <FieldSelect
-                    label="Style sprite"
+                    label="Mode de rendu sprite"
                     fieldKey="anim_sprite_style"
                     settings={settings}
                     onChange={handleChange}
                     options={SPRITE_STYLE_OPTIONS}
+                  />
+                  <FieldSelect
+                    label="Mode de cadrage asset sprite"
+                    fieldKey="anim_sprite_asset_fit"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={[
+                      { value: 'contain', label: 'Contain (recommande)' },
+                      { value: 'cover', label: 'Cover' },
+                    ]}
                   />
                   <FieldSelect
                     label="Trajet du sprite principal"
@@ -2140,6 +2330,34 @@ export default function AdminSettings() {
                     unit="ms"
                     defaultValue={1700}
                   />
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Sprite asset global (fallback)"
+                      value={settings.anim_sprite_asset_default_url || ''}
+                      onUpload={(url) => handleChange('anim_sprite_asset_default_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Sprite principal baladeur"
+                      value={settings.anim_sprite_asset_wander_url || ''}
+                      onUpload={(url) => handleChange('anim_sprite_asset_wander_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Sprite lateral gauche"
+                      value={settings.anim_sprite_asset_side_left_url || ''}
+                      onUpload={(url) => handleChange('anim_sprite_asset_side_left_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Sprite lateral droit"
+                      value={settings.anim_sprite_asset_side_right_url || ''}
+                      onUpload={(url) => handleChange('anim_sprite_asset_side_right_url', url)}
+                    />
+                  </div>
                 </div>
               </CardSection>
 

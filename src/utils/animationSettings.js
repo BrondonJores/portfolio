@@ -25,23 +25,12 @@ export const SECTION_REVEAL_OPTIONS = [
 ]
 
 export const MASCOT_STYLE_OPTIONS = [
-  { value: 'asset', label: 'Asset reel (GIF/WebM/SVG)' },
-  { value: 'section', label: 'Par section (recommande)' },
-  { value: 'mixed', label: 'Mixte' },
-  { value: 'robot', label: 'Robot' },
-  { value: 'blob', label: 'Blob' },
-  { value: 'human', label: 'Humain' },
+  { value: 'asset', label: 'Assets reels (dotLottie / Rive / Video / Image)' },
 ]
 
 export const SPRITE_STYLE_OPTIONS = [
-  { value: 'mixed-human', label: 'Humains (mixte)' },
-  { value: 'walker', label: 'Humain marcheur' },
-  { value: 'hoodie', label: 'Humain hoodie' },
-  { value: 'skater', label: 'Humain skateur' },
-  { value: 'coder', label: 'Humain codeur' },
-  { value: 'pixel', label: 'Pixel' },
-  { value: 'ghost', label: 'Ghost' },
-  { value: 'rocket', label: 'Rocket' },
+  { value: 'asset-shared', label: 'Asset partage (global)' },
+  { value: 'asset-split', label: 'Assets separes (baladeur + cotes)' },
 ]
 
 export const SPRITE_PATH_OPTIONS = [
@@ -142,7 +131,7 @@ const CINEMATIC_PRESET_MAP = {
     anim_intensity: '1.2',
     anim_duration_scale: '1',
     anim_section_once: 'false',
-    anim_sprite_style: 'mixed-human',
+    anim_sprite_style: 'asset-shared',
     anim_sprite_path: 'zigzag',
     anim_sprite_side_pattern: 'dash',
     anim_sprite_flip_enabled: 'true',
@@ -161,7 +150,7 @@ const CINEMATIC_PRESET_MAP = {
     anim_intensity: '0.9',
     anim_duration_scale: '1.08',
     anim_section_once: 'true',
-    anim_sprite_style: 'coder',
+    anim_sprite_style: 'asset-shared',
     anim_sprite_path: 'orbit',
     anim_sprite_side_pattern: 'peek',
     anim_sprite_flip_enabled: 'true',
@@ -180,7 +169,7 @@ const CINEMATIC_PRESET_MAP = {
     anim_intensity: '1.4',
     anim_duration_scale: '0.92',
     anim_section_once: 'false',
-    anim_sprite_style: 'skater',
+    anim_sprite_style: 'asset-shared',
     anim_sprite_path: 'perimeter',
     anim_sprite_side_pattern: 'hop',
     anim_sprite_flip_enabled: 'true',
@@ -206,7 +195,7 @@ const CINEMATIC_PRESET_MAP = {
     anim_mascot_bubble_interval_ms: '3600',
     anim_mascot_bubble_max_visible: '1',
     anim_mascot_bubble_messages: 'Bienvenue !\nParcourons le portfolio ensemble.\nUn projet en tete ? Parlons-en.',
-    anim_sprite_style: 'mixed-human',
+    anim_sprite_style: 'asset-shared',
     anim_sprite_path: 'orbit',
     anim_sprite_side_pattern: 'peek',
     anim_scene_hero: 'soft',
@@ -220,6 +209,17 @@ const CINEMATIC_PRESET_MAP = {
 
 const IMPORTABLE_ANIMATION_KEY_PATTERN = /^anim_[a-z0-9_]{1,80}$/i
 const MAX_IMPORTED_ANIMATION_SETTINGS = 120
+const LEGACY_SPRITE_STYLE_SET = new Set([
+  'mixed-human',
+  'walker',
+  'hoodie',
+  'skater',
+  'coder',
+  'pixel',
+  'ghost',
+  'rocket',
+])
+const SPRITE_RENDER_MODE_SET = new Set(SPRITE_STYLE_OPTIONS.map((option) => option.value))
 
 function clampNumber(rawValue, min, max, fallback) {
   const parsed = Number(rawValue)
@@ -253,6 +253,34 @@ function parseBubbleMessages(rawValue) {
     .slice(0, 12)
 
   return messages.length > 0 ? messages : fallback
+}
+
+/**
+ * Normalise le style mascotte vers le mode assets-only.
+ * @param {unknown} rawValue Valeur brute depuis les settings.
+ * @returns {'asset'} Mode pris en charge.
+ */
+function normalizeMascotStyle(rawValue) {
+  if (String(rawValue || '').trim().toLowerCase() === 'asset') {
+    return 'asset'
+  }
+  return 'asset'
+}
+
+/**
+ * Normalise le mode de rendu sprite en conservant la compatibilite legacy.
+ * @param {unknown} rawValue Valeur brute depuis les settings.
+ * @returns {'asset-shared'|'asset-split'} Mode sprite.
+ */
+function normalizeSpriteStyle(rawValue) {
+  const token = String(rawValue || '').trim().toLowerCase()
+  if (SPRITE_RENDER_MODE_SET.has(token)) {
+    return token
+  }
+  if (LEGACY_SPRITE_STYLE_SET.has(token)) {
+    return 'asset-shared'
+  }
+  return 'asset-shared'
 }
 
 function normalizeSectionSceneToken(rawValue) {
@@ -393,7 +421,7 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     mascotSizePx: clampNumber(settings.anim_mascot_size, 180, 520, 340) * Math.max(0.75, intensity),
     mascotSpeed: clampNumber(settings.anim_mascot_speed, 0.5, 2.5, 1) * Math.max(0.75, intensity),
     mascotOpacity: clampNumber(settings.anim_mascot_opacity, 0.2, 1, 0.85),
-    mascotStyle: settings.anim_mascot_style || 'asset',
+    mascotStyle: normalizeMascotStyle(settings.anim_mascot_style),
     mascotShowHero: parseBooleanSetting(settings.anim_mascot_show_hero, false),
     mascotAssetFit: settings.anim_mascot_asset_fit === 'cover' ? 'cover' : 'contain',
     mascotAssetDefaultUrl: String(settings.anim_mascot_asset_default_url || '').trim(),
@@ -406,6 +434,20 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     mascotBubbleIntervalMs: clampNumber(settings.anim_mascot_bubble_interval_ms, 1200, 12000, 4200),
     mascotBubbleMaxVisible: Math.round(clampNumber(settings.anim_mascot_bubble_max_visible, 1, 1, 1)),
     mascotBubbleMessages: parseBubbleMessages(settings.anim_mascot_bubble_messages),
+    sceneAssetsEnabled: parseBooleanSetting(settings.anim_scene_assets_enabled, true),
+    sceneAssetShowHero: parseBooleanSetting(settings.anim_scene_asset_show_hero, true),
+    sceneAssetMobileEnabled: parseBooleanSetting(settings.anim_scene_asset_mobile_enabled, false),
+    sceneAssetSizePx: clampNumber(settings.anim_scene_asset_size, 220, 760, 360) * Math.max(0.8, intensity),
+    sceneAssetOpacity: clampNumber(settings.anim_scene_asset_opacity, 0.2, 1, 0.9),
+    sceneAssetSpeed: clampNumber(settings.anim_scene_asset_speed, 0.5, 2.5, 1),
+    sceneAssetFit: settings.anim_scene_asset_fit === 'cover' ? 'cover' : 'contain',
+    sceneAssetDefaultUrl: String(settings.anim_scene_asset_default_url || '').trim(),
+    sceneAssetHeroUrl: String(settings.anim_scene_asset_hero_url || '').trim(),
+    sceneAssetAboutUrl: String(settings.anim_scene_asset_about_url || '').trim(),
+    sceneAssetSkillsUrl: String(settings.anim_scene_asset_skills_url || '').trim(),
+    sceneAssetProjectsUrl: String(settings.anim_scene_asset_projects_url || '').trim(),
+    sceneAssetBlogUrl: String(settings.anim_scene_asset_blog_url || '').trim(),
+    sceneAssetContactUrl: String(settings.anim_scene_asset_contact_url || '').trim(),
     spriteWanderEnabled: parseBooleanSetting(settings.anim_sprite_wander_enabled, true),
     spriteWanderSizePx: clampNumber(settings.anim_sprite_wander_size, 36, 140, 74) * Math.max(0.8, intensity),
     spriteWanderSpeed: clampNumber(settings.anim_sprite_wander_speed, 0.4, 2.6, 1) * Math.max(0.75, intensity),
@@ -415,13 +457,23 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     spriteSideSizePx: clampNumber(settings.anim_sprite_side_size, 36, 160, 92) * Math.max(0.8, intensity),
     spriteSideFrequencyMs: clampNumber(settings.anim_sprite_side_frequency_ms, 1400, 12000, 5200),
     spriteSideDurationMs: clampNumber(settings.anim_sprite_side_duration_ms, 700, 5000, 1700),
-    spriteStyle: settings.anim_sprite_style || 'mixed-human',
+    spriteStyle: normalizeSpriteStyle(settings.anim_sprite_style),
     spritePath: settings.anim_sprite_path || 'orbit',
     spriteSidePattern: settings.anim_sprite_side_pattern || 'peek',
     spriteFlipEnabled: parseBooleanSetting(settings.anim_sprite_flip_enabled, true),
     spriteBouncePx: clampNumber(settings.anim_sprite_bounce_px, 0, 24, 8) * Math.max(0.85, intensity),
     spriteWanderRotationDeg: clampNumber(settings.anim_sprite_wander_rotation_deg, 0, 24, 8) * Math.max(0.8, intensity),
+    spriteAssetFit: settings.anim_sprite_asset_fit === 'cover' ? 'cover' : 'contain',
+    spriteAssetDefaultUrl: String(settings.anim_sprite_asset_default_url || '').trim(),
+    spriteAssetWanderUrl: String(settings.anim_sprite_asset_wander_url || '').trim(),
+    spriteAssetSideLeftUrl: String(settings.anim_sprite_asset_side_left_url || '').trim(),
+    spriteAssetSideRightUrl: String(settings.anim_sprite_asset_side_right_url || '').trim(),
     scrollProgressEnabled: parseBooleanSetting(settings.anim_scroll_progress_enabled, true),
     scrollProgressThickness: clampNumber(settings.anim_scroll_progress_thickness, 2, 10, 4),
   }
 }
+
+
+
+
+

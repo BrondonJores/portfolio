@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { ArrowDownIcon, BoltIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import Button from '../ui/Button.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
+import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
@@ -84,10 +85,6 @@ export default function Hero() {
       label: settings.stat_3_label || 'clients satisfaits',
     },
   ]
-  const heroSpeedFactorRaw = Number(settings.ui_hero_speed_factor)
-  const heroSpeedFactor = Number.isFinite(heroSpeedFactorRaw)
-    ? Math.min(2, Math.max(0.5, heroSpeedFactorRaw))
-    : 1
   const canAnimate = animationConfig.canAnimate
   const revealDuration = Math.max(0.2, 0.6 * animationConfig.durationScale)
 
@@ -97,23 +94,14 @@ export default function Hero() {
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
     >
       <AnimatedMascots scope="hero" sceneKey="hero" />
+      <AnimatedSceneAsset scope="hero" sceneKey="hero" />
 
-      <motion.div
+      <div
         className="absolute inset-0 -z-10"
-        animate={canAnimate ? {
-          background: [
-            'radial-gradient(ellipse at 20% 50%, var(--color-accent-glow) 0%, transparent 60%)',
-            'radial-gradient(ellipse at 80% 50%, var(--color-accent-glow) 0%, transparent 60%)',
-            'radial-gradient(ellipse at 50% 20%, var(--color-accent-glow) 0%, transparent 60%)',
-            'radial-gradient(ellipse at 20% 50%, var(--color-accent-glow) 0%, transparent 60%)',
-          ],
-        } : undefined}
-        transition={{
-          duration: (12 / heroSpeedFactor) * animationConfig.durationScale,
-          repeat: Infinity,
-          ease: 'linear',
+        style={{
+          backgroundColor: 'var(--color-bg-primary)',
+          backgroundImage: 'radial-gradient(ellipse at 22% 46%, var(--color-accent-glow) 0%, transparent 62%)',
         }}
-        style={{ backgroundColor: 'var(--color-bg-primary)' }}
       />
 
       <div
@@ -123,7 +111,6 @@ export default function Hero() {
           left: '5%',
           background: 'var(--color-accent-glow)',
           filter: 'blur(var(--ui-hero-blur))',
-          animation: canAnimate ? 'aurora-float calc(10s / var(--ui-hero-speed-factor)) ease-in-out infinite' : 'none',
         }}
       />
       <div
@@ -133,7 +120,6 @@ export default function Hero() {
           right: '5%',
           background: 'var(--color-accent-glow)',
           filter: 'blur(calc(var(--ui-hero-blur) * 0.88))',
-          animation: canAnimate ? 'aurora-float calc(14s / var(--ui-hero-speed-factor)) ease-in-out infinite reverse' : 'none',
         }}
       />
       <div
@@ -143,7 +129,6 @@ export default function Hero() {
           left: '40%',
           background: 'var(--color-accent-glow)',
           filter: 'blur(calc(var(--ui-hero-blur) * 0.75))',
-          animation: canAnimate ? 'aurora-float calc(18s / var(--ui-hero-speed-factor)) ease-in-out infinite' : 'none',
         }}
       />
 
@@ -174,33 +159,7 @@ export default function Hero() {
 
             <motion.div variants={itemVariants} transition={{ duration: revealDuration }} className="mb-2">
               <span className="text-3xl sm:text-4xl font-bold gradient-text">
-                {canAnimate ? (
-                  <>
-                    {Array.from(firstName).map((char, i) => (
-                      <motion.span
-                        key={`first-${i}`}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.22 + i * 0.04, duration: 0.45 * animationConfig.durationScale }}
-                      >
-                        {char}
-                      </motion.span>
-                    ))}
-                    {' '}
-                    {Array.from(lastName).map((char, i) => (
-                      <motion.span
-                        key={`last-${i}`}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.22 + (firstName.length + 1 + i) * 0.04, duration: 0.45 * animationConfig.durationScale }}
-                      >
-                        {char}
-                      </motion.span>
-                    ))}
-                  </>
-                ) : (
-                  heroNameRaw
-                )}
+                {`${firstName} ${lastName}`.trim() || heroNameRaw}
               </span>
             </motion.div>
 
@@ -272,15 +231,8 @@ export default function Hero() {
             transition={{ duration: revealDuration }}
             className="relative mx-auto w-full max-w-md"
           >
-            <motion.div
+            <div
               className="absolute -inset-8 rounded-[2.5rem] opacity-65 -z-10 pointer-events-none"
-              animate={canAnimate ? { rotate: [0, 3, -3, 0], scale: [1, 1.03, 0.98, 1] } : undefined}
-              transition={{
-                duration: 10 * animationConfig.durationScale,
-                repeat: Infinity,
-                repeatType: 'mirror',
-                ease: 'easeInOut',
-              }}
               style={{
                 background: 'radial-gradient(circle at 20% 20%, var(--color-accent-glow) 0%, transparent 65%)',
               }}
@@ -356,19 +308,13 @@ export default function Hero() {
         </motion.div>
       </div>
 
-      {canAnimate && (
-        <motion.div
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.5 * animationConfig.durationScale, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <ArrowDownIcon
-            className="h-6 w-6"
-            style={{ color: 'var(--color-text-secondary)' }}
-            aria-hidden="true"
-          />
-        </motion.div>
-      )}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+        <ArrowDownIcon
+          className="h-6 w-6"
+          style={{ color: 'var(--color-text-secondary)' }}
+          aria-hidden="true"
+        />
+      </div>
     </section>
   )
 }

@@ -79,6 +79,20 @@ export const DEFAULT_THEME_SETTINGS = {
   anim_mascot_bubble_interval_ms: '4200',
   anim_mascot_bubble_max_visible: '1',
   anim_mascot_bubble_messages: 'Salut !\nBienvenue sur mon portfolio.\nDiscutons de ton projet.',
+  anim_scene_assets_enabled: 'true',
+  anim_scene_asset_show_hero: 'true',
+  anim_scene_asset_mobile_enabled: 'false',
+  anim_scene_asset_size: '360',
+  anim_scene_asset_opacity: '0.9',
+  anim_scene_asset_speed: '1',
+  anim_scene_asset_fit: 'contain',
+  anim_scene_asset_default_url: '',
+  anim_scene_asset_hero_url: '',
+  anim_scene_asset_about_url: '',
+  anim_scene_asset_skills_url: '',
+  anim_scene_asset_projects_url: '',
+  anim_scene_asset_blog_url: '',
+  anim_scene_asset_contact_url: '',
   anim_sprite_wander_enabled: 'true',
   anim_sprite_wander_size: '74',
   anim_sprite_wander_speed: '1',
@@ -88,12 +102,17 @@ export const DEFAULT_THEME_SETTINGS = {
   anim_sprite_side_size: '92',
   anim_sprite_side_frequency_ms: '5200',
   anim_sprite_side_duration_ms: '1700',
-  anim_sprite_style: 'mixed-human',
+  anim_sprite_style: 'asset-shared',
   anim_sprite_path: 'orbit',
   anim_sprite_side_pattern: 'peek',
   anim_sprite_flip_enabled: 'true',
   anim_sprite_bounce_px: '8',
   anim_sprite_wander_rotation_deg: '8',
+  anim_sprite_asset_fit: 'contain',
+  anim_sprite_asset_default_url: '',
+  anim_sprite_asset_wander_url: '',
+  anim_sprite_asset_side_left_url: '',
+  anim_sprite_asset_side_right_url: '',
   anim_scene_hero: 'inherit',
   anim_scene_about: 'inherit',
   anim_scene_skills: 'inherit',
@@ -236,3 +255,8 @@ export function applyThemeSettings(settings = {}) {
   rootStyle.setProperty('--anim-mascot-opacity', String(config.mascotOpacity))
   rootStyle.setProperty('--anim-scroll-progress-thickness', `${config.scrollProgressThickness}px`)
 }
+
+
+
+
+

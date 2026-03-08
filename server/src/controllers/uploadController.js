@@ -1,5 +1,8 @@
 /* Controleur HTTP upload : delegue le metier au service associe. */
-const { uploadImage: uploadImageFile } = require('../services/uploadService')
+const {
+  uploadImage: uploadImageFile,
+  uploadMascotAsset: uploadMascotAssetFile,
+} = require('../services/uploadService')
 
 /**
  * Recoit un fichier image via Multer puis delegue l'upload au service.
@@ -17,4 +20,20 @@ async function uploadImage(req, res, next) {
   }
 }
 
-module.exports = { uploadImage }
+/**
+ * Recoit un asset mascotte (gif/webm/json/lottie/riv...) via Multer puis delegue l'upload.
+ * @param {import('express').Request} req Requete contenant `file`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres envoi de l'URL upload.
+ */
+async function uploadMascot(req, res, next) {
+  try {
+    const result = await uploadMascotAssetFile(req.file)
+    return res.status(201).json(result)
+  } catch (err) {
+    next(err)
+  }
+}
+
+module.exports = { uploadImage, uploadMascot }

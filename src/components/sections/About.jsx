@@ -2,6 +2,7 @@
 import { UserIcon, BriefcaseIcon, CodeBracketIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
+import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import Card from '../ui/Card.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 
@@ -34,6 +35,7 @@ export default function About() {
       style={{ backgroundColor: 'var(--color-bg-secondary)' }}
     >
       <AnimatedMascots scope="about" sceneKey="about" />
+      <AnimatedSceneAsset scope="about" sceneKey="about" />
 
       <div className="max-w-6xl mx-auto relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">

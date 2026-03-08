@@ -4,6 +4,7 @@ import AnimatedSection from '../ui/AnimatedSection.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Button from '../ui/Button.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
+import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import RecaptchaNotice from '../ui/RecaptchaNotice.jsx'
 import { useContactForm } from '../../hooks/useContactForm.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
@@ -49,6 +50,7 @@ export default function Contact() {
       className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
     >
       <AnimatedMascots scope="contact" sceneKey="contact" />
+      <AnimatedSceneAsset scope="contact" sceneKey="contact" />
       <div className="max-w-6xl mx-auto relative z-20">
         <SectionTitle
           title={sectionTitle}

@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { DocumentTextIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
+import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Badge from '../ui/Badge.jsx'
@@ -41,6 +42,7 @@ export default function Blog() {
       className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
     >
       <AnimatedMascots scope="blog" sceneKey="blog" />
+      <AnimatedSceneAsset scope="blog" sceneKey="blog" />
 
       <div className="max-w-6xl mx-auto relative z-20">
         <SectionTitle

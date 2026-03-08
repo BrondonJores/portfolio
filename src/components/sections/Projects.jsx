@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
+import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Button from '../ui/Button.jsx'
@@ -91,6 +92,7 @@ export default function Projects() {
       style={{ backgroundColor: 'var(--color-bg-secondary)' }}
     >
       <AnimatedMascots scope="projects" sceneKey="projects" />
+      <AnimatedSceneAsset scope="projects" sceneKey="projects" />
 
       <div className="max-w-6xl mx-auto relative z-20">
         <SectionTitle
