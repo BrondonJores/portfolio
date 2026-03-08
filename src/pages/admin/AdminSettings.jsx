@@ -34,18 +34,106 @@ import {
   SPRITE_STYLE_OPTIONS,
   SECTION_REVEAL_OPTIONS,
 } from '../../utils/animationSettings.js'
+import {
+  ArrowPathIcon,
+  CheckCircleIcon,
+  DocumentTextIcon,
+  EnvelopeIcon,
+  ExclamationTriangleIcon,
+  HomeIcon,
+  MagnifyingGlassIcon,
+  NewspaperIcon,
+  PaintBrushIcon,
+  ShieldExclamationIcon,
+  Squares2X2Icon,
+  UsersIcon,
+  WrenchScrewdriverIcon,
+} from '@heroicons/react/24/outline'
 
-const TABS = [
-  { id: 'identity', label: 'Identite' },
-  { id: 'social', label: 'Reseaux sociaux' },
-  { id: 'contact', label: 'Contact' },
-  { id: 'content', label: 'Contenus' },
-  { id: 'seo', label: 'SEO' },
-  { id: 'appearance', label: 'Apparence' },
-  { id: 'animations', label: 'Animations' },
-  { id: 'security', label: 'Securite' },
-  { id: 'newsletter', label: 'Newsletter' },
+const SETTINGS_NAV_GROUPS = [
+  {
+    label: 'Pilotage',
+    items: [
+      {
+        id: 'overview',
+        label: 'Vue d ensemble',
+        description: 'Statut global du site, securite et communication.',
+        icon: HomeIcon,
+      },
+    ],
+  },
+  {
+    label: 'Site public',
+    items: [
+      {
+        id: 'identity',
+        label: 'Identite',
+        description: 'Nom du site, hero, avatar, logo et chiffres cles.',
+        icon: UsersIcon,
+      },
+      {
+        id: 'social',
+        label: 'Reseaux sociaux',
+        description: 'Liens vers tes plateformes et profils publics.',
+        icon: Squares2X2Icon,
+      },
+      {
+        id: 'contact',
+        label: 'Contact',
+        description: 'Email public, localisation et disponibilite.',
+        icon: EnvelopeIcon,
+      },
+      {
+        id: 'content',
+        label: 'Contenus UI',
+        description: 'Textes dynamiques, labels et messages systeme.',
+        icon: DocumentTextIcon,
+      },
+      {
+        id: 'seo',
+        label: 'SEO',
+        description: 'Meta title, description, OG image et mots cles.',
+        icon: WrenchScrewdriverIcon,
+      },
+    ],
+  },
+  {
+    label: 'Presentation',
+    items: [
+      {
+        id: 'appearance',
+        label: 'Apparence',
+        description: 'Palette, typo et style visuel global.',
+        icon: PaintBrushIcon,
+      },
+      {
+        id: 'animations',
+        label: 'Animations',
+        description: 'Moteur motion, mascottes, sprites et presets.',
+        icon: Squares2X2Icon,
+      },
+    ],
+  },
+  {
+    label: 'Confiance',
+    items: [
+      {
+        id: 'security',
+        label: 'Securite',
+        description: '2FA et protection du compte administrateur.',
+        icon: ShieldExclamationIcon,
+      },
+      {
+        id: 'newsletter',
+        label: 'Newsletter',
+        description: 'Expediteur, email et pied de campagne.',
+        icon: NewspaperIcon,
+      },
+    ],
+  },
 ]
+
+const SETTINGS_NAV_ITEMS = SETTINGS_NAV_GROUPS.flatMap((group) => group.items)
 
 const inputStyle = {
   backgroundColor: 'var(--color-bg-primary)',
@@ -216,6 +304,63 @@ const CONTENT_TAB_SECTIONS = [
   },
 ]
 
+const IDENTITY_FIELD_KEYS = [
+  'site_name',
+  'site_url',
+  'tagline',
+  'hero_name',
+  'hero_title',
+  'hero_bio',
+  'bio',
+  'hero_photo_status',
+  'hero_photo_stack',
+  'hero_photo_alt',
+  'hero_photo_object_position',
+  'about_photo_badge',
+  'about_photo_caption',
+  'avatar_url',
+  'logo_url',
+  'stat_1_value',
+  'stat_1_label',
+  'stat_2_value',
+  'stat_2_label',
+  'stat_3_value',
+  'stat_3_label',
+]
+
+const SOCIAL_FIELD_KEYS = [
+  'github_url',
+  'linkedin_url',
+  'twitter_url',
+  'youtube_url',
+  'instagram_url',
+]
+
+const CONTACT_FIELD_KEYS = [
+  'contact_email',
+  'contact_location',
+  'contact_availability',
+]
+
+const SEO_FIELD_KEYS = [
+  'seo_title',
+  'seo_description',
+  'seo_keywords',
+  'og_image_url',
+]
+
+const NEWSLETTER_FIELD_KEYS = [
+  'newsletter_from_name',
+  'newsletter_from_email',
+  'newsletter_footer_text',
+]
+
+const APPEARANCE_EXTRA_FIELD_KEYS = [
+  'footer_text',
+  'footer_credits',
+  'maintenance_mode',
+]
+
 function normalizeColor(rawValue, fallback) {
   if (typeof rawValue !== 'string') {
     return fallback
@@ -226,6 +371,12 @@ function normalizeColor(rawValue, fallback) {
     return value
   }
   return fallback
+}
+
+function normalizeSearchValue(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
 }
 
 function normalizeTwoFactorStatus(raw) {
@@ -393,11 +544,16 @@ function FieldCheckbox({ label, fieldKey, settings, onChange }) {
   )
 }
 
-function CardSection({ children, className = '' }) {
+function CardSection({ children, className = '', tone = 'default' }) {
+  const sectionStyle =
+    tone === 'danger'
+      ? { borderColor: 'rgba(239, 68, 68, 0.45)', backgroundColor: 'rgba(127, 29, 29, 0.1)' }
+      : { borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }
+
   return (
     <div
       className={`rounded-xl border p-4 space-y-4 ${className}`}
-      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+      style={sectionStyle}
     >
       {children}
     </div>
@@ -412,13 +568,31 @@ function InlineTip({ children }) {
   )
 }
 
+function SectionSaveBar({ onSave, saving, label }) {
+  return (
+    <div className="pt-2 border-t flex justify-end" style={{ borderColor: 'var(--color-border)' }}>
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={saving}
+        className="px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
+        style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+      >
+        {saving ? 'Enregistrement...' : label}
+      </button>
+    </div>
+  )
+}
+
 export default function AdminSettings() {
   const addToast = useAdminToast()
   const { updateLocalSettings } = useSettings()
   const [settings, setSettings] = useState(() => mergeWithThemeDefaults({}))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState('identity')
+  const [activeTab, setActiveTab] = useState('overview')
+  const [navigationSearch, setNavigationSearch] = useState('')
+  const [contentSearch, setContentSearch] = useState('')
   const [twoFactorBusy, setTwoFactorBusy] = useState(false)
   const [twoFactorStatus, setTwoFactorStatus] = useState(() =>
     normalizeTwoFactorStatus({ enabled: false, hasRecoveryCodes: false, recoveryCodesCount: 0 })
@@ -436,6 +610,136 @@ export default function AdminSettings() {
   const animationPresetFileInputRef = useRef(null)
 
   const styleKeys = useMemo(() => Object.keys(DEFAULT_THEME_SETTINGS), [])
+  const contentFieldCount = useMemo(
+    () => CONTENT_TAB_SECTIONS.reduce((total, section) => total + section.fields.length, 0),
+    []
+  )
+  const appearanceFieldKeys = useMemo(
+    () => [...new Set([...APPEARANCE_EXTRA_FIELD_KEYS, ...styleKeys])],
+    [styleKeys]
+  )
+  const animationFieldKeys = useMemo(
+    () => Object.keys(extractAnimationSettings(settings || {})),
+    [settings]
+  )
+  const contentSectionKeyMap = useMemo(() => {
+    const map = Object.create(null)
+    CONTENT_TAB_SECTIONS.forEach((section) => {
+      map[section.title] = section.fields.map((field) => field.key)
+    })
+    return map
+  }, [])
+
+  const normalizedNavigationSearch = normalizeSearchValue(navigationSearch)
+  const filteredNavigationGroups = useMemo(() => {
+    if (!normalizedNavigationSearch) {
+      return SETTINGS_NAV_GROUPS
+    }
+
+    return SETTINGS_NAV_GROUPS
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          const haystack = normalizeSearchValue(`${item.label} ${item.description}`)
+          return haystack.includes(normalizedNavigationSearch)
+        }),
+      }))
+      .filter((group) => group.items.length > 0)
+  }, [normalizedNavigationSearch])
+
+  const activeTabMeta = useMemo(
+    () => SETTINGS_NAV_ITEMS.find((item) => item.id === activeTab) || null,
+    [activeTab]
+  )
+  const canSaveActiveTab = activeTab !== 'security' && activeTab !== 'overview'
+
+  const normalizedContentSearch = normalizeSearchValue(contentSearch)
+  const filteredContentSections = useMemo(() => {
+    if (!normalizedContentSearch) {
+      return CONTENT_TAB_SECTIONS
+    }
+
+    return CONTENT_TAB_SECTIONS.reduce((acc, section) => {
+      const sectionMatch = normalizeSearchValue(section.title).includes(normalizedContentSearch)
+      const filteredFields = sectionMatch
+        ? section.fields
+        : section.fields.filter((field) => {
+            const searchable = normalizeSearchValue(`${field.label} ${field.key}`)
+            return searchable.includes(normalizedContentSearch)
+          })
+
+      if (filteredFields.length > 0) {
+        acc.push({
+          ...section,
+          fields: filteredFields,
+        })
+      }
+      return acc
+    }, [])
+  }, [normalizedContentSearch])
+
+  const overviewItems = useMemo(() => {
+    const hasSeo = Boolean(settings.seo_title && settings.seo_description)
+    const hasTheme = Boolean(settings.theme_dark_accent && settings.theme_light_accent)
+    const hasNewsletterSender = Boolean(settings.newsletter_from_name && settings.newsletter_from_email)
+    const contentConfigured = CONTENT_TAB_SECTIONS.reduce(
+      (count, section) =>
+        count +
+        section.fields.filter((field) => {
+          const value = settings[field.key]
+          return typeof value === 'string' && value.trim().length > 0
+        }).length,
+      0
+    )
+
+    return [
+      {
+        id: 'seo',
+        title: 'SEO',
+        subtitle: hasSeo ? 'Meta principales configurees' : 'Meta principales manquantes',
+        statusLabel: hasSeo ? 'Pret' : 'A completer',
+        isHealthy: hasSeo,
+        metric: hasSeo ? 'Core fields OK' : 'Titre/description a renseigner',
+        icon: WrenchScrewdriverIcon,
+      },
+      {
+        id: 'appearance',
+        title: 'Theme',
+        subtitle: hasTheme ? 'Palette active detectee' : 'Palette incomplete',
+        statusLabel: hasTheme ? 'Pret' : 'A verifier',
+        isHealthy: hasTheme,
+        metric: `Typo: ${settings.ui_font_body || 'defaut'}`,
+        icon: PaintBrushIcon,
+      },
+      {
+        id: 'security',
+        title: 'Securite',
+        subtitle: twoFactorStatus.enabled ? '2FA activee' : '2FA inactive',
+        statusLabel: twoFactorStatus.enabled ? 'Protege' : 'Risque',
+        isHealthy: twoFactorStatus.enabled,
+        metric: `${twoFactorStatus.recoveryCodesCount} recovery code(s)`,
+        icon: ShieldExclamationIcon,
+      },
+      {
+        id: 'newsletter',
+        title: 'Newsletter',
+        subtitle: hasNewsletterSender ? 'Expediteur configure' : 'Expediteur incomplet',
+        statusLabel: hasNewsletterSender ? 'Pret' : 'A completer',
+        isHealthy: hasNewsletterSender,
+        metric: settings.newsletter_from_email || 'Email expediteur absent',
+        icon: NewspaperIcon,
+      },
+      {
+        id: 'content',
+        title: 'Contenus UI',
+        subtitle: `${contentConfigured}/${contentFieldCount} champs personnalises`,
+        statusLabel: contentConfigured > 0 ? 'En cours' : 'Vide',
+        isHealthy: contentConfigured > 0,
+        metric: 'Labels et textes dynamiques',
+        icon: DocumentTextIcon,
+      },
+    ]
+  }, [contentFieldCount, settings, twoFactorStatus.enabled, twoFactorStatus.recoveryCodesCount])
 
   const loadTwoFactorStatus = useCallback(async () => {
     setTwoFactorBusy(true)
@@ -514,6 +818,14 @@ export default function AdminSettings() {
     })
     setSettings(next)
     updateLocalSettings(next)
+  }
+
+  const handleResetAnimations = () => {
+    const animationDefaults = extractAnimationSettings(mergeWithThemeDefaults({}))
+    const nextSettings = mergeWithThemeDefaults({ ...settings, ...animationDefaults })
+    setSettings(nextSettings)
+    updateLocalSettings(nextSettings)
+    addToast('Animations reinitialisees.', 'success')
   }
 
   const handleApplyCinematicPreset = () => {
@@ -654,18 +966,44 @@ export default function AdminSettings() {
     applyParsedAnimationPreset(parsed)
   }
 
-  const handleSave = async () => {
+  const persistSettingsPatch = useCallback(async (payload, successMessage = 'Parametres enregistres.') => {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      addToast('Aucun parametre valide a enregistrer.', 'error')
+      return false
+    }
+
+    if (Object.keys(payload).length === 0) {
+      addToast('Aucune modification detectee pour cette section.', 'error')
+      return false
+    }
+
     setSaving(true)
     try {
-      await updateSettings(settings)
-      updateLocalSettings(settings)
-      addToast('Parametres enregistres.', 'success')
+      await updateSettings(payload)
+      updateLocalSettings(payload)
+      addToast(successMessage, 'success')
+      return true
     } catch {
       addToast("Erreur lors de l'enregistrement.", 'error')
+      return false
     } finally {
       setSaving(false)
     }
-  }
+  }, [addToast, updateLocalSettings])
+
+  const handleSave = useCallback(async () => {
+    await persistSettingsPatch(settings, 'Parametres enregistres.')
+  }, [persistSettingsPatch, settings])
+
+  const handleSaveSectionByKeys = useCallback(async (keys, successMessage = 'Section enregistree.') => {
+    const patch = {}
+    keys.forEach((key) => {
+      if (Object.prototype.hasOwnProperty.call(settings, key)) {
+        patch[key] = settings[key]
+      }
+    })
+    await persistSettingsPatch(patch, successMessage)
+  }, [persistSettingsPatch, settings])
 
   const handleStartTwoFactorSetup = async () => {
     setTwoFactorBusy(true)
@@ -783,58 +1121,193 @@ export default function AdminSettings() {
         <title>Parametres - Administration</title>
       </Helmet>
 
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            Parametres
-          </h1>
-
-          <div className="flex items-center gap-2">
-            {(activeTab === 'appearance' || activeTab === 'animations') && (
-              <button
-                onClick={handleResetAppearance}
-                className="px-4 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none"
-                style={{
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  color: 'var(--color-text-secondary)',
-                  border: '1px solid var(--color-border)',
-                }}
-              >
-                {activeTab === 'appearance' ? 'Reinitialiser le style' : 'Reinitialiser les animations'}
-              </button>
-            )}
-            {activeTab !== 'security' && (
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
-                style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
-              >
-                {saving ? 'Enregistrement...' : 'Enregistrer'}
-              </button>
-            )}
+      <div className="grid grid-cols-1 xl:grid-cols-[280px_minmax(0,1fr)] gap-6">
+        <aside
+          className="rounded-xl border p-3 h-fit xl:sticky xl:top-20 space-y-4"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+          aria-label="Navigation des parametres"
+        >
+          <div>
+            <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+              Rechercher une section
+            </label>
+            <div className="relative">
+              <MagnifyingGlassIcon
+                className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: 'var(--color-text-secondary)' }}
+                aria-hidden="true"
+              />
+              <input
+                type="text"
+                value={navigationSearch}
+                onChange={(event) => setNavigationSearch(event.target.value)}
+                placeholder="Ex: SEO, Securite..."
+                className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                style={inputStyle}
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="flex flex-wrap gap-1 mb-6 border-b" style={{ borderColor: 'var(--color-border)' }}>
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="px-4 py-2 text-sm font-medium transition-colors focus:outline-none"
-              style={{
-                color: activeTab === tab.id ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-                borderBottom: activeTab === tab.id ? '2px solid var(--color-accent)' : '2px solid transparent',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+          <nav className="space-y-3">
+            {filteredNavigationGroups.length === 0 && (
+              <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                Aucune section ne correspond a cette recherche.
+              </p>
+            )}
 
-        <div className="space-y-5 max-w-5xl">
-          {activeTab === 'identity' && (
-            <CardSection className="max-w-2xl">
+            {filteredNavigationGroups.map((group) => (
+              <div key={group.label} className="space-y-1.5">
+                <p className="text-[11px] uppercase tracking-wide font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+                  {group.label}
+                </p>
+                <div className="space-y-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon
+                    const isActive = item.id === activeTab
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setActiveTab(item.id)}
+                        className="w-full text-left rounded-lg border px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={{
+                          borderColor: isActive ? 'var(--color-accent)' : 'var(--color-border)',
+                          backgroundColor: isActive ? 'rgba(34, 197, 94, 0.1)' : 'var(--color-bg-card)',
+                        }}
+                      >
+                        <div className="flex items-start gap-2">
+                          <Icon
+                            className="h-4 w-4 mt-0.5 flex-shrink-0"
+                            style={{ color: isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)' }}
+                            aria-hidden="true"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                              {item.label}
+                            </span>
+                            <span className="block text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                              {item.description}
+                            </span>
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </aside>
+
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+                Parametres
+              </h1>
+              {activeTabMeta?.description && (
+                <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                  {activeTabMeta.description}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {(activeTab === 'appearance' || activeTab === 'animations') && (
+                <button
+                  onClick={activeTab === 'appearance' ? handleResetAppearance : handleResetAnimations}
+                  className="px-4 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none"
+                  style={{
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  {activeTab === 'appearance' ? 'Reinitialiser le style' : 'Reinitialiser les animations'}
+                </button>
+              )}
+              {canSaveActiveTab && (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+                >
+                  {saving ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-5 max-w-5xl">
+            {activeTab === 'overview' && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {overviewItems.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <CardSection key={item.id} className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-5 w-5" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                              {item.title}
+                            </p>
+                          </div>
+                          <span
+                            className="text-[11px] px-2 py-1 rounded-full font-semibold"
+                            style={{
+                              backgroundColor: item.isHealthy ? 'rgba(34,197,94,0.14)' : 'rgba(239,68,68,0.14)',
+                              color: item.isHealthy ? '#22c55e' : '#f87171',
+                            }}
+                          >
+                            {item.statusLabel}
+                          </span>
+                        </div>
+
+                        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                          {item.subtitle}
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          {item.metric}
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab(item.id)}
+                          className="text-sm font-medium"
+                          style={{ color: 'var(--color-accent)' }}
+                        >
+                          Ouvrir cette section
+                        </button>
+                      </CardSection>
+                    )
+                  })}
+                </div>
+
+                <CardSection className="max-w-3xl">
+                  <SectionTitle>Bonnes pratiques rapides</SectionTitle>
+                  <ul className="space-y-1.5 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    <li className="flex items-start gap-2">
+                      <CheckCircleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                      Active le 2FA avant toute publication importante.
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                      Complete SEO + OG pour faciliter indexation et partage.
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                      Teste ton expediteur newsletter avant un envoi global.
+                    </li>
+                  </ul>
+                </CardSection>
+              </>
+            )}
+
+            {activeTab === 'identity' && (
+              <CardSection className="max-w-2xl">
               <FieldInput label="Nom du site" fieldKey="site_name" settings={settings} onChange={handleChange} />
               <FieldInput label="URL du site" fieldKey="site_url" settings={settings} onChange={handleChange} type="url" />
               <FieldInput label="Accroche" fieldKey="tagline" settings={settings} onChange={handleChange} />
@@ -875,6 +1348,12 @@ export default function AdminSettings() {
                 <FieldInput label="Stat 3 - valeur" fieldKey="stat_3_value" settings={settings} onChange={handleChange} />
                 <FieldInput label="Stat 3 - libelle" fieldKey="stat_3_label" settings={settings} onChange={handleChange} />
               </div>
+
+              <SectionSaveBar
+                onSave={() => handleSaveSectionByKeys(IDENTITY_FIELD_KEYS, 'Section identite enregistree.')}
+                saving={saving}
+                label="Enregistrer l identite"
+              />
             </CardSection>
           )}
 
@@ -885,6 +1364,12 @@ export default function AdminSettings() {
               <FieldInput label="Twitter/X" fieldKey="twitter_url" settings={settings} onChange={handleChange} type="url" />
               <FieldInput label="YouTube" fieldKey="youtube_url" settings={settings} onChange={handleChange} type="url" />
               <FieldInput label="Instagram" fieldKey="instagram_url" settings={settings} onChange={handleChange} type="url" />
+
+              <SectionSaveBar
+                onSave={() => handleSaveSectionByKeys(SOCIAL_FIELD_KEYS, 'Section reseaux sociaux enregistree.')}
+                saving={saving}
+                label="Enregistrer les reseaux"
+              />
             </CardSection>
           )}
 
@@ -893,12 +1378,48 @@ export default function AdminSettings() {
               <FieldInput label="Email de contact" fieldKey="contact_email" settings={settings} onChange={handleChange} type="email" />
               <FieldInput label="Localisation" fieldKey="contact_location" settings={settings} onChange={handleChange} />
               <FieldInput label="Disponibilite" fieldKey="contact_availability" settings={settings} onChange={handleChange} />
+
+              <SectionSaveBar
+                onSave={() => handleSaveSectionByKeys(CONTACT_FIELD_KEYS, 'Section contact enregistree.')}
+                saving={saving}
+                label="Enregistrer le contact"
+              />
             </CardSection>
           )}
 
           {activeTab === 'content' && (
             <>
-              {CONTENT_TAB_SECTIONS.map((section) => (
+              <CardSection className="max-w-3xl">
+                <SectionTitle>Recherche dans les contenus UI</SectionTitle>
+                <div className="relative">
+                  <MagnifyingGlassIcon
+                    className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    aria-hidden="true"
+                  />
+                  <input
+                    type="text"
+                    value={contentSearch}
+                    onChange={(event) => setContentSearch(event.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                    style={inputStyle}
+                    placeholder="Rechercher un libelle ou une cle (ex: ui_article_like...)"
+                  />
+                </div>
+                <InlineTip>
+                  {filteredContentSections.length} section(s) affichee(s), {contentFieldCount} champ(s) dynamiques disponibles.
+                </InlineTip>
+              </CardSection>
+
+              {filteredContentSections.length === 0 && (
+                <CardSection className="max-w-3xl">
+                  <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    Aucun champ ne correspond a cette recherche.
+                  </p>
+                </CardSection>
+              )}
+
+              {filteredContentSections.map((section) => (
                 <CardSection key={section.title}>
                   <SectionTitle>{section.title}</SectionTitle>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -914,6 +1435,16 @@ export default function AdminSettings() {
                       </div>
                     ))}
                   </div>
+
+                  <SectionSaveBar
+                    onSave={() =>
+                      handleSaveSectionByKeys(
+                        contentSectionKeyMap[section.title] || [],
+                        `Section ${section.title} enregistree.`
+                      )}
+                    saving={saving}
+                    label="Enregistrer cette section"
+                  />
                 </CardSection>
               ))}
             </>
@@ -928,6 +1459,12 @@ export default function AdminSettings() {
                 label="Image OG"
                 value={settings.og_image_url || ''}
                 onUpload={(url) => handleChange('og_image_url', url)}
+              />
+
+              <SectionSaveBar
+                onSave={() => handleSaveSectionByKeys(SEO_FIELD_KEYS, 'Section SEO enregistree.')}
+                saving={saving}
+                label="Enregistrer le SEO"
               />
             </CardSection>
           )}
@@ -1099,6 +1636,16 @@ export default function AdminSettings() {
                     defaultValue={0.95}
                   />
                 </div>
+              </CardSection>
+
+              <CardSection className="max-w-2xl">
+                <SectionSaveBar
+                  onSave={() =>
+                    handleSaveSectionByKeys(appearanceFieldKeys, 'Section apparence enregistree.')
+                  }
+                  saving={saving}
+                  label="Enregistrer l apparence"
+                />
               </CardSection>
             </>
           )}
@@ -1572,6 +2119,16 @@ export default function AdminSettings() {
                   />
                 </div>
               </CardSection>
+
+              <CardSection className="max-w-2xl">
+                <SectionSaveBar
+                  onSave={() =>
+                    handleSaveSectionByKeys(animationFieldKeys, 'Section animations enregistree.')
+                  }
+                  saving={saving}
+                  label="Enregistrer les animations"
+                />
+              </CardSection>
             </>
           )}
 
@@ -1600,9 +2157,10 @@ export default function AdminSettings() {
                     type="button"
                     onClick={loadTwoFactorStatus}
                     disabled={twoFactorBusy}
-                    className="px-3 py-2 rounded-lg text-sm font-medium border"
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border"
                     style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
                   >
+                    <ArrowPathIcon className="h-4 w-4" aria-hidden="true" />
                     Rafraichir
                   </button>
                 </div>
@@ -1794,8 +2352,11 @@ export default function AdminSettings() {
                     </button>
                   </CardSection>
 
-                  <CardSection className="max-w-3xl">
-                    <SectionTitle>Desactiver le 2FA</SectionTitle>
+                  <CardSection className="max-w-3xl" tone="danger">
+                    <div className="flex items-center gap-2">
+                      <ExclamationTriangleIcon className="h-5 w-5" style={{ color: '#f87171' }} aria-hidden="true" />
+                      <SectionTitle>Danger zone - Desactiver le 2FA</SectionTitle>
+                    </div>
                     <InlineTip>
                       Pour desactiver, renseigne soit un code Authenticator, soit un recovery code.
                     </InlineTip>
@@ -1899,9 +2460,16 @@ export default function AdminSettings() {
                 onChange={handleChange}
                 textarea
               />
+
+              <SectionSaveBar
+                onSave={() => handleSaveSectionByKeys(NEWSLETTER_FIELD_KEYS, 'Section newsletter enregistree.')}
+                saving={saving}
+                label="Enregistrer la newsletter"
+              />
             </CardSection>
           )}
         </div>
+      </div>
       </div>
     </>
   )
