@@ -1,6 +1,8 @@
 /* Service metier subscriber : regles applicatives et acces donnees. */
 const cryptoLib = require('crypto')
+const sequelizeLib = require('sequelize')
 const { Subscriber } = require('../models')
+const { createHttpError } = require('../utils/httpError')
 
 /**
  * Construit le service abonne avec dependances injectables.
@@ -12,6 +14,37 @@ const { Subscriber } = require('../models')
 function createSubscriberService(deps = {}) {
   const subscriberModel = deps.subscriberModel || Subscriber
   const crypto = deps.crypto || cryptoLib
+  const sequelizeOps = deps.sequelizeOps || sequelizeLib
+  const { Op } = sequelizeOps
+
+  /**
+   * Genere un token brut de desinscription (envoye par email uniquement).
+   * @returns {string} Token aleatoire hexadecimal.
+   */
+  function generateUnsubscribeToken() {
+    return crypto.randomBytes(32).toString('hex')
+  }
+
+  /**
+   * Hache un token de desinscription pour stockage en base.
+   * @param {string} token Token brut.
+   * @returns {string} Hash SHA-256 hexadecimal.
+   */
+  function hashUnsubscribeToken(token) {
+    return crypto
+      .createHash('sha256')
+      .update(String(token || ''), 'utf8')
+      .digest('hex')
+  }
+
+  /**
+   * Normalise un token issu d'un parametre URL.
+   * @param {unknown} token Valeur brute.
+   * @returns {string} Token normalise.
+   */
+  function normalizeIncomingToken(token) {
+    return String(token || '').trim()
+  }
 
   /**
    * Cree un abonnement newsletter et genere un token de desinscription.
@@ -20,12 +53,13 @@ function createSubscriberService(deps = {}) {
    * @returns {Promise<{message:string,alreadySubscribed:boolean}>} Resultat metier d'abonnement.
    */
   async function subscribeToNewsletter(email) {
-    const token = crypto.randomBytes(32).toString('hex')
+    const token = generateUnsubscribeToken()
+    const tokenHash = hashUnsubscribeToken(token)
 
     try {
       await subscriberModel.create({
         email,
-        unsubscribe_token: token,
+        unsubscribe_token: tokenHash,
       })
       return { message: 'Abonnement confirme.', alreadySubscribed: false }
     } catch (err) {
@@ -42,7 +76,59 @@ function createSubscriberService(deps = {}) {
    * @returns {Promise<void>} Promise resolue apres suppression.
    */
   async function unsubscribeFromNewsletter(token) {
-    await subscriberModel.destroy({ where: { unsubscribe_token: token } })
+    const normalizedToken = normalizeIncomingToken(token)
+    if (!normalizedToken) {
+      return
+    }
+
+    const hashedToken = hashUnsubscribeToken(normalizedToken)
+    await subscriberModel.destroy({
+      where: {
+        [Op.or]: [
+          { unsubscribe_token: normalizedToken },
+          { unsubscribe_token: hashedToken },
+        ],
+      },
+    })
+  }
+
+  /**
+   * Regroupe et prepare les abonnes avant envoi:
+   * - genere un token brut unique par abonne (lien email),
+   * - persiste uniquement son hash en base.
+   * @param {Array<object>} subscribers Liste abonnes Sequelize.
+   * @returns {Promise<Array<object>>} Liste avec token brut pret pour le mailer.
+   */
+  async function prepareSubscribersForNewsletter(subscribers) {
+    const source = Array.isArray(subscribers) ? subscribers : []
+    const prepared = []
+
+    for (const subscriber of source) {
+      const rawToken = generateUnsubscribeToken()
+      const hashedToken = hashUnsubscribeToken(rawToken)
+
+      if (subscriber && typeof subscriber.update === 'function') {
+        await subscriber.update({ unsubscribe_token: hashedToken })
+      } else {
+        const subscriberId = Number.parseInt(String(subscriber?.id || ''), 10)
+        if (!Number.isFinite(subscriberId) || subscriberId <= 0) {
+          throw createHttpError(500, "Impossible de generer le lien de desinscription de l'abonne.")
+        }
+        await subscriberModel.update(
+          { unsubscribe_token: hashedToken },
+          { where: { id: subscriberId } }
+        )
+      }
+
+      const payload =
+        subscriber && typeof subscriber.toJSON === 'function' ? subscriber.toJSON() : { ...(subscriber || {}) }
+      prepared.push({
+        ...payload,
+        unsubscribe_token: rawToken,
+      })
+    }
+
+    return prepared
   }
 
   /**
@@ -65,6 +151,7 @@ function createSubscriberService(deps = {}) {
   return {
     subscribeToNewsletter,
     unsubscribeFromNewsletter,
+    prepareSubscribersForNewsletter,
     getAllSubscribers,
     deleteSubscriber,
   }

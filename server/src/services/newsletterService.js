@@ -2,6 +2,7 @@
 const { NewsletterCampaign, Subscriber } = require('../models')
 const mailerService = require('./mailerService')
 const settingService = require('./settingService')
+const subscriberService = require('./subscriberService')
 const { createHttpError } = require('../utils/httpError')
 
 /**
@@ -15,6 +16,8 @@ function createNewsletterService(deps = {}) {
   const sendNewsletterFn = deps.sendNewsletter || mailerService.sendNewsletter
   const resolveDeliveryModeFn = deps.resolveDeliveryMode || mailerService.resolveDeliveryMode
   const getSettingsMapFn = deps.getSettingsMap || settingService.getSettingsMap
+  const prepareSubscribersForNewsletterFn =
+    deps.prepareSubscribersForNewsletter || subscriberService.prepareSubscribersForNewsletter
   const env = deps.env || process.env
   const now = deps.now || (() => new Date())
   const logger = deps.logger || console
@@ -153,6 +156,7 @@ function createNewsletterService(deps = {}) {
     }
 
     const settings = await getSettingsMapFn()
+    const subscribersWithUnsubscribeTokens = await prepareSubscribersForNewsletterFn(subscribers)
 
     debug('send:start', {
       campaignId: campaign.id,
@@ -166,7 +170,7 @@ function createNewsletterService(deps = {}) {
     try {
       const result = await sendNewsletterFn({
         campaign,
-        subscribers,
+        subscribers: subscribersWithUnsubscribeTokens,
         fromName: settings.newsletter_from_name || 'Newsletter',
         fromEmail:
           settings.newsletter_from_email ||

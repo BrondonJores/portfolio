@@ -77,6 +77,27 @@ async function main() {
     assert.equal(map.site_title, 'Portfolio')
   })
 
+  await runCase('getPublicSettingsMap exposes only allowlisted keys', async () => {
+    const service = createSettingService({
+      settingModel: {
+        findAll: async () => ([
+          { key: 'hero_name', value: 'Alice' },
+          { key: 'ui_font_body', value: 'inter' },
+          { key: 'theme_page_home_preset_id', value: '2' },
+          { key: 'smtp_password', value: 'super-secret' },
+          { key: 'brevo_api_key', value: 'secret-key' },
+        ]),
+      },
+    })
+
+    const map = await service.getPublicSettingsMap()
+    assert.equal(map.hero_name, 'Alice')
+    assert.equal(map.ui_font_body, 'inter')
+    assert.equal(map.theme_page_home_preset_id, '2')
+    assert.equal(map.smtp_password, undefined)
+    assert.equal(map.brevo_api_key, undefined)
+  })
+
   if (failures > 0) {
     console.error(`\nDI unit tests failed: ${failures}`)
     process.exit(1)

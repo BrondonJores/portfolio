@@ -4,6 +4,44 @@ const { createHttpError } = require('../utils/httpError')
 
 const SETTINGS_KEY_PATTERN = /^[a-zA-Z0-9._:-]{1,100}$/
 const FORBIDDEN_SETTING_KEYS = new Set(['__proto__', 'prototype', 'constructor'])
+const PUBLIC_SETTING_KEY_PATTERN = /^(theme_page_[a-z0-9_]+_preset_id)$/i
+const PUBLIC_SETTING_KEYS = new Set([
+  'about_photo_badge',
+  'about_photo_caption',
+  'avatar_url',
+  'bio',
+  'contact_availability',
+  'contact_email',
+  'contact_location',
+  'footer_credits',
+  'footer_text',
+  'github_url',
+  'instagram_url',
+  'linkedin_url',
+  'logo_url',
+  'maintenance_mode',
+  'og_image_url',
+  'seo_description',
+  'seo_keywords',
+  'seo_title',
+  'site_name',
+  'site_url',
+  'tagline',
+  'twitter_url',
+  'youtube_url',
+])
+const PUBLIC_SETTING_PREFIXES = [
+  'about_',
+  'anim_',
+  'contact_',
+  'footer_',
+  'hero_',
+  'seo_',
+  'site_',
+  'stat_',
+  'theme_',
+  'ui_',
+]
 
 /**
  * Indique si une cle de setting est autorisee.
@@ -23,6 +61,28 @@ function isSafeSettingKey(key) {
 }
 
 /**
+ * Indique si une cle peut etre exposee publiquement au frontend.
+ * L'approche est en "allowlist" pour eviter toute fuite de secrets.
+ * @param {unknown} key Cle candidate.
+ * @returns {boolean} true si la cle est publiquement exposable.
+ */
+function isPublicSettingKey(key) {
+  if (!isSafeSettingKey(key)) {
+    return false
+  }
+
+  if (PUBLIC_SETTING_KEYS.has(key)) {
+    return true
+  }
+
+  if (PUBLIC_SETTING_KEY_PATTERN.test(key)) {
+    return true
+  }
+
+  return PUBLIC_SETTING_PREFIXES.some((prefix) => key.startsWith(prefix))
+}
+
+/**
  * Transforme une collection de lignes `settings` en objet simple.
  * @param {Array<{key:string,value:string}>} rows Lignes provenant du modele.
  * @returns {Record<string, string>} Map des settings.
@@ -31,6 +91,21 @@ function toSettingsMap(rows) {
   const map = Object.create(null)
   for (const row of rows) {
     map[row.key] = row.value
+  }
+  return map
+}
+
+/**
+ * Transforme une collection de settings en map publique filtree.
+ * @param {Array<{key:string,value:string}>} rows Lignes settings.
+ * @returns {Record<string, string>} Map des cles publiques uniquement.
+ */
+function toPublicSettingsMap(rows) {
+  const map = Object.create(null)
+  for (const row of rows) {
+    if (isPublicSettingKey(row?.key)) {
+      map[row.key] = row.value
+    }
   }
   return map
 }
@@ -53,6 +128,15 @@ function createSettingService(deps = {}) {
   async function getSettingsMap() {
     const rows = await settingModel.findAll()
     return toSettingsMap(rows)
+  }
+
+  /**
+   * Recupere uniquement les settings destinables au frontend public.
+   * @returns {Promise<Record<string, string>>} Parametres non sensibles.
+   */
+  async function getPublicSettingsMap() {
+    const rows = await settingModel.findAll()
+    return toPublicSettingsMap(rows)
   }
 
   /**
@@ -85,6 +169,7 @@ function createSettingService(deps = {}) {
 
   return {
     getSettingsMap,
+    getPublicSettingsMap,
     upsertSettings,
   }
 }

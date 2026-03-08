@@ -6,7 +6,7 @@
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "lint": "node scripts/lint.cjs",
-    "test": "node tests/mailerService.test.cjs && node tests/authService.di.test.cjs && node tests/totpService.di.test.cjs && node tests/twoFactorService.di.test.cjs && node tests/recaptchaService.di.test.cjs && node tests/uploadValidationMiddleware.test.cjs && node tests/settingService.di.test.cjs && node tests/projectService.di.test.cjs && node tests/articleService.di.test.cjs && node tests/blockTemplateService.di.test.cjs && node tests/themePresetService.di.test.cjs && node tests/themeMarketplaceService.di.test.cjs && node tests/statsService.di.test.cjs && node tests/securityEventService.di.test.cjs && node tests/visualBuilderDraftService.di.test.cjs && node tests/cmsPageService.di.test.cjs && node tests/sitemapService.di.test.cjs",
+    "test": "node tests/mailerService.test.cjs && node tests/authService.di.test.cjs && node tests/totpService.di.test.cjs && node tests/twoFactorService.di.test.cjs && node tests/recaptchaService.di.test.cjs && node tests/uploadValidationMiddleware.test.cjs && node tests/settingService.di.test.cjs && node tests/subscriberService.di.test.cjs && node tests/projectService.di.test.cjs && node tests/articleService.di.test.cjs && node tests/blockTemplateService.di.test.cjs && node tests/themePresetService.di.test.cjs && node tests/themeMarketplaceService.di.test.cjs && node tests/statsService.di.test.cjs && node tests/securityEventService.di.test.cjs && node tests/visualBuilderDraftService.di.test.cjs && node tests/cmsPageService.di.test.cjs && node tests/sitemapService.di.test.cjs",
     "test:smoke": "node tests/smoke.api.test.cjs",
     "migrate": "sequelize-cli db:migrate",
     "seed": "sequelize-cli db:seed:all"

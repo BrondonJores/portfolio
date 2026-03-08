@@ -38,6 +38,15 @@ function extractOriginFromReferer(referer) {
 }
 
 /**
+ * Indique si le serveur tourne en production.
+ * @param {NodeJS.ProcessEnv | object} env Variables d'environnement.
+ * @returns {boolean} true en production.
+ */
+function isProductionEnv(env) {
+  return String(env?.NODE_ENV || '').toLowerCase() === 'production'
+}
+
+/**
  * Construit la liste des origines autorisees (front principal + liste complementaire).
  * @param {NodeJS.ProcessEnv | object} env Variables d'environnement.
  * @returns {Set<string>} Ensemble d'origines de confiance.
@@ -67,7 +76,8 @@ function getTrustedOrigins(env) {
 
 /**
  * Autorise uniquement les requetes avec une origine front approuvee.
- * Si Origin/Referer sont absents (curl, script serveur), la requete est acceptee.
+ * En production, l'absence de Origin/Referer est bloquante (mode fail-closed).
+ * En developpement, ce cas reste autorise pour faciliter les scripts locaux.
  * @param {import('express').Request} req Requete HTTP.
  * @param {import('express').Response} res Reponse HTTP.
  * @param {import('express').NextFunction} next Middleware suivant.
@@ -76,8 +86,35 @@ function getTrustedOrigins(env) {
 function requireTrustedOrigin(req, res, next) {
   const originHeader = normalizeOrigin(req.get('origin'))
   const refererHeader = req.get('referer')
+  const isProduction = isProductionEnv(process.env)
+
+  /**
+   * Bloque la requete et journalise la raison.
+   * @param {string} eventType Type d'evenement securite.
+   * @param {string} message Message humain.
+   * @param {object} [metadata={}] Metadata associees.
+   * @returns {void}
+   */
+  function deny(eventType, message, metadata = {}) {
+    void logSecurityEventFromRequest(req, {
+      eventType,
+      severity: 'critical',
+      source: 'trusted_origin_middleware',
+      message,
+      metadata,
+    })
+    res.status(403).json({ error: 'Origine non autorisee.' })
+  }
 
   if (!originHeader && !refererHeader) {
+    if (isProduction) {
+      deny(
+        'request.missing_origin',
+        'Requete bloquee: en-tete Origin/Referer manquant sur endpoint sensible.'
+      )
+      return
+    }
+
     next()
     return
   }
@@ -86,21 +123,22 @@ function requireTrustedOrigin(req, res, next) {
   const trustedOrigins = getTrustedOrigins(process.env)
 
   if (trustedOrigins.size === 0) {
+    if (isProduction) {
+      deny(
+        'request.trusted_origin_misconfigured',
+        'Requete bloquee: aucune origine de confiance configuree en production.'
+      )
+      return
+    }
+
     next()
     return
   }
 
   if (!requestOrigin || !trustedOrigins.has(requestOrigin)) {
-    void logSecurityEventFromRequest(req, {
-      eventType: 'request.untrusted_origin',
-      severity: 'critical',
-      source: 'trusted_origin_middleware',
-      message: 'Requete bloquee: origine non autorisee.',
-      metadata: {
-        requestOrigin,
-      },
+    deny('request.untrusted_origin', 'Requete bloquee: origine non autorisee.', {
+      requestOrigin,
     })
-    res.status(403).json({ error: 'Origine non autorisee.' })
     return
   }
 
