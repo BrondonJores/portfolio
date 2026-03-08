@@ -23,6 +23,8 @@ import {
   ANIMATION_PROFILE_OPTIONS,
   MASCOT_STYLE_OPTIONS,
   REDUCE_MOTION_OPTIONS,
+  SPRITE_PATH_OPTIONS,
+  SPRITE_SIDE_PATTERN_OPTIONS,
   SPRITE_STYLE_OPTIONS,
   SECTION_REVEAL_OPTIONS,
 } from '../../utils/animationSettings.js'
@@ -935,7 +937,7 @@ export default function AdminSettings() {
               <CardSection>
                 <SectionTitle>Sprites SVG Dynamiques</SectionTitle>
                 <InlineTip>
-                  Active un sprite qui se balade sur l&apos;ecran + des sprites lateraux qui apparaissent puis disparaissent.
+                  Active des petits bonhommes SVG: un sprite principal qui se balade + des sprites lateraux qui apparaissent puis disparaissent.
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox label="Sprite principal baladeur" fieldKey="anim_sprite_wander_enabled" settings={settings} onChange={handleChange} />
@@ -946,6 +948,26 @@ export default function AdminSettings() {
                     settings={settings}
                     onChange={handleChange}
                     options={SPRITE_STYLE_OPTIONS}
+                  />
+                  <FieldSelect
+                    label="Trajet du sprite principal"
+                    fieldKey="anim_sprite_path"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={SPRITE_PATH_OPTIONS}
+                  />
+                  <FieldSelect
+                    label="Pattern des sprites lateraux"
+                    fieldKey="anim_sprite_side_pattern"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={SPRITE_SIDE_PATTERN_OPTIONS}
+                  />
+                  <FieldCheckbox
+                    label="Orientation automatique gauche/droite"
+                    fieldKey="anim_sprite_flip_enabled"
+                    settings={settings}
+                    onChange={handleChange}
                   />
                   <FieldRange
                     label="Taille sprite principal"
@@ -978,6 +1000,28 @@ export default function AdminSettings() {
                     max={1}
                     step={0.05}
                     defaultValue={0.88}
+                  />
+                  <FieldRange
+                    label="Amplitude de rebond"
+                    fieldKey="anim_sprite_bounce_px"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0}
+                    max={24}
+                    step={1}
+                    unit="px"
+                    defaultValue={8}
+                  />
+                  <FieldRange
+                    label="Inclinaison max du sprite"
+                    fieldKey="anim_sprite_wander_rotation_deg"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0}
+                    max={24}
+                    step={1}
+                    unit="deg"
+                    defaultValue={8}
                   />
                   <FieldRange
                     label="Nombre de sprites lateraux"

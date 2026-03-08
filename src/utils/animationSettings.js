@@ -31,9 +31,26 @@ export const MASCOT_STYLE_OPTIONS = [
 ]
 
 export const SPRITE_STYLE_OPTIONS = [
+  { value: 'mixed-human', label: 'Humains (mixte)' },
+  { value: 'walker', label: 'Humain marcheur' },
+  { value: 'hoodie', label: 'Humain hoodie' },
+  { value: 'skater', label: 'Humain skateur' },
+  { value: 'coder', label: 'Humain codeur' },
   { value: 'pixel', label: 'Pixel' },
   { value: 'ghost', label: 'Ghost' },
   { value: 'rocket', label: 'Rocket' },
+]
+
+export const SPRITE_PATH_OPTIONS = [
+  { value: 'orbit', label: 'Orbite libre' },
+  { value: 'zigzag', label: 'Zigzag dynamique' },
+  { value: 'perimeter', label: 'Tour des bords' },
+]
+
+export const SPRITE_SIDE_PATTERN_OPTIONS = [
+  { value: 'peek', label: 'Peek discret' },
+  { value: 'dash', label: 'Dash rapide' },
+  { value: 'hop', label: 'Saut lateral' },
 ]
 
 function clampNumber(rawValue, min, max, fallback) {
@@ -107,7 +124,12 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     spriteSideSizePx: clampNumber(settings.anim_sprite_side_size, 36, 160, 92) * Math.max(0.8, intensity),
     spriteSideFrequencyMs: clampNumber(settings.anim_sprite_side_frequency_ms, 1400, 12000, 5200),
     spriteSideDurationMs: clampNumber(settings.anim_sprite_side_duration_ms, 700, 5000, 1700),
-    spriteStyle: settings.anim_sprite_style || 'pixel',
+    spriteStyle: settings.anim_sprite_style || 'mixed-human',
+    spritePath: settings.anim_sprite_path || 'orbit',
+    spriteSidePattern: settings.anim_sprite_side_pattern || 'peek',
+    spriteFlipEnabled: parseBooleanSetting(settings.anim_sprite_flip_enabled, true),
+    spriteBouncePx: clampNumber(settings.anim_sprite_bounce_px, 0, 24, 8) * Math.max(0.85, intensity),
+    spriteWanderRotationDeg: clampNumber(settings.anim_sprite_wander_rotation_deg, 0, 24, 8) * Math.max(0.8, intensity),
     scrollProgressEnabled: parseBooleanSetting(settings.anim_scroll_progress_enabled, true),
     scrollProgressThickness: clampNumber(settings.anim_scroll_progress_thickness, 2, 10, 4),
   }

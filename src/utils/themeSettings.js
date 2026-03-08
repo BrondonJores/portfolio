@@ -76,7 +76,12 @@ export const DEFAULT_THEME_SETTINGS = {
   anim_sprite_side_size: '92',
   anim_sprite_side_frequency_ms: '5200',
   anim_sprite_side_duration_ms: '1700',
-  anim_sprite_style: 'pixel',
+  anim_sprite_style: 'mixed-human',
+  anim_sprite_path: 'orbit',
+  anim_sprite_side_pattern: 'peek',
+  anim_sprite_flip_enabled: 'true',
+  anim_sprite_bounce_px: '8',
+  anim_sprite_wander_rotation_deg: '8',
   anim_scroll_progress_enabled: 'true',
   anim_scroll_progress_thickness: '4',
 }
