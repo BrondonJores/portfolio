@@ -167,6 +167,48 @@ async function main() {
     assert.equal(fakeRevisions.store[0].stage, 'draft')
   })
 
+  await runCase('createCmsPage sanitizes section blocks and nested widgets', async () => {
+    const fakePages = createFakePageModel()
+    const fakeRevisions = createFakeRevisionModel()
+
+    const service = createCmsPageService({
+      cmsPageModel: fakePages.model,
+      cmsPageRevisionModel: fakeRevisions.model,
+      notEqualOperator: '__not_equal__',
+    })
+
+    const page = await service.createCmsPage(
+      {
+        title: 'Page section',
+        blocks: [
+          {
+            id: 'sec-1',
+            type: 'section',
+            layout: '3-col',
+            variant: 'accent',
+            spacing: 'lg',
+            columns: [
+              [
+                { id: 'w-1', type: 'heading', level: 2, content: 'Titre' },
+                { id: 'w-2', type: 'section', layout: '1-col', columns: [[]] },
+              ],
+              [{ id: 'w-3', type: 'paragraph', content: 'Texte' }],
+              [{ id: 'w-4', type: 'quote', content: 'Citation', author: 'A' }],
+            ],
+          },
+        ],
+      },
+      3
+    )
+
+    assert.equal(page.draft.layout.length, 1)
+    assert.equal(page.draft.layout[0].type, 'section')
+    assert.equal(page.draft.layout[0].layout, '3-col')
+    assert.equal(page.draft.layout[0].columns.length, 3)
+    assert.equal(page.draft.layout[0].columns[0].length, 1)
+    assert.equal(page.draft.layout[0].columns[0][0].type, 'heading')
+  })
+
   await runCase('publishCmsPage copies draft data to published payload', async () => {
     const fakePages = createFakePageModel()
     const fakeRevisions = createFakeRevisionModel()

@@ -74,6 +74,50 @@ async function main() {
     assert.equal(createPayload.blocks[0].level, 2)
   })
 
+  await runCase('createBlockTemplate sanitizes section blocks and nested widgets', async () => {
+    let createPayload = null
+
+    const fakeModel = {
+      create: async (payload) => {
+        createPayload = payload
+        return { id: 2, ...payload }
+      },
+    }
+
+    const service = createBlockTemplateService({ blockTemplateModel: fakeModel })
+
+    await service.createBlockTemplate({
+      name: 'Template section',
+      context: 'all',
+      blocks: [
+        {
+          type: 'section',
+          layout: '9-col',
+          variant: 'unknown',
+          spacing: 'xxl',
+          columns: [
+            [
+              { type: 'heading', level: 2, content: 'Titre colonne 1' },
+              { type: 'section', layout: '2-col', columns: [[]] },
+            ],
+            [
+              { type: 'paragraph', content: 'Colonne 2' },
+            ],
+          ],
+        },
+      ],
+    })
+
+    assert.equal(createPayload.blocks.length, 1)
+    assert.equal(createPayload.blocks[0].type, 'section')
+    assert.equal(createPayload.blocks[0].layout, '2-col')
+    assert.equal(createPayload.blocks[0].variant, 'default')
+    assert.equal(createPayload.blocks[0].spacing, 'md')
+    assert.equal(createPayload.blocks[0].columns.length, 2)
+    assert.equal(createPayload.blocks[0].columns[0].length, 1)
+    assert.equal(createPayload.blocks[0].columns[0][0].type, 'heading')
+  })
+
   await runCase('createBlockTemplate syncs marketplace template when repository exists', async () => {
     const upsertCalls = []
 

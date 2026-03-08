@@ -863,6 +863,7 @@ export default function AdminBlockTemplates() {
                 <BlockEditor
                   blocks={form.blocks}
                   onChange={(nextBlocks) => setForm((prev) => ({ ...prev, blocks: nextBlocks }))}
+                  allowSections
                 />
               </div>
 

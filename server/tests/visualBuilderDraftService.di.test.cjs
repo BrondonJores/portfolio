@@ -82,6 +82,54 @@ async function main() {
     assert.equal(result.draft.versionNumber, 1)
   })
 
+  await runCase('saveCurrentVisualBuilderDraft sanitizes section blocks and widgets', async () => {
+    let createdPayload = null
+
+    const service = createVisualBuilderDraftService({
+      visualBuilderDraftModel: {
+        findOne: async () => null,
+        create: async (payload) => {
+          createdPayload = payload
+          return {
+            id: 11,
+            ...payload,
+            created_at: new Date('2026-03-08T10:05:00.000Z'),
+            updated_at: new Date('2026-03-08T10:05:00.000Z'),
+          }
+        },
+      },
+      hashFactory: (value) => `hash:${value}`,
+    })
+
+    await service.saveCurrentVisualBuilderDraft({
+      entity: 'page',
+      channel: 'page:home',
+      title: 'Page home',
+      blocks: [
+        {
+          id: 'sec-1',
+          type: 'section',
+          layout: '2-col',
+          variant: 'soft',
+          spacing: 'md',
+          columns: [
+            [
+              { id: 'w-1', type: 'heading', level: 3, content: 'Hero' },
+              { id: 'w-2', type: 'section', layout: '1-col', columns: [[]] },
+            ],
+            [{ id: 'w-3', type: 'paragraph', content: 'Description' }],
+          ],
+        },
+      ],
+    })
+
+    assert.equal(createdPayload.blocks.length, 1)
+    assert.equal(createdPayload.blocks[0].type, 'section')
+    assert.equal(createdPayload.blocks[0].columns.length, 2)
+    assert.equal(createdPayload.blocks[0].columns[0].length, 1)
+    assert.equal(createdPayload.blocks[0].columns[0][0].type, 'heading')
+  })
+
   await runCase('saveCurrentVisualBuilderDraft skips update when content hash is unchanged', async () => {
     const hashFactory = (value) => `hash:${value}`
     let updateCalled = false

@@ -445,6 +445,7 @@ export default function AdminPageForm() {
                   blocks={blocks}
                   onChange={setBlocks}
                   templates={editorTemplates}
+                  allowSections
                 />
               </div>
 

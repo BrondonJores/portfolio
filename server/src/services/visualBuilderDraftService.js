@@ -4,7 +4,14 @@ const { VisualBuilderDraft } = require('../models')
 const { createHttpError } = require('../utils/httpError')
 
 const ALLOWED_ENTITIES = new Set(['article', 'project', 'newsletter', 'page'])
-const ALLOWED_BLOCK_TYPES = new Set(['paragraph', 'heading', 'image', 'code', 'quote', 'list'])
+const ALLOWED_BLOCK_TYPES = new Set(['paragraph', 'heading', 'image', 'code', 'quote', 'list', 'section'])
+const SECTION_LAYOUT_COLUMNS = {
+  '1-col': 1,
+  '2-col': 2,
+  '3-col': 3,
+}
+const SECTION_VARIANTS = new Set(['default', 'soft', 'accent'])
+const SECTION_SPACINGS = new Set(['sm', 'md', 'lg'])
 const MAX_BLOCKS = 250
 
 /**
@@ -135,17 +142,89 @@ function sanitizeListItems(items, depth = 0) {
 }
 
 /**
+ * Nettoie le layout d'une section (`1-col`, `2-col`, `3-col`).
+ * @param {unknown} value Valeur brute.
+ * @returns {'1-col'|'2-col'|'3-col'} Layout section normalise.
+ */
+function sanitizeSectionLayout(value) {
+  const normalized = sanitizeIdentifier(value, 12)
+  if (Object.prototype.hasOwnProperty.call(SECTION_LAYOUT_COLUMNS, normalized)) {
+    return normalized
+  }
+  return '2-col'
+}
+
+/**
+ * Retourne le nombre de colonnes attendu pour un layout section.
+ * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
+ * @returns {number} Nombre de colonnes.
+ */
+function getSectionColumnCount(layout) {
+  return SECTION_LAYOUT_COLUMNS[layout] || 2
+}
+
+/**
+ * Nettoie le variant visuel d'une section.
+ * @param {unknown} value Valeur brute.
+ * @returns {'default'|'soft'|'accent'} Variant section.
+ */
+function sanitizeSectionVariant(value) {
+  const normalized = sanitizeIdentifier(value, 20)
+  if (SECTION_VARIANTS.has(normalized)) {
+    return normalized
+  }
+  return 'default'
+}
+
+/**
+ * Nettoie l'espacement vertical d'une section.
+ * @param {unknown} value Valeur brute.
+ * @returns {'sm'|'md'|'lg'} Spacing section.
+ */
+function sanitizeSectionSpacing(value) {
+  const normalized = sanitizeIdentifier(value, 20)
+  if (SECTION_SPACINGS.has(normalized)) {
+    return normalized
+  }
+  return 'md'
+}
+
+/**
+ * Nettoie les colonnes/widgets d'une section.
+ * @param {unknown} columns Colonnes brutes.
+ * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
+ * @param {number} depth Profondeur courante.
+ * @returns {Array<Array<object>>} Colonnes normalisees.
+ */
+function sanitizeSectionColumns(columns, layout, depth) {
+  const columnCount = getSectionColumnCount(layout)
+  const sourceColumns = Array.isArray(columns) ? columns : []
+
+  return Array.from({ length: columnCount }, (_, index) => {
+    const rawColumn = Array.isArray(sourceColumns[index]) ? sourceColumns[index] : []
+    return sanitizeBlocks(rawColumn, {
+      allowSection: false,
+      depth,
+      limit: 80,
+    })
+  })
+}
+
+/**
  * Nettoie un bloc du builder et force un schema autorise.
  * @param {unknown} block Bloc source.
+ * @param {number} [depth=0] Profondeur de nettoyage.
+ * @param {boolean} [allowSection=true] Autorise ou non les sections.
  * @returns {object|null} Bloc normalise ou `null` si invalide.
  */
-function sanitizeBlock(block) {
+function sanitizeBlock(block, depth = 0, allowSection = true) {
   if (!block || typeof block !== 'object') return null
 
   const type = sanitizeIdentifier(block.type, 20)
   if (!ALLOWED_BLOCK_TYPES.has(type)) {
     return null
   }
+  if (type === 'section' && !allowSection) return null
 
   const common = {
     id: sanitizeIdentifier(block.id, 64) || null,
@@ -153,6 +232,18 @@ function sanitizeBlock(block) {
   }
 
   switch (type) {
+    case 'section': {
+      if (depth >= 2) return null
+      const layout = sanitizeSectionLayout(block.layout)
+      return {
+        ...common,
+        layout,
+        variant: sanitizeSectionVariant(block.variant),
+        spacing: sanitizeSectionSpacing(block.spacing),
+        anchor: sanitizeIdentifier(block.anchor, 80) || '',
+        columns: sanitizeSectionColumns(block.columns, layout, depth + 1),
+      }
+    }
     case 'heading':
       return {
         ...common,
@@ -194,13 +285,21 @@ function sanitizeBlock(block) {
 /**
  * Nettoie la collection complete des blocs du builder.
  * @param {unknown} blocks Collection brute.
+ * @param {object} [options={}] Options de nettoyage.
+ * @param {boolean} [options.allowSection=true] Autorise les sections.
+ * @param {number} [options.depth=0] Profondeur de nettoyage.
+ * @param {number} [options.limit=MAX_BLOCKS] Limite de blocs.
  * @returns {Array<object>} Blocs valides.
  */
-function sanitizeBlocks(blocks) {
+function sanitizeBlocks(blocks, options = {}) {
   if (!Array.isArray(blocks)) return []
+  const allowSection = options.allowSection !== false
+  const depth = Number.isInteger(options.depth) ? options.depth : 0
+  const limit = Number.isInteger(options.limit) && options.limit > 0 ? options.limit : MAX_BLOCKS
+
   return blocks
-    .slice(0, MAX_BLOCKS)
-    .map((block) => sanitizeBlock(block))
+    .slice(0, limit)
+    .map((block) => sanitizeBlock(block, depth, allowSection))
     .filter(Boolean)
 }
 

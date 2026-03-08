@@ -121,6 +121,16 @@ function resolveEntityConfig(entity) {
  */
 function createBlockByType(type) {
   switch (type) {
+    case 'section':
+      return {
+        id: genId(),
+        type: 'section',
+        layout: '2-col',
+        variant: 'default',
+        spacing: 'md',
+        anchor: '',
+        columns: [[], []],
+      }
     case 'heading':
       return { id: genId(), type: 'heading', level: 2, content: '' }
     case 'image':
@@ -154,6 +164,8 @@ function normalizeBlocks(blocks) {
  */
 function toBlockLabel(type) {
   switch (type) {
+    case 'section':
+      return 'Section'
     case 'paragraph':
       return 'Paragraphe'
     case 'heading':
@@ -178,6 +190,14 @@ function toBlockLabel(type) {
  */
 function toBlockPreview(block) {
   if (!block || typeof block !== 'object') return ''
+  if (block.type === 'section') {
+    const columns = Array.isArray(block.columns) ? block.columns : []
+    const widgetCount = columns.reduce((acc, column) => {
+      if (!Array.isArray(column)) return acc
+      return acc + column.length
+    }, 0)
+    return `${block.layout || '2-col'} • ${widgetCount} widget(s)`
+  }
   if (block.type === 'heading' || block.type === 'paragraph' || block.type === 'quote') {
     return String(block.content || '').slice(0, 70)
   }
@@ -659,6 +679,10 @@ export default function AdminVisualBuilder() {
     return commandActions.filter((action) => action.label.toLowerCase().includes(query))
   }, [commandActions, commandQuery])
 
+  const navigatorInsertTypes = entityConfig.key === 'page'
+    ? ['section', 'paragraph', 'heading', 'image', 'quote', 'code', 'list']
+    : ['paragraph', 'heading', 'image', 'quote', 'code', 'list']
+
   return (
     <>
       <Helmet>
@@ -774,12 +798,12 @@ export default function AdminVisualBuilder() {
             <div className="flex items-center gap-2">
               <Bars3Icon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
               <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                Navigator
+                Elements & Structure
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              {['paragraph', 'heading', 'image', 'quote', 'code', 'list'].map((type) => (
+              {navigatorInsertTypes.map((type) => (
                 <button
                   key={type}
                   type="button"
@@ -882,7 +906,7 @@ export default function AdminVisualBuilder() {
             <div className="flex items-center gap-2 mb-3">
               <Squares2X2Icon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} />
               <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                Canvas ({VIEWPORT_MODES[viewportMode].label})
+                Canvas Builder ({VIEWPORT_MODES[viewportMode].label})
               </p>
             </div>
 
@@ -896,6 +920,7 @@ export default function AdminVisualBuilder() {
                 templates={templates}
                 activeBlockId={activeBlockId}
                 onActiveBlockChange={setActiveBlockId}
+                allowSections={entityConfig.key === 'page'}
               />
             </div>
           </main>
@@ -926,7 +951,7 @@ export default function AdminVisualBuilder() {
                 className="rounded-lg border p-3 text-xs"
                 style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}
               >
-                Selectionne un bloc dans le Navigator ou le Canvas pour modifier ses proprietes.
+                Selectionne un bloc dans le panneau de structure ou le canvas pour modifier ses proprietes.
               </div>
             ) : (
               <div className="space-y-3">
@@ -936,6 +961,80 @@ export default function AdminVisualBuilder() {
                 >
                   Bloc actif: <strong style={{ color: 'var(--color-text-primary)' }}>{toBlockLabel(activeBlock.type)}</strong>
                 </div>
+
+                {activeBlock.type === 'section' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                        Layout
+                      </label>
+                      <select
+                        value={['1-col', '2-col', '3-col'].includes(activeBlock.layout) ? activeBlock.layout : '2-col'}
+                        onChange={(event) => {
+                          const nextLayout = event.target.value
+                          const nextColumnCount = nextLayout === '1-col' ? 1 : nextLayout === '3-col' ? 3 : 2
+                          const sourceColumns = Array.isArray(activeBlock.columns) ? activeBlock.columns : []
+                          const nextColumns = Array.from({ length: nextColumnCount }, (_, index) => {
+                            return Array.isArray(sourceColumns[index]) ? sourceColumns[index] : []
+                          })
+                          patchActiveBlock({ layout: nextLayout, columns: nextColumns })
+                        }}
+                        className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={inputStyle}
+                      >
+                        <option value="1-col">1-col</option>
+                        <option value="2-col">2-col</option>
+                        <option value="3-col">3-col</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                        Variant
+                      </label>
+                      <select
+                        value={['default', 'soft', 'accent'].includes(activeBlock.variant) ? activeBlock.variant : 'default'}
+                        onChange={(event) => patchActiveBlock({ variant: event.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={inputStyle}
+                      >
+                        <option value="default">default</option>
+                        <option value="soft">soft</option>
+                        <option value="accent">accent</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                        Spacing
+                      </label>
+                      <select
+                        value={['sm', 'md', 'lg'].includes(activeBlock.spacing) ? activeBlock.spacing : 'md'}
+                        onChange={(event) => patchActiveBlock({ spacing: event.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={inputStyle}
+                      >
+                        <option value="sm">sm</option>
+                        <option value="md">md</option>
+                        <option value="lg">lg</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                        Anchor
+                      </label>
+                      <input
+                        type="text"
+                        value={activeBlock.anchor || ''}
+                        onChange={(event) => patchActiveBlock({ anchor: event.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={inputStyle}
+                        placeholder="hero, features, contact..."
+                      />
+                    </div>
+                  </>
+                )}
 
                 {(activeBlock.type === 'paragraph' || activeBlock.type === 'quote') && (
                   <div>

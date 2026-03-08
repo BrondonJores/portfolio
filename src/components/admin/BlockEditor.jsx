@@ -5,6 +5,8 @@ import {
   TrashIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   DocumentTextIcon,
   Bars3BottomLeftIcon,
   PhotoIcon,
@@ -14,6 +16,7 @@ import {
   DocumentDuplicateIcon,
   ArrowsUpDownIcon,
   XMarkIcon,
+  RectangleGroupIcon,
 } from '@heroicons/react/24/outline'
 import ImageUploader from '../ui/ImageUploader.jsx'
 
@@ -26,6 +29,79 @@ const inputStyle = {
 
 const inputClass =
   'w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all'
+
+const SECTION_LAYOUT_COLUMNS = {
+  '1-col': 1,
+  '2-col': 2,
+  '3-col': 3,
+}
+
+const SECTION_LAYOUT_OPTIONS = ['1-col', '2-col', '3-col']
+const SECTION_VARIANT_OPTIONS = ['default', 'soft', 'accent']
+const SECTION_SPACING_OPTIONS = ['sm', 'md', 'lg']
+
+/**
+ * Nettoie un identifiant technique.
+ * @param {unknown} value Valeur brute.
+ * @param {number} maxLength Taille max.
+ * @returns {string} Identifiant normalise.
+ */
+function sanitizeIdentifier(value, maxLength) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9:_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, maxLength)
+}
+
+/**
+ * Normalise le layout section.
+ * @param {unknown} value Valeur brute.
+ * @returns {'1-col'|'2-col'|'3-col'} Layout section.
+ */
+function sanitizeSectionLayout(value) {
+  const normalized = sanitizeIdentifier(value, 12)
+  if (Object.prototype.hasOwnProperty.call(SECTION_LAYOUT_COLUMNS, normalized)) {
+    return normalized
+  }
+  return '2-col'
+}
+
+/**
+ * Normalise le variant section.
+ * @param {unknown} value Valeur brute.
+ * @returns {'default'|'soft'|'accent'} Variant section.
+ */
+function sanitizeSectionVariant(value) {
+  const normalized = sanitizeIdentifier(value, 20)
+  if (SECTION_VARIANT_OPTIONS.includes(normalized)) {
+    return normalized
+  }
+  return 'default'
+}
+
+/**
+ * Normalise le spacing section.
+ * @param {unknown} value Valeur brute.
+ * @returns {'sm'|'md'|'lg'} Spacing section.
+ */
+function sanitizeSectionSpacing(value) {
+  const normalized = sanitizeIdentifier(value, 20)
+  if (SECTION_SPACING_OPTIONS.includes(normalized)) {
+    return normalized
+  }
+  return 'md'
+}
+
+/**
+ * Retourne le nombre de colonnes attendu.
+ * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
+ * @returns {number} Nombre de colonnes.
+ */
+function getSectionColumnCount(layout) {
+  return SECTION_LAYOUT_COLUMNS[layout] || 2
+}
 
 /* Genere un identifiant unique pour chaque bloc. */
 function genId() {
@@ -55,48 +131,36 @@ function deriveListItems(block) {
   return lines.length > 0 ? lines : ['']
 }
 
-/* Transforme un bloc existant vers un nouveau type en conservant un minimum de contenu. */
-function transformBlockToType(currentBlock, typeDef) {
-  const base = typeDef.defaultData()
-  const text = currentBlock.content || currentBlock.caption || ''
-
-  switch (typeDef.type) {
-    case 'paragraph':
-      base.content = text
-      break
-    case 'heading':
-      base.content = text
-      base.level = currentBlock.level === 3 ? 3 : 2
-      break
-    case 'image':
-      base.url = currentBlock.url || ''
-      base.caption = text
-      break
-    case 'code':
-      base.content = currentBlock.content || ''
-      base.language = currentBlock.language || 'js'
-      break
-    case 'quote':
-      base.content = text
-      base.author = currentBlock.author || ''
-      break
-    case 'list':
-      base.items = deriveListItems(currentBlock)
-      break
-    default:
-      break
-  }
-
-  return { ...base, id: currentBlock.id }
-}
-
 /**
  * Normalise un bloc de template vers un format compatible editeur.
  * @param {object} block Bloc source.
+ * @param {{allowSection?: boolean}} [options] Options de normalisation.
  * @returns {object} Bloc normalise sans identifiant.
  */
-function normalizeTemplateBlock(block) {
-  const type = block?.type || 'paragraph'
+function normalizeTemplateBlock(block, options = {}) {
+  const allowSection = options.allowSection !== false
+  const type = String(block?.type || 'paragraph').trim().toLowerCase()
+
+  if (type === 'section' && allowSection) {
+    const layout = sanitizeSectionLayout(block?.layout)
+    const columnCount = getSectionColumnCount(layout)
+    const sourceColumns = Array.isArray(block?.columns) ? block.columns : []
+
+    return {
+      type: 'section',
+      layout,
+      variant: sanitizeSectionVariant(block?.variant),
+      spacing: sanitizeSectionSpacing(block?.spacing),
+      anchor: sanitizeIdentifier(block?.anchor, 80),
+      columns: Array.from({ length: columnCount }, (_, index) => {
+        const rawColumn = Array.isArray(sourceColumns[index]) ? sourceColumns[index] : []
+        return rawColumn
+          .slice(0, 80)
+          .map((item) => normalizeTemplateBlock(item, { allowSection: false }))
+          .filter(Boolean)
+      }),
+    }
+  }
 
   switch (type) {
     case 'heading':
@@ -138,13 +202,109 @@ function normalizeTemplateBlock(block) {
 }
 
 /**
+ * Cree la structure par defaut d'une section.
+ * @param {'1-col'|'2-col'|'3-col'} [layout='2-col'] Layout cible.
+ * @returns {object} Bloc section initial.
+ */
+function createDefaultSectionBlockData(layout = '2-col') {
+  const safeLayout = sanitizeSectionLayout(layout)
+  const columnCount = getSectionColumnCount(safeLayout)
+
+  return {
+    id: genId(),
+    type: 'section',
+    layout: safeLayout,
+    variant: 'default',
+    spacing: 'md',
+    anchor: '',
+    columns: Array.from({ length: columnCount }, () => []),
+  }
+}
+
+/**
+ * Ajoute des ids au bloc template (y compris widgets de section).
+ * @param {object} block Bloc normalise sans id.
+ * @returns {object|null} Bloc instancie avec ids.
+ */
+function instantiateTemplateBlockWithIds(block) {
+  if (!block || typeof block !== 'object') return null
+
+  if (block.type !== 'section') {
+    return { ...safeClone(block), id: genId() }
+  }
+
+  const layout = sanitizeSectionLayout(block.layout)
+  const columnCount = getSectionColumnCount(layout)
+  const sourceColumns = Array.isArray(block.columns) ? block.columns : []
+
+  return {
+    id: genId(),
+    type: 'section',
+    layout,
+    variant: sanitizeSectionVariant(block.variant),
+    spacing: sanitizeSectionSpacing(block.spacing),
+    anchor: sanitizeIdentifier(block.anchor, 80),
+    columns: Array.from({ length: columnCount }, (_, index) => {
+      const widgets = Array.isArray(sourceColumns[index]) ? sourceColumns[index] : []
+      return widgets
+        .slice(0, 80)
+        .map((widget) => instantiateTemplateBlockWithIds(normalizeTemplateBlock(widget, { allowSection: false })))
+        .filter(Boolean)
+    }),
+  }
+}
+
+/* Transforme un bloc existant vers un nouveau type en conservant un minimum de contenu. */
+function transformBlockToType(currentBlock, typeDef) {
+  const base = typeDef.defaultData()
+  const text = currentBlock.content || currentBlock.caption || ''
+
+  switch (typeDef.type) {
+    case 'paragraph':
+      base.content = text
+      break
+    case 'heading':
+      base.content = text
+      base.level = currentBlock.level === 3 ? 3 : 2
+      break
+    case 'image':
+      base.url = currentBlock.url || ''
+      base.caption = text
+      break
+    case 'code':
+      base.content = currentBlock.content || ''
+      base.language = currentBlock.language || 'js'
+      break
+    case 'quote':
+      base.content = text
+      base.author = currentBlock.author || ''
+      break
+    case 'list':
+      base.items = deriveListItems(currentBlock)
+      break
+    case 'section': {
+      const widget = normalizeTemplateBlock(currentBlock, { allowSection: false })
+      const firstColumn = widget ? [{ ...widget, id: genId() }] : []
+      base.columns = base.columns.map((column, index) => (index === 0 ? firstColumn : column))
+      break
+    }
+    default:
+      break
+  }
+
+  return { ...base, id: currentBlock.id }
+}
+
+/**
  * Instancie les blocs d'un template avec des ids uniques.
  * @param {Array<object>} blocksFromTemplate Blocs du template.
  * @returns {Array<object>} Blocs prets a inserer.
  */
 function instantiateTemplateBlocks(blocksFromTemplate) {
   return (Array.isArray(blocksFromTemplate) ? blocksFromTemplate : [])
-    .map((block) => ({ ...normalizeTemplateBlock(block), id: genId() }))
+    .map((block) => normalizeTemplateBlock(block, { allowSection: true }))
+    .map((block) => instantiateTemplateBlockWithIds(block))
+    .filter(Boolean)
 }
 
 /**
@@ -498,10 +658,588 @@ const BLOCK_TYPES = [
     Icon: ListBulletIcon,
     defaultData: () => ({ id: genId(), type: 'list', items: [''] }),
   },
+  {
+    type: 'section',
+    label: 'Section',
+    Icon: RectangleGroupIcon,
+    defaultData: () => createDefaultSectionBlockData('2-col'),
+  },
 ]
 
+const WIDGET_BLOCK_TYPES = BLOCK_TYPES.filter((entry) => entry.type !== 'section')
+
+/**
+ * Normalise un widget de section (sans autoriser les sections imbriquees).
+ * @param {object} widget Bloc source.
+ * @returns {object} Widget normalise.
+ */
+function normalizeSectionWidget(widget) {
+  const normalized = normalizeTemplateBlock(widget, { allowSection: false })
+  return {
+    ...(normalized || { type: 'paragraph', content: '' }),
+    id: widget?.id || genId(),
+  }
+}
+
+/**
+ * Rend l'editeur d'une section multi-colonnes.
+ * @param {object} props Props composant.
+ * @param {object} props.block Bloc section.
+ * @param {(nextBlock: object) => void} props.onChange Callback update section.
+ * @returns {JSX.Element} UI section.
+ */
+function SectionBlock({ block, onChange }) {
+  const [widgetDragSource, setWidgetDragSource] = useState(null)
+  const [widgetDropTarget, setWidgetDropTarget] = useState(null)
+  const layout = sanitizeSectionLayout(block.layout)
+  const variant = sanitizeSectionVariant(block.variant)
+  const spacing = sanitizeSectionSpacing(block.spacing)
+  const columnCount = getSectionColumnCount(layout)
+  const sourceColumns = Array.isArray(block.columns) ? block.columns : []
+  const columns = Array.from({ length: columnCount }, (_, index) => {
+    const rawWidgets = Array.isArray(sourceColumns[index]) ? sourceColumns[index] : []
+    return rawWidgets.map((widget) => normalizeSectionWidget(widget))
+  })
+
+  const applyColumns = (nextColumns) => {
+    onChange({
+      ...block,
+      layout,
+      variant,
+      spacing,
+      columns: nextColumns,
+    })
+  }
+
+  const clearWidgetDragState = () => {
+    setWidgetDragSource(null)
+    setWidgetDropTarget(null)
+  }
+
+  const isDropTargetPosition = (columnIndex, widgetIndex) => {
+    return (
+      widgetDropTarget &&
+      widgetDropTarget.columnIndex === columnIndex &&
+      widgetDropTarget.widgetIndex === widgetIndex
+    )
+  }
+
+  const updateLayout = (nextLayoutRaw) => {
+    const nextLayout = sanitizeSectionLayout(nextLayoutRaw)
+    const nextColumnCount = getSectionColumnCount(nextLayout)
+    const nextColumns = Array.from({ length: nextColumnCount }, (_, index) => {
+      const existing = Array.isArray(columns[index]) ? columns[index] : []
+      return existing.map((widget) => normalizeSectionWidget(widget))
+    })
+
+    onChange({
+      ...block,
+      layout: nextLayout,
+      columns: nextColumns,
+    })
+    clearWidgetDragState()
+  }
+
+  const addWidget = (columnIndex, type = 'paragraph', atIndex = null) => {
+    const typeDef = WIDGET_BLOCK_TYPES.find((entry) => entry.type === type) || WIDGET_BLOCK_TYPES[0]
+    const widget = normalizeSectionWidget(typeDef.defaultData())
+    const nextColumns = columns.map((column, index) => {
+      if (index !== columnIndex) return column
+      const nextColumn = [...column]
+      const safeAt = Number.isInteger(atIndex) ? Math.max(0, Math.min(nextColumn.length, atIndex)) : nextColumn.length
+      nextColumn.splice(safeAt, 0, widget)
+      return nextColumn
+    })
+    applyColumns(nextColumns)
+    clearWidgetDragState()
+  }
+
+  const updateWidget = (columnIndex, widgetIndex, updatedWidget) => {
+    const nextColumns = columns.map((column, index) => {
+      if (index !== columnIndex) return column
+      const nextColumn = [...column]
+      if (!nextColumn[widgetIndex]) return nextColumn
+      nextColumn[widgetIndex] = normalizeSectionWidget({ ...updatedWidget, id: nextColumn[widgetIndex].id })
+      return nextColumn
+    })
+    applyColumns(nextColumns)
+  }
+
+  const removeWidget = (columnIndex, widgetIndex) => {
+    const nextColumns = columns.map((column, index) => {
+      if (index !== columnIndex) return column
+      return column.filter((_, idx) => idx !== widgetIndex)
+    })
+    applyColumns(nextColumns)
+    clearWidgetDragState()
+  }
+
+  const duplicateWidget = (columnIndex, widgetIndex) => {
+    const nextColumns = columns.map((column, index) => {
+      if (index !== columnIndex) return column
+      const source = column[widgetIndex]
+      if (!source) return column
+      const clone = normalizeSectionWidget({ ...safeClone(source), id: genId() })
+      const nextColumn = [...column]
+      nextColumn.splice(widgetIndex + 1, 0, clone)
+      return nextColumn
+    })
+    applyColumns(nextColumns)
+    clearWidgetDragState()
+  }
+
+  const moveWidget = (columnIndex, widgetIndex, direction) => {
+    const nextColumns = columns.map((column, index) => {
+      if (index !== columnIndex) return column
+      const target = widgetIndex + direction
+      if (target < 0 || target >= column.length) return column
+      const nextColumn = [...column]
+      ;[nextColumn[widgetIndex], nextColumn[target]] = [nextColumn[target], nextColumn[widgetIndex]]
+      return nextColumn
+    })
+    applyColumns(nextColumns)
+    clearWidgetDragState()
+  }
+
+  const moveWidgetAcrossColumns = (columnIndex, widgetIndex, direction) => {
+    const targetColumnIndex = columnIndex + direction
+    if (targetColumnIndex < 0 || targetColumnIndex >= columns.length) return
+
+    const nextColumns = columns.map((column) => [...column])
+    const sourceColumn = nextColumns[columnIndex]
+    const targetColumn = nextColumns[targetColumnIndex]
+    if (!Array.isArray(sourceColumn) || !Array.isArray(targetColumn)) return
+
+    const sourceWidget = sourceColumn[widgetIndex]
+    if (!sourceWidget) return
+
+    const [moved] = sourceColumn.splice(widgetIndex, 1)
+    const insertAt = Math.max(0, Math.min(targetColumn.length, widgetIndex))
+    targetColumn.splice(insertAt, 0, moved)
+    applyColumns(nextColumns)
+    clearWidgetDragState()
+  }
+
+  const commitWidgetDragDrop = (source, target) => {
+    if (!source || !target) {
+      clearWidgetDragState()
+      return
+    }
+
+    const sourceColumnIndex = Number.parseInt(String(source.columnIndex), 10)
+    const sourceWidgetIndex = Number.parseInt(String(source.widgetIndex), 10)
+    const targetColumnIndex = Number.parseInt(String(target.columnIndex), 10)
+    const rawTargetWidgetIndex = Number.parseInt(String(target.widgetIndex), 10)
+
+    if (
+      !Number.isInteger(sourceColumnIndex) ||
+      !Number.isInteger(sourceWidgetIndex) ||
+      !Number.isInteger(targetColumnIndex) ||
+      !Number.isInteger(rawTargetWidgetIndex)
+    ) {
+      clearWidgetDragState()
+      return
+    }
+
+    if (
+      sourceColumnIndex < 0 ||
+      sourceColumnIndex >= columns.length ||
+      targetColumnIndex < 0 ||
+      targetColumnIndex >= columns.length
+    ) {
+      clearWidgetDragState()
+      return
+    }
+
+    if (
+      sourceColumnIndex === targetColumnIndex &&
+      (rawTargetWidgetIndex === sourceWidgetIndex || rawTargetWidgetIndex === sourceWidgetIndex + 1)
+    ) {
+      clearWidgetDragState()
+      return
+    }
+
+    const nextColumns = columns.map((column) => [...column])
+    const sourceColumn = nextColumns[sourceColumnIndex]
+    const targetColumn = nextColumns[targetColumnIndex]
+    if (!Array.isArray(sourceColumn) || !Array.isArray(targetColumn)) {
+      clearWidgetDragState()
+      return
+    }
+
+    const sourceWidget = sourceColumn[sourceWidgetIndex]
+    if (!sourceWidget) {
+      clearWidgetDragState()
+      return
+    }
+
+    const [movedWidget] = sourceColumn.splice(sourceWidgetIndex, 1)
+    let targetWidgetIndex = rawTargetWidgetIndex
+    if (sourceColumnIndex === targetColumnIndex && sourceWidgetIndex < targetWidgetIndex) {
+      targetWidgetIndex -= 1
+    }
+
+    const safeTargetIndex = Math.max(0, Math.min(targetColumn.length, targetWidgetIndex))
+    targetColumn.splice(safeTargetIndex, 0, movedWidget)
+    applyColumns(nextColumns)
+    clearWidgetDragState()
+  }
+
+  const handleWidgetDragStart = (event, columnIndex, widgetIndex) => {
+    setWidgetDragSource({ columnIndex, widgetIndex })
+    setWidgetDropTarget({ columnIndex, widgetIndex })
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', `${columnIndex}:${widgetIndex}`)
+  }
+
+  const handleWidgetDragOver = (event, columnIndex, widgetIndex) => {
+    if (!widgetDragSource) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    const targetWidgetIndex = event.clientY < rect.top + rect.height / 2 ? widgetIndex : widgetIndex + 1
+    setWidgetDropTarget((previous) => {
+      if (
+        previous &&
+        previous.columnIndex === columnIndex &&
+        previous.widgetIndex === targetWidgetIndex
+      ) {
+        return previous
+      }
+      return { columnIndex, widgetIndex: targetWidgetIndex }
+    })
+  }
+
+  const handleWidgetDrop = (event, columnIndex, widgetIndex) => {
+    if (!widgetDragSource) return
+    event.preventDefault()
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    const targetWidgetIndex = event.clientY < rect.top + rect.height / 2 ? widgetIndex : widgetIndex + 1
+    commitWidgetDragDrop(widgetDragSource, { columnIndex, widgetIndex: targetWidgetIndex })
+  }
+
+  const handleColumnDragOver = (event, columnIndex) => {
+    if (!widgetDragSource) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+
+    const targetIsWidget =
+      event.target instanceof HTMLElement && Boolean(event.target.closest('[data-section-widget="true"]'))
+    if (targetIsWidget) return
+
+    const targetWidgetIndex = columns[columnIndex]?.length || 0
+    setWidgetDropTarget((previous) => {
+      if (
+        previous &&
+        previous.columnIndex === columnIndex &&
+        previous.widgetIndex === targetWidgetIndex
+      ) {
+        return previous
+      }
+      return { columnIndex, widgetIndex: targetWidgetIndex }
+    })
+  }
+
+  const handleColumnDrop = (event, columnIndex) => {
+    if (!widgetDragSource) return
+    event.preventDefault()
+
+    const fallbackIndex = columns[columnIndex]?.length || 0
+    const targetWidgetIndex =
+      widgetDropTarget && widgetDropTarget.columnIndex === columnIndex
+        ? widgetDropTarget.widgetIndex
+        : fallbackIndex
+    commitWidgetDragDrop(widgetDragSource, { columnIndex, widgetIndex: targetWidgetIndex })
+  }
+
+  const handleWidgetDragEnd = () => {
+    clearWidgetDragState()
+  }
+
+  const changeWidgetType = (columnIndex, widgetIndex, nextType) => {
+    const typeDef = WIDGET_BLOCK_TYPES.find((entry) => entry.type === nextType)
+    if (!typeDef) return
+    const source = columns[columnIndex]?.[widgetIndex]
+    if (!source) return
+    const transformed = transformBlockToType(source, typeDef)
+    updateWidget(columnIndex, widgetIndex, transformed)
+  }
+
+  const gridClass =
+    layout === '1-col'
+      ? 'grid-cols-1'
+      : layout === '3-col'
+        ? 'grid-cols-1 md:grid-cols-3'
+        : 'grid-cols-1 md:grid-cols-2'
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+        <div>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+            Layout
+          </label>
+          <select
+            value={layout}
+            onChange={(event) => updateLayout(event.target.value)}
+            className={inputClass}
+            style={inputStyle}
+          >
+            {SECTION_LAYOUT_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+            Variant
+          </label>
+          <select
+            value={variant}
+            onChange={(event) => onChange({ ...block, variant: sanitizeSectionVariant(event.target.value) })}
+            className={inputClass}
+            style={inputStyle}
+          >
+            {SECTION_VARIANT_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+            Spacing
+          </label>
+          <select
+            value={spacing}
+            onChange={(event) => onChange({ ...block, spacing: sanitizeSectionSpacing(event.target.value) })}
+            className={inputClass}
+            style={inputStyle}
+          >
+            {SECTION_SPACING_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+            Anchor
+          </label>
+          <input
+            type="text"
+            value={block.anchor || ''}
+            onChange={(event) => onChange({ ...block, anchor: sanitizeIdentifier(event.target.value, 80) })}
+            className={inputClass}
+            style={inputStyle}
+            placeholder="hero, pricing, contact..."
+          />
+        </div>
+      </div>
+
+      <div className={`grid gap-3 ${gridClass}`}>
+        {columns.map((widgets, columnIndex) => (
+          <div
+            key={`section-column-${columnIndex}`}
+            className="rounded-lg border p-2 space-y-2"
+            style={{
+              borderColor: widgetDropTarget?.columnIndex === columnIndex ? 'var(--color-accent)' : 'var(--color-border)',
+              backgroundColor: 'var(--color-bg-primary)',
+              boxShadow: widgetDropTarget?.columnIndex === columnIndex ? '0 0 0 1px var(--color-accent)' : 'none',
+            }}
+            onDragOver={(event) => handleColumnDragOver(event, columnIndex)}
+            onDrop={(event) => handleColumnDrop(event, columnIndex)}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                Colonne {columnIndex + 1}
+              </p>
+              <div className="flex items-center gap-1">
+                {WIDGET_BLOCK_TYPES.map((typeDef) => (
+                  <button
+                    key={`add-widget-${columnIndex}-${typeDef.type}`}
+                    type="button"
+                    onClick={() => addWidget(columnIndex, typeDef.type)}
+                    className="p-1 rounded border"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                    title={`Ajouter ${typeDef.label}`}
+                    aria-label={`Ajouter ${typeDef.label}`}
+                  >
+                    <typeDef.Icon className="h-3.5 w-3.5" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {widgets.length === 0 && (
+              <button
+                type="button"
+                onClick={() => addWidget(columnIndex, 'paragraph')}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed px-2 py-2 text-xs"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+              >
+                <PlusIcon className="h-3.5 w-3.5" />
+                Ajouter un widget
+              </button>
+            )}
+
+            {widgets.length === 0 && isDropTargetPosition(columnIndex, 0) && (
+              <div
+                className="h-2 rounded-full"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 75%, transparent)' }}
+              />
+            )}
+
+            {widgets.map((widget, widgetIndex) => {
+              const typeDef = WIDGET_BLOCK_TYPES.find((entry) => entry.type === widget.type)
+              return (
+                <div key={widget.id || `widget-${columnIndex}-${widgetIndex}`} className="space-y-2">
+                  {isDropTargetPosition(columnIndex, widgetIndex) && (
+                    <div
+                      className="h-2 rounded-full"
+                      style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 75%, transparent)' }}
+                    />
+                  )}
+
+                  <article
+                    data-section-widget="true"
+                    className="rounded-lg border p-2 space-y-2"
+                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+                    onDragOver={(event) => handleWidgetDragOver(event, columnIndex, widgetIndex)}
+                    onDrop={(event) => handleWidgetDrop(event, columnIndex, widgetIndex)}
+                  >
+                    <div className="flex flex-wrap items-center gap-2 justify-between">
+                      <span className="text-[11px] font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+                        Widget {widgetIndex + 1}
+                      </span>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          draggable
+                          onDragStart={(event) => handleWidgetDragStart(event, columnIndex, widgetIndex)}
+                          onDragEnd={handleWidgetDragEnd}
+                          className="p-1 rounded cursor-grab active:cursor-grabbing"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          aria-label="Glisser le widget"
+                          title="Glisser pour deplacer entre colonnes"
+                        >
+                          <ArrowsUpDownIcon className="h-4 w-4" />
+                        </button>
+
+                        <select
+                          value={widget.type}
+                          onChange={(event) => changeWidgetType(columnIndex, widgetIndex, event.target.value)}
+                          className="px-2 py-1 rounded-lg border text-xs focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          style={inputStyle}
+                          aria-label="Changer le type de widget"
+                        >
+                          {WIDGET_BLOCK_TYPES.map((entry) => (
+                            <option key={`widget-${widget.id}-${entry.type}`} value={entry.type}>
+                              {entry.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={() => moveWidgetAcrossColumns(columnIndex, widgetIndex, -1)}
+                          disabled={columnIndex === 0}
+                          className="p-1 rounded disabled:opacity-30"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          aria-label="Deplacer le widget vers la colonne precedente"
+                          title="Deplacer vers la colonne precedente"
+                        >
+                          <ChevronLeftIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveWidgetAcrossColumns(columnIndex, widgetIndex, 1)}
+                          disabled={columnIndex === columns.length - 1}
+                          className="p-1 rounded disabled:opacity-30"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          aria-label="Deplacer le widget vers la colonne suivante"
+                          title="Deplacer vers la colonne suivante"
+                        >
+                          <ChevronRightIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveWidget(columnIndex, widgetIndex, -1)}
+                          disabled={widgetIndex === 0}
+                          className="p-1 rounded disabled:opacity-30"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          aria-label="Monter le widget"
+                        >
+                          <ChevronUpIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveWidget(columnIndex, widgetIndex, 1)}
+                          disabled={widgetIndex === widgets.length - 1}
+                          className="p-1 rounded disabled:opacity-30"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          aria-label="Descendre le widget"
+                        >
+                          <ChevronDownIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => duplicateWidget(columnIndex, widgetIndex)}
+                          className="p-1 rounded"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          aria-label="Dupliquer le widget"
+                        >
+                          <DocumentDuplicateIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeWidget(columnIndex, widgetIndex)}
+                          className="p-1 rounded"
+                          style={{ color: '#f87171' }}
+                          aria-label="Supprimer le widget"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {typeDef && (
+                      <BlockContent
+                        block={widget}
+                        onChange={(updated) => updateWidget(columnIndex, widgetIndex, updated)}
+                        allowSection={false}
+                      />
+                    )}
+                  </article>
+                </div>
+              )
+            })}
+
+            {isDropTargetPosition(columnIndex, widgets.length) && (
+              <div
+                className="h-2 rounded-full"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 75%, transparent)' }}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+        Tip: fais glisser un widget (icone double fleche) pour le deplacer dans une autre colonne.
+      </p>
+    </div>
+  )
+}
+
 /* Rend le sous-composant correspondant au type du bloc. */
-function BlockContent({ block, onChange }) {
+function BlockContent({ block, onChange, allowSection = true }) {
   switch (block.type) {
     case 'paragraph':
       return <ParagraphBlock block={block} onChange={onChange} />
@@ -515,6 +1253,9 @@ function BlockContent({ block, onChange }) {
       return <QuoteBlock block={block} onChange={onChange} />
     case 'list':
       return <ListBlock block={block} onChange={onChange} />
+    case 'section':
+      if (!allowSection) return null
+      return <SectionBlock block={block} onChange={onChange} />
     default:
       return null
   }
@@ -528,6 +1269,7 @@ function BlockContent({ block, onChange }) {
  * @param {Array<{id: string, label: string, description?: string, blocks: Array<object>}>} [props.templates] Templates predefinis optionnels.
  * @param {string | null} [props.activeBlockId] Bloc actif force depuis le parent.
  * @param {(blockId: string | null) => void} [props.onActiveBlockChange] Callback changement de bloc actif.
+ * @param {boolean} [props.allowSections=false] Autorise le bloc section (mode page builder).
  * @returns {JSX.Element} Interface de gestion des blocs.
  */
 export default function BlockEditor({
@@ -536,6 +1278,7 @@ export default function BlockEditor({
   templates = [],
   activeBlockId: externalActiveBlockId = null,
   onActiveBlockChange,
+  allowSections = false,
 }) {
   const [paletteQuery, setPaletteQuery] = useState('')
   const [insertionIndex, setInsertionIndex] = useState(null)
@@ -554,11 +1297,16 @@ export default function BlockEditor({
     )
   }, [templates])
 
+  const availableBlockTypes = useMemo(
+    () => (allowSections ? BLOCK_TYPES : WIDGET_BLOCK_TYPES),
+    [allowSections]
+  )
+
   const filteredTypes = useMemo(() => {
     const q = paletteQuery.trim().toLowerCase()
-    if (!q) return BLOCK_TYPES
-    return BLOCK_TYPES.filter((typeDef) => typeDef.label.toLowerCase().includes(q))
-  }, [paletteQuery])
+    if (!q) return availableBlockTypes
+    return availableBlockTypes.filter((typeDef) => typeDef.label.toLowerCase().includes(q))
+  }, [paletteQuery, availableBlockTypes])
 
   const activeIndex = useMemo(
     () => blocks.findIndex((block) => block.id === activeBlockId),
@@ -657,7 +1405,7 @@ export default function BlockEditor({
   }
 
   const changeBlockType = (index, nextType) => {
-    const typeDef = BLOCK_TYPES.find((entry) => entry.type === nextType)
+    const typeDef = availableBlockTypes.find((entry) => entry.type === nextType)
     if (!typeDef) return
 
     const current = blocks[index]
@@ -783,11 +1531,12 @@ export default function BlockEditor({
         c: 'code',
         q: 'quote',
         l: 'list',
+        s: 'section',
       }
       const type = shortcutMap[key]
       if (!type) return
 
-      const typeDef = BLOCK_TYPES.find((entry) => entry.type === type)
+      const typeDef = availableBlockTypes.find((entry) => entry.type === type)
       if (!typeDef) return
 
       event.preventDefault()
@@ -870,7 +1619,7 @@ export default function BlockEditor({
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {BLOCK_TYPES.map((typeDef) => (
+          {availableBlockTypes.map((typeDef) => (
             <button
               key={`${position}-${typeDef.type}`}
               type="button"
@@ -905,7 +1654,7 @@ export default function BlockEditor({
             Composer en blocs
           </p>
           <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            Raccourcis: Ctrl+Shift+P/H/I/C/Q/L (ajouter), Alt+haut/bas (deplacer), Alt+D
+            Raccourcis: Ctrl+Shift+P/H/I/C/Q/L/S (ajouter), Alt+haut/bas (deplacer), Alt+D
             (dupliquer), Alt+Suppr (supprimer).
           </p>
         </div>
@@ -1081,7 +1830,7 @@ export default function BlockEditor({
                     style={inputStyle}
                     aria-label="Changer le type de bloc"
                   >
-                    {BLOCK_TYPES.map((entry) => (
+                    {availableBlockTypes.map((entry) => (
                       <option key={`${block.id}-${entry.type}`} value={entry.type}>
                         {entry.label}
                       </option>

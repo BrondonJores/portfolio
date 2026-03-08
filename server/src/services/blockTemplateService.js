@@ -4,7 +4,15 @@ const { BlockTemplate, MarketplaceItem, BlockTemplateRelease } = require('../mod
 const { createHttpError } = require('../utils/httpError')
 
 const TEMPLATE_CONTEXTS = new Set(['article', 'project', 'newsletter', 'all'])
-const BLOCK_TYPES = new Set(['paragraph', 'heading', 'image', 'code', 'quote', 'list'])
+const BLOCK_TYPES = new Set(['paragraph', 'heading', 'image', 'code', 'quote', 'list', 'section'])
+const SECTION_LAYOUT_COLUMNS = {
+  '1-col': 1,
+  '2-col': 2,
+  '3-col': 3,
+}
+const SECTION_VARIANTS = new Set(['default', 'soft', 'accent'])
+const SECTION_SPACINGS = new Set(['sm', 'md', 'lg'])
+const MAX_BLOCKS = 250
 
 /**
  * Verifie que le repository marketplace expose les methodes minimales.
@@ -61,6 +69,21 @@ function sanitizeText(value, maxLength, fallback = '') {
 }
 
 /**
+ * Nettoie un identifiant technique (id bloc, anchor...).
+ * @param {unknown} value Valeur brute.
+ * @param {number} maxLength Taille max.
+ * @returns {string} Identifiant nettoye.
+ */
+function sanitizeIdentifier(value, maxLength) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9:_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, maxLength)
+}
+
+/**
  * Nettoie recursivement les items d'une liste imbriquee.
  * @param {unknown} items Elements bruts de liste.
  * @param {number} [depth=0] Profondeur courante.
@@ -101,50 +124,139 @@ function sanitizeListItems(items, depth = 0) {
 }
 
 /**
+ * Nettoie le layout d'une section (`1-col`, `2-col`, `3-col`).
+ * @param {unknown} value Valeur brute.
+ * @returns {'1-col'|'2-col'|'3-col'} Layout section normalise.
+ */
+function sanitizeSectionLayout(value) {
+  const normalized = sanitizeIdentifier(value, 12)
+  if (Object.prototype.hasOwnProperty.call(SECTION_LAYOUT_COLUMNS, normalized)) {
+    return normalized
+  }
+  return '2-col'
+}
+
+/**
+ * Retourne le nombre de colonnes pour un layout section.
+ * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
+ * @returns {number} Nombre de colonnes.
+ */
+function getSectionColumnCount(layout) {
+  return SECTION_LAYOUT_COLUMNS[layout] || 2
+}
+
+/**
+ * Nettoie le variant visuel d'une section.
+ * @param {unknown} value Valeur brute.
+ * @returns {'default'|'soft'|'accent'} Variant section.
+ */
+function sanitizeSectionVariant(value) {
+  const normalized = sanitizeIdentifier(value, 20)
+  if (SECTION_VARIANTS.has(normalized)) {
+    return normalized
+  }
+  return 'default'
+}
+
+/**
+ * Nettoie l'espacement vertical d'une section.
+ * @param {unknown} value Valeur brute.
+ * @returns {'sm'|'md'|'lg'} Spacing section.
+ */
+function sanitizeSectionSpacing(value) {
+  const normalized = sanitizeIdentifier(value, 20)
+  if (SECTION_SPACINGS.has(normalized)) {
+    return normalized
+  }
+  return 'md'
+}
+
+/**
+ * Nettoie les widgets d'une section.
+ * @param {unknown} columns Colonnes brutes.
+ * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
+ * @param {number} depth Profondeur de nettoyage.
+ * @returns {Array<Array<object>>} Colonnes normalisees.
+ */
+function sanitizeSectionColumns(columns, layout, depth) {
+  const columnCount = getSectionColumnCount(layout)
+  const sourceColumns = Array.isArray(columns) ? columns : []
+
+  return Array.from({ length: columnCount }, (_, index) => {
+    const rawColumn = Array.isArray(sourceColumns[index]) ? sourceColumns[index] : []
+    return sanitizeBlocks(rawColumn, {
+      allowSection: false,
+      depth,
+      limit: 80,
+    })
+  })
+}
+
+/**
  * Normalise un bloc brut en structure autorisee pour le CMS.
  * @param {unknown} block Bloc source.
+ * @param {number} [depth=0] Profondeur de nettoyage.
+ * @param {boolean} [allowSection=true] Autorise les sections top-level.
  * @returns {object | null} Bloc nettoye ou null si invalide.
  */
-function sanitizeBlock(block) {
+function sanitizeBlock(block, depth = 0, allowSection = true) {
   if (!block || typeof block !== 'object') return null
 
-  const type = sanitizeText(block.type, 20).toLowerCase()
+  const type = sanitizeIdentifier(block.type, 20)
   if (!BLOCK_TYPES.has(type)) return null
+  if (type === 'section' && !allowSection) return null
+
+  const common = {
+    id: sanitizeIdentifier(block.id, 64) || null,
+    type,
+  }
 
   switch (type) {
+    case 'section': {
+      if (depth >= 2) return null
+      const layout = sanitizeSectionLayout(block.layout)
+      return {
+        ...common,
+        layout,
+        variant: sanitizeSectionVariant(block.variant),
+        spacing: sanitizeSectionSpacing(block.spacing),
+        anchor: sanitizeIdentifier(block.anchor, 80) || '',
+        columns: sanitizeSectionColumns(block.columns, layout, depth + 1),
+      }
+    }
     case 'heading':
       return {
-        type: 'heading',
+        ...common,
         level: Number(block.level) === 3 ? 3 : 2,
         content: sanitizeText(block.content, 2000),
       }
     case 'image':
       return {
-        type: 'image',
+        ...common,
         url: sanitizeText(block.url, 2000),
         caption: sanitizeText(block.caption, 500),
       }
     case 'code':
       return {
-        type: 'code',
+        ...common,
         language: sanitizeText(block.language, 40, 'js') || 'js',
         content: sanitizeText(block.content, 200000),
       }
     case 'quote':
       return {
-        type: 'quote',
+        ...common,
         content: sanitizeText(block.content, 4000),
         author: sanitizeText(block.author, 200),
       }
     case 'list':
       return {
-        type: 'list',
+        ...common,
         items: sanitizeListItems(block.items),
       }
     case 'paragraph':
     default:
       return {
-        type: 'paragraph',
+        ...common,
         content: sanitizeText(block.content, 8000),
       }
   }
@@ -153,13 +265,21 @@ function sanitizeBlock(block) {
 /**
  * Nettoie une collection de blocs.
  * @param {unknown} blocks Valeur source.
+ * @param {object} [options={}] Options de nettoyage.
+ * @param {boolean} [options.allowSection=true] Autorise les sections.
+ * @param {number} [options.depth=0] Profondeur de nettoyage.
+ * @param {number} [options.limit=MAX_BLOCKS] Limite de blocs.
  * @returns {Array<object>} Tableau de blocs valides.
  */
-function sanitizeBlocks(blocks) {
+function sanitizeBlocks(blocks, options = {}) {
   if (!Array.isArray(blocks)) return []
+  const allowSection = options.allowSection !== false
+  const depth = Number.isInteger(options.depth) ? options.depth : 0
+  const limit = Number.isInteger(options.limit) && options.limit > 0 ? options.limit : MAX_BLOCKS
 
   return blocks
-    .map((block) => sanitizeBlock(block))
+    .slice(0, limit)
+    .map((block) => sanitizeBlock(block, depth, allowSection))
     .filter(Boolean)
 }
 
