@@ -31,6 +31,9 @@ export default function BlogPage() {
   const [pagination, setPagination] = useState(null)
   const { settings } = useSettings()
   const pageTitle = buildPageTitle(settings, 'Blog')
+  const blogPageHeading = settings.ui_blog_page_title || 'Blog'
+  const blogPageSubtitle = settings.ui_blog_page_subtitle || 'Articles et reflexions sur le developpement web'
+  const blogPageEmpty = settings.ui_blog_page_empty || 'Aucun article disponible pour le moment.'
 
   useEffect(() => {
     setLoading(true)
@@ -52,8 +55,8 @@ export default function BlogPage() {
       <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionTitle
-            title="Blog"
-            subtitle="Articles et reflexions sur le developpement web"
+            title={blogPageHeading}
+            subtitle={blogPageSubtitle}
           />
 
           {loading ? (
@@ -65,7 +68,7 @@ export default function BlogPage() {
               className="text-center py-20"
               style={{ color: 'var(--color-text-secondary)' }}
             >
-              Aucun article disponible pour le moment.
+              {blogPageEmpty}
             </p>
           ) : (
             <>

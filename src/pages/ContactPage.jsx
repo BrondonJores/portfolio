@@ -35,6 +35,21 @@ export default function ContactPage() {
 
   const contactEmail = settings.contact_email || 'contact@brondonjores.dev'
   const contactLocation = settings.contact_location || 'France'
+  const sectionTitle = settings.ui_section_contact_title || 'Contact'
+  const sectionSubtitle = settings.ui_section_contact_subtitle || 'Discutons de votre prochain projet'
+  const contactIntro =
+    settings.ui_contact_intro ||
+    "Je suis disponible pour des missions freelance, des opportunites d'emploi ou simplement pour discuter de vos projets."
+  const formNameLabel = settings.ui_contact_form_name_label || 'Nom'
+  const formEmailLabel = settings.ui_contact_form_email_label || 'Email'
+  const formMessageLabel = settings.ui_contact_form_message_label || 'Message'
+  const formNamePlaceholder = settings.ui_contact_form_name_placeholder || 'Votre nom'
+  const formEmailPlaceholder = settings.ui_contact_form_email_placeholder || 'votre@email.com'
+  const formMessagePlaceholder = settings.ui_contact_form_message_placeholder || 'Decrivez votre projet...'
+  const formSuccessMessage = settings.ui_contact_form_success || 'Votre message a ete envoye avec succes.'
+  const formSubmitLabel = settings.ui_contact_form_submit || 'Envoyer le message'
+  const formSubmittingLabel = settings.ui_contact_form_submitting || 'Envoi en cours...'
+  const testimonialsTitle = settings.ui_contact_testimonials_title || 'Temoignages'
 
   useEffect(() => {
     getTestimonials()
@@ -51,8 +66,8 @@ export default function ContactPage() {
       <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionTitle
-            title="Contact"
-            subtitle="Discutons de votre prochain projet"
+            title={sectionTitle}
+            subtitle={sectionSubtitle}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
@@ -62,8 +77,7 @@ export default function ContactPage() {
                 className="text-base leading-relaxed mb-8"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
-                Je suis disponible pour des missions freelance, des opportunites d&apos;emploi ou
-                simplement pour discuter de vos projets.
+                {contactIntro}
               </p>
               <div className="space-y-4 mb-8">
                 <div className="flex items-center gap-3">
@@ -112,7 +126,7 @@ export default function ContactPage() {
                     className="block text-sm font-medium mb-1.5"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    Nom
+                    {formNameLabel}
                   </label>
                   <input
                     id="cp-name"
@@ -124,7 +138,7 @@ export default function ContactPage() {
                     autoComplete="name"
                     className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
                     style={inputStyle}
-                    placeholder="Votre nom"
+                    placeholder={formNamePlaceholder}
                   />
                 </div>
                 <div>
@@ -133,7 +147,7 @@ export default function ContactPage() {
                     className="block text-sm font-medium mb-1.5"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    Email
+                    {formEmailLabel}
                   </label>
                   <input
                     id="cp-email"
@@ -145,7 +159,7 @@ export default function ContactPage() {
                     autoComplete="email"
                     className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
                     style={inputStyle}
-                    placeholder="votre@email.com"
+                    placeholder={formEmailPlaceholder}
                   />
                 </div>
                 <div>
@@ -154,7 +168,7 @@ export default function ContactPage() {
                     className="block text-sm font-medium mb-1.5"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    Message
+                    {formMessageLabel}
                   </label>
                   <textarea
                     id="cp-message"
@@ -165,7 +179,7 @@ export default function ContactPage() {
                     rows={5}
                     className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all resize-none"
                     style={inputStyle}
-                    placeholder="Decrivez votre projet..."
+                    placeholder={formMessagePlaceholder}
                   />
                 </div>
 
@@ -175,7 +189,7 @@ export default function ContactPage() {
                     style={{ color: '#4ade80', backgroundColor: 'rgba(74, 222, 128, 0.1)' }}
                     role="status"
                   >
-                    Votre message a ete envoye avec succes.
+                    {formSuccessMessage}
                   </p>
                 )}
                 {status.error && (
@@ -195,7 +209,7 @@ export default function ContactPage() {
                   className="w-full justify-center"
                 >
                   <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
-                  {status.loading ? 'Envoi en cours...' : 'Envoyer le message'}
+                  {status.loading ? formSubmittingLabel : formSubmitLabel}
                 </Button>
               </div>
             </form>
@@ -214,7 +228,7 @@ export default function ContactPage() {
                   className="text-2xl font-bold"
                   style={{ color: 'var(--color-text-primary)' }}
                 >
-                  Temoignages
+                  {testimonialsTitle}
                 </h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

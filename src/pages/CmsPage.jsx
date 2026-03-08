@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import { getPublicCmsPageBySlug } from '../services/cmsPageService.js'
+import { useSettings } from '../context/SettingsContext.jsx'
 
 /**
  * Retourne `value` si c'est une chaine, sinon fallback.
@@ -18,6 +19,7 @@ function asText(value, fallback = '') {
 
 export default function CmsPage() {
   const { slug } = useParams()
+  const { settings } = useSettings()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [page, setPage] = useState(null)
@@ -31,12 +33,18 @@ export default function CmsPage() {
       })
       .catch((err) => {
         setPage(null)
-        setError(err.message || 'Page introuvable.')
+        setError(err.message || asText(settings?.ui_cms_not_found_title, 'Page introuvable'))
       })
       .finally(() => setLoading(false))
   }, [slug])
 
-  const pageTitle = asText(page?.seo?.title) || asText(page?.title) || 'Page'
+  const cmsDefaultTitle = asText(settings?.ui_cms_default_title, 'Page')
+  const cmsNotFoundTitle = asText(settings?.ui_cms_not_found_title, 'Page introuvable')
+  const cmsNotFoundMessage = asText(
+    settings?.ui_cms_not_found_message,
+    "La page que vous recherchez n'est pas disponible."
+  )
+  const pageTitle = asText(page?.seo?.title) || asText(page?.title) || cmsDefaultTitle
   const pageDescription = asText(page?.seo?.description)
   const pageCanonical = asText(page?.seo?.canonicalUrl)
   const pageNoIndex = Boolean(page?.seo?.noindex)
@@ -58,14 +66,14 @@ export default function CmsPage() {
     return (
       <>
         <Helmet>
-          <title>Page introuvable</title>
+          <title>{cmsNotFoundTitle}</title>
         </Helmet>
         <section className="max-w-3xl mx-auto px-4 py-16">
           <h1 className="text-3xl font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>
-            Page introuvable
+            {cmsNotFoundTitle}
           </h1>
           <p style={{ color: 'var(--color-text-secondary)' }}>
-            {error || "La page que vous recherchez n'est pas disponible."}
+            {error || cmsNotFoundMessage}
           </p>
         </section>
       </>

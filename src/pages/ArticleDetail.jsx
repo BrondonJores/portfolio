@@ -166,7 +166,7 @@ function ReadingProgress() {
 }
 
 /* Bouton retour en haut (fixe, apparaît après 400px de scroll) */
-function BackToTopButton() {
+function BackToTopButton({ label = 'Retour en haut' }) {
   const scrollY = useScrollPosition()
   return (
     <AnimatePresence>
@@ -178,7 +178,7 @@ function BackToTopButton() {
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           className="fixed bottom-8 right-6 p-3 rounded-full shadow-lg z-40 focus:outline-none"
           style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
-          aria-label="Retour en haut"
+          aria-label={label}
         >
           <ChevronUpIcon className="h-5 w-5" aria-hidden="true" />
         </motion.button>
@@ -188,7 +188,7 @@ function BackToTopButton() {
 }
 
 /* Table des matières avec suivi de section active via IntersectionObserver */
-function TableOfContents({ headings }) {
+function TableOfContents({ headings, title = 'Table des matieres' }) {
   const [activeId, setActiveId] = useState('')
 
   useEffect(() => {
@@ -211,12 +211,12 @@ function TableOfContents({ headings }) {
   if (headings.length === 0) return null
 
   return (
-    <nav aria-label="Table des matières">
+    <nav aria-label={title}>
       <p
         className="text-xs font-semibold uppercase tracking-wide mb-3"
         style={{ color: 'var(--color-text-secondary)' }}
       >
-        Table des matières
+        {title}
       </p>
       <ul className="space-y-1.5">
         {headings.map(({ id, text, level }) => (
@@ -243,7 +243,20 @@ function TableOfContents({ headings }) {
 }
 
 /* Sidebar de partage (desktop) */
-function ShareSidebar({ article, liked, likesCount, onLike, onCopyLink, copied, likeAnimKey, likePending }) {
+function ShareSidebar({
+  article,
+  liked,
+  likesCount,
+  onLike,
+  onCopyLink,
+  copied,
+  likeAnimKey,
+  likePending,
+  copyLabel = 'Copier le lien',
+  copiedLabel = 'Lien copie !',
+  likeAddLabel = "J'aime cet article",
+  likeRemoveLabel = 'Retirer le like',
+}) {
   const twitterUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(article.title)}`
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`
 
@@ -257,12 +270,12 @@ function ShareSidebar({ article, liked, likesCount, onLike, onCopyLink, copied, 
     <div className="flex flex-col items-center gap-3">
       <button
         onClick={onCopyLink}
-        title={copied ? 'Lien copié !' : 'Copier le lien'}
+        title={copied ? copiedLabel : copyLabel}
         className="p-2.5 rounded-full border transition-colors focus:outline-none"
         style={btnStyle}
         onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
         onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-        aria-label="Copier le lien"
+        aria-label={copyLabel}
       >
         <LinkIcon className="h-5 w-5" aria-hidden="true" />
       </button>
@@ -306,7 +319,7 @@ function ShareSidebar({ article, liked, likesCount, onLike, onCopyLink, copied, 
         transition={{ duration: 0.3 }}
         disabled={likePending}
         className="flex flex-col items-center gap-0.5 focus:outline-none disabled:opacity-60"
-        aria-label={liked ? 'Retirer le like' : "J'aime cet article"}
+        aria-label={liked ? likeRemoveLabel : likeAddLabel}
       >
         <HeartIcon
           className="h-5 w-5 transition-colors"
@@ -379,7 +392,14 @@ function AuthorCard({ article }) {
 }
 
 /* Newsletter CTA inline */
-function NewsletterCTA() {
+function NewsletterCTA({
+  successLabel = 'Merci ! Vous etes desormais abonne(e).',
+  titleLabel = 'Vous aimez ce contenu ? Abonnez-vous pour ne rien manquer.',
+  emailPlaceholder = 'votre@email.com',
+  submitLabel = "S'abonner",
+  submittingLabel = 'Envoi...',
+  genericErrorLabel = 'Une erreur est survenue. Veuillez reessayer.',
+}) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle') // idle | loading | success | error
   const [errorMsg, setErrorMsg] = useState('')
@@ -394,7 +414,7 @@ function NewsletterCTA() {
       setStatus('success')
     } catch (err) {
       setStatus('error')
-      setErrorMsg(err?.message || 'Une erreur est survenue. Veuillez reessayer.')
+      setErrorMsg(err?.message || genericErrorLabel)
     }
   }
 
@@ -413,7 +433,7 @@ function NewsletterCTA() {
         <div className="flex items-center gap-2">
           <CheckCircleIcon className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
           <p className="text-sm font-medium" style={{ color: 'var(--color-accent)' }}>
-            Merci ! Vous etes desormais abonne(e).
+            {successLabel}
           </p>
         </div>
       ) : (
@@ -421,7 +441,7 @@ function NewsletterCTA() {
           <div className="flex items-center gap-2 mb-3">
             <EnvelopeIcon className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
             <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-              Vous aimez ce contenu ? Abonnez-vous pour ne rien manquer.
+              {titleLabel}
             </p>
           </div>
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2">
@@ -430,7 +450,7 @@ function NewsletterCTA() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              placeholder="votre@email.com"
+              placeholder={emailPlaceholder}
               disabled={status === 'loading'}
               className="flex-1 px-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
               style={{
@@ -445,7 +465,7 @@ function NewsletterCTA() {
               className="px-4 py-2 rounded-lg text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
               style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
             >
-              {status === 'loading' ? 'Envoi...' : "S'abonner"}
+              {status === 'loading' ? submittingLabel : submitLabel}
             </button>
           </form>
           <div className="mt-3">
@@ -479,6 +499,42 @@ export default function ArticleDetail() {
   const [likeAnimKey, setLikeAnimKey] = useState(0)
   const [likePending, setLikePending] = useState(false)
   const [likeError, setLikeError] = useState('')
+  const articleNotFoundLabel = settings.ui_article_not_found || 'Article introuvable.'
+  const articleBackToTopLabel = settings.ui_article_back_to_top || 'Retour en haut'
+  const articleBackToBlogLabel = settings.ui_article_back_to_blog || 'Retour au blog'
+  const articleCopyLinkLabel = settings.ui_article_copy_link || 'Copier le lien'
+  const articleLinkCopiedLabel = settings.ui_article_link_copied || 'Lien copie !'
+  const articleCopyShortLabel = settings.ui_article_copy_short || 'Copier'
+  const articleCopyShortCopiedLabel = settings.ui_article_copy_short_copied || 'Copie !'
+  const articleLikeAddLabel = settings.ui_article_like_add || "J'aime cet article"
+  const articleLikeRemoveLabel = settings.ui_article_like_remove || 'Retirer le like'
+  const articleLikeOnLabel = settings.ui_article_like_label_on || 'Aime'
+  const articleLikeOffLabel = settings.ui_article_like_label_off || "J'aime"
+  const likeAddLabel = articleLikeAddLabel
+  const likeRemoveLabel = articleLikeRemoveLabel
+  const articleReadingSuffix = settings.ui_article_reading_time_suffix || 'min de lecture'
+  const articleViewsSuffix = settings.ui_article_views_suffix || 'vues'
+  const articleTocTitle = settings.ui_article_toc_title || 'Table des matieres'
+  const articleGenericErrorLabel = settings.ui_article_generic_error || 'Une erreur est survenue. Veuillez reessayer.'
+  const articleLikeErrorLabel = settings.ui_article_like_error || 'Impossible de mettre a jour le like pour le moment.'
+  const articleCommentsTitle = settings.ui_article_comments_title || 'Commentaires'
+  const articleCommentWord = settings.ui_article_comment_word || 'commentaire'
+  const articleLeaveCommentLabel = settings.ui_article_leave_comment || 'Laisser un commentaire'
+  const articleCommentPendingLabel =
+    settings.ui_article_comment_pending || 'Commentaire soumis, en attente de moderation.'
+  const articleCommentNamePlaceholder = settings.ui_article_comment_name_placeholder || 'Votre nom *'
+  const articleCommentEmailPlaceholder = settings.ui_article_comment_email_placeholder || 'Votre email (optionnel)'
+  const articleCommentContentPlaceholder = settings.ui_article_comment_content_placeholder || 'Votre commentaire...'
+  const articleCommentSubmitLabel = settings.ui_article_comment_submit || 'Publier'
+  const articleCommentSubmittingLabel = settings.ui_article_comment_submitting || 'Envoi...'
+  const articleRelatedTitle = settings.ui_article_related_title || 'Articles similaires'
+  const articleNewsletterSuccess = settings.ui_article_newsletter_success || 'Merci ! Vous etes desormais abonne(e).'
+  const articleNewsletterTitle =
+    settings.ui_article_newsletter_title || 'Vous aimez ce contenu ? Abonnez-vous pour ne rien manquer.'
+  const articleNewsletterEmailPlaceholder =
+    settings.ui_article_newsletter_email_placeholder || 'votre@email.com'
+  const articleNewsletterSubmit = settings.ui_article_newsletter_submit || "S'abonner"
+  const articleNewsletterSubmitting = settings.ui_article_newsletter_submitting || 'Envoi...'
 
   useEffect(() => {
     getArticleBySlug(slug)
@@ -543,7 +599,7 @@ export default function ArticleDetail() {
     } catch (err) {
       setLiked(previousLiked)
       setLikesCount(previousCount)
-      setLikeError(err?.message || 'Impossible de mettre a jour le like pour le moment.')
+      setLikeError(err?.message || articleLikeErrorLabel)
     } finally {
       setLikePending(false)
     }
@@ -562,7 +618,7 @@ export default function ArticleDetail() {
       <>
         <Navbar />
         <main className="pt-24 min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-          <p style={{ color: 'var(--color-text-secondary)' }}>Article introuvable.</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>{articleNotFoundLabel}</p>
         </main>
       </>
     )
@@ -588,7 +644,7 @@ export default function ArticleDetail() {
       </Helmet>
       <ReadingProgress />
       <Navbar />
-      <BackToTopButton />
+      <BackToTopButton label={articleBackToTopLabel} />
 
       <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
         {/* Cover image hero pleine largeur */}
@@ -613,7 +669,7 @@ export default function ArticleDetail() {
             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
           >
             <ArrowLeftIcon className="h-4 w-4" aria-hidden="true" />
-            Retour au blog
+            {articleBackToBlogLabel}
           </button>
 
           {/* Layout principal : sidebar gauche + contenu + TOC droite */}
@@ -630,6 +686,10 @@ export default function ArticleDetail() {
                 copied={copied}
                 likeAnimKey={likeAnimKey}
                 likePending={likePending}
+                copyLabel={articleCopyLinkLabel}
+                copiedLabel={articleLinkCopiedLabel}
+                likeAddLabel={articleLikeAddLabel}
+                likeRemoveLabel={articleLikeRemoveLabel}
               />
             </aside>
 
@@ -658,12 +718,12 @@ export default function ArticleDetail() {
                   )}
                   <span className="flex items-center gap-1.5">
                     <ClockIcon className="h-4 w-4" aria-hidden="true" />
-                    {readingTime} min de lecture
+                    {readingTime} {articleReadingSuffix}
                   </span>
                   {article.views != null && (
                     <span className="flex items-center gap-1.5">
                       <EyeIcon className="h-4 w-4" aria-hidden="true" />
-                      {article.views} vues
+                      {article.views} {articleViewsSuffix}
                     </span>
                   )}
                 </div>
@@ -688,7 +748,7 @@ export default function ArticleDetail() {
                     }}
                   >
                     <LinkIcon className="h-4 w-4" aria-hidden="true" />
-                    {copied ? 'Copié !' : 'Copier'}
+                    {copied ? articleCopyShortCopiedLabel : articleCopyShortLabel}
                   </button>
                   <a
                     href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(article.title)}`}
@@ -747,14 +807,14 @@ export default function ArticleDetail() {
                     color: liked ? '#ef4444' : 'var(--color-text-secondary)',
                     backgroundColor: 'var(--color-bg-card)',
                   }}
-                  aria-label={liked ? 'Retirer le like' : "J'aime cet article"}
+                  aria-label={liked ? likeRemoveLabel : likeAddLabel}
                 >
                   <HeartIcon
                     className="h-5 w-5"
                     style={{ fill: liked ? '#ef4444' : 'none' }}
                     aria-hidden="true"
                   />
-                  {liked ? 'Aime' : "J'aime"} - {likesCount}
+                  {liked ? articleLikeOnLabel : articleLikeOffLabel} - {likesCount}
                 </motion.button>
                 {likeError && (
                   <p className="text-sm" style={{ color: '#ef4444' }}>
@@ -767,7 +827,14 @@ export default function ArticleDetail() {
               <AuthorCard article={article} />
 
               {/* Newsletter CTA */}
-              <NewsletterCTA />
+              <NewsletterCTA
+                successLabel={articleNewsletterSuccess}
+                titleLabel={articleNewsletterTitle}
+                emailPlaceholder={articleNewsletterEmailPlaceholder}
+                submitLabel={articleNewsletterSubmit}
+                submittingLabel={articleNewsletterSubmitting}
+                genericErrorLabel={articleGenericErrorLabel}
+              />
 
               {/* Section commentaires */}
               <section className="mt-12">
@@ -776,8 +843,8 @@ export default function ArticleDetail() {
                   style={{ color: 'var(--color-text-primary)' }}
                 >
                   {comments.length === 0
-                    ? 'Commentaires'
-                    : `${comments.length} commentaire${comments.length > 1 ? 's' : ''}`}
+                    ? articleCommentsTitle
+                    : `${comments.length} ${articleCommentWord}${comments.length > 1 ? 's' : ''}`}
                 </h2>
 
                 {/* Liste des commentaires */}
@@ -840,11 +907,11 @@ export default function ArticleDetail() {
                     className="text-base font-medium mb-4"
                     style={{ color: 'var(--color-text-primary)' }}
                   >
-                    Laisser un commentaire
+                    {articleLeaveCommentLabel}
                   </h3>
                   {submitSuccess ? (
                     <p className="text-sm" style={{ color: 'var(--color-accent)' }}>
-                      Commentaire soumis, en attente de modération.
+                      {articleCommentPendingLabel}
                     </p>
                   ) : (
                     <form
@@ -864,7 +931,7 @@ export default function ArticleDetail() {
                           setSubmitSuccess(true)
                           setCommentForm({ author_name: '', author_email: '', content: '' })
                         } catch (err) {
-                          setSubmitError(err?.message || 'Une erreur est survenue. Veuillez reessayer.')
+                          setSubmitError(err?.message || articleGenericErrorLabel)
                         } finally {
                           setSubmitting(false)
                         }
@@ -873,7 +940,7 @@ export default function ArticleDetail() {
                     >
                       <input
                         type="text"
-                        placeholder="Votre nom *"
+                        placeholder={articleCommentNamePlaceholder}
                         value={commentForm.author_name}
                         onChange={(e) => setCommentForm((prev) => ({ ...prev, author_name: e.target.value }))}
                         required
@@ -886,7 +953,7 @@ export default function ArticleDetail() {
                       />
                       <input
                         type="email"
-                        placeholder="Votre email (optionnel)"
+                        placeholder={articleCommentEmailPlaceholder}
                         value={commentForm.author_email}
                         onChange={(e) => setCommentForm((prev) => ({ ...prev, author_email: e.target.value }))}
                         className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
@@ -897,7 +964,7 @@ export default function ArticleDetail() {
                         }}
                       />
                       <textarea
-                        placeholder="Votre commentaire..."
+                        placeholder={articleCommentContentPlaceholder}
                         value={commentForm.content}
                         onChange={(e) => setCommentForm((prev) => ({ ...prev, content: e.target.value }))}
                         required
@@ -921,7 +988,7 @@ export default function ArticleDetail() {
                         className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
                         style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
                       >
-                        {submitting ? 'Envoi...' : 'Publier'}
+                        {submitting ? articleCommentSubmittingLabel : articleCommentSubmitLabel}
                       </button>
                     </form>
                   )}
@@ -932,7 +999,7 @@ export default function ArticleDetail() {
             {/* Table des matières — xl+ uniquement */}
             {tocHeadings.length > 0 && (
               <aside className="hidden xl:block flex-shrink-0 w-52 sticky top-28 h-fit pt-16">
-                <TableOfContents headings={tocHeadings} />
+                <TableOfContents headings={tocHeadings} title={articleTocTitle} />
               </aside>
             )}
           </div>
@@ -944,7 +1011,7 @@ export default function ArticleDetail() {
                 className="text-xl font-semibold mb-6"
                 style={{ color: 'var(--color-text-primary)' }}
               >
-                Articles similaires
+                {articleRelatedTitle}
               </h2>
               {/* Mobile: scroll horizontal — Desktop: grille 3 colonnes */}
               <div className="flex gap-4 overflow-x-auto snap-x pb-2 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
@@ -1019,4 +1086,8 @@ export default function ArticleDetail() {
     </>
   )
 }
+
+
+
+
 

@@ -39,6 +39,9 @@ export default function Skills() {
     [settings, prefersReducedMotion]
   )
   const canAnimate = animationConfig.canAnimate
+  const skillsTitle = settings.ui_section_skills_title || 'Competences'
+  const skillsSubtitle = settings.ui_section_skills_subtitle || "Technologies et outils que j'utilise au quotidien"
+  const skillsEmptyLabel = settings.ui_section_skills_empty || 'Aucune competence pour le moment.'
 
   useEffect(() => {
     getSkills()
@@ -87,14 +90,14 @@ export default function Skills() {
             aria-hidden="true"
           />
           <SectionTitle
-            title="Competences"
-            subtitle="Technologies et outils que j'utilise au quotidien"
+            title={skillsTitle}
+            subtitle={skillsSubtitle}
           />
         </div>
 
         {skillGroups.length === 0 ? (
           <p style={{ color: 'var(--color-text-secondary)' }}>
-            Aucune competence pour le moment.
+            {skillsEmptyLabel}
           </p>
         ) : (
           /* Grille des categories de competences */

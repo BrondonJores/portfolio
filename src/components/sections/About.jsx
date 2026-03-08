@@ -22,6 +22,7 @@ export default function About() {
   const location = settings.contact_location || 'Remote'
   const aboutPhotoBadge = settings.about_photo_badge || 'Disponible pour missions freelance'
   const aboutPhotoCaption = settings.about_photo_caption || 'De la conception au deploiement, je prends en charge le cycle complet.'
+  const aboutTitle = settings.ui_about_title || 'A propos de moi'
   const initials = heroName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
   return (
     <AnimatedSection
@@ -110,7 +111,7 @@ export default function About() {
               className="text-4xl font-bold mb-4"
               style={{ color: 'var(--color-text-primary)' }}
             >
-              A propos de moi
+              {aboutTitle}
             </h2>
             <div
               className="h-1 w-16 rounded mb-6"

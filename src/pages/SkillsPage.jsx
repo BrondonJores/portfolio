@@ -50,6 +50,9 @@ export default function SkillsPage() {
   const [loading, setLoading] = useState(true)
   const { settings } = useSettings()
   const pageTitle = buildPageTitle(settings, 'Competences')
+  const skillsPageHeading = settings.ui_skills_page_title || 'Mes Competences'
+  const skillsPageSubtitle =
+    settings.ui_skills_page_subtitle || 'Technologies et outils maitrises avec niveaux de competences'
 
   useEffect(() => {
     getSkills()
@@ -67,8 +70,8 @@ export default function SkillsPage() {
       <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionTitle
-            title="Mes Competences"
-            subtitle="Technologies et outils maitrisés avec niveaux de competences"
+            title={skillsPageHeading}
+            subtitle={skillsPageSubtitle}
           />
 
           {loading ? (
@@ -109,3 +112,4 @@ export default function SkillsPage() {
     </>
   )
 }
+

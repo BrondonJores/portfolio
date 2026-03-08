@@ -27,6 +27,20 @@ export default function Contact() {
 
   const contactEmail = settings.contact_email || 'contact@brondonjores.dev'
   const contactLocation = settings.contact_location || 'France'
+  const sectionTitle = settings.ui_section_contact_title || 'Contact'
+  const sectionSubtitle = settings.ui_section_contact_subtitle || 'Discutons de votre prochain projet'
+  const contactIntro =
+    settings.ui_contact_intro ||
+    "Je suis disponible pour des missions freelance, des opportunites d'emploi ou simplement pour discuter de vos projets. N'hesitez pas a me contacter."
+  const formNameLabel = settings.ui_contact_form_name_label || 'Nom'
+  const formEmailLabel = settings.ui_contact_form_email_label || 'Email'
+  const formMessageLabel = settings.ui_contact_form_message_label || 'Message'
+  const formNamePlaceholder = settings.ui_contact_form_name_placeholder || 'Votre nom'
+  const formEmailPlaceholder = settings.ui_contact_form_email_placeholder || 'votre@email.com'
+  const formMessagePlaceholder = settings.ui_contact_form_message_placeholder || 'Decrivez votre projet ou votre demande...'
+  const formSuccessMessage = settings.ui_contact_form_success || 'Votre message a ete envoye avec succes.'
+  const formSubmitLabel = settings.ui_contact_form_submit || 'Envoyer le message'
+  const formSubmittingLabel = settings.ui_contact_form_submitting || 'Envoi en cours...'
 
   return (
     <AnimatedSection
@@ -37,8 +51,8 @@ export default function Contact() {
       <AnimatedMascots scope="section" sceneKey="contact" />
       <div className="max-w-6xl mx-auto">
         <SectionTitle
-          title="Contact"
-          subtitle="Discutons de votre prochain projet"
+          title={sectionTitle}
+          subtitle={sectionSubtitle}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -48,8 +62,7 @@ export default function Contact() {
               className="text-base leading-relaxed mb-8"
               style={{ color: 'var(--color-text-secondary)' }}
             >
-              Je suis disponible pour des missions freelance, des opportunites d&apos;emploi ou
-              simplement pour discuter de vos projets. N&apos;hesitez pas a me contacter.
+              {contactIntro}
             </p>
 
             {/* Informations de contact */}
@@ -115,7 +128,7 @@ export default function Contact() {
                   className="block text-sm font-medium mb-1.5"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  Nom
+                  {formNameLabel}
                 </label>
                 <input
                   id="name"
@@ -127,7 +140,7 @@ export default function Contact() {
                   autoComplete="name"
                   className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
                   style={inputStyle}
-                  placeholder="Votre nom"
+                  placeholder={formNamePlaceholder}
                 />
               </div>
 
@@ -138,7 +151,7 @@ export default function Contact() {
                   className="block text-sm font-medium mb-1.5"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  Email
+                  {formEmailLabel}
                 </label>
                 <input
                   id="email"
@@ -150,7 +163,7 @@ export default function Contact() {
                   autoComplete="email"
                   className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
                   style={inputStyle}
-                  placeholder="votre@email.com"
+                  placeholder={formEmailPlaceholder}
                 />
               </div>
 
@@ -161,7 +174,7 @@ export default function Contact() {
                   className="block text-sm font-medium mb-1.5"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  Message
+                  {formMessageLabel}
                 </label>
                 <textarea
                   id="message"
@@ -172,7 +185,7 @@ export default function Contact() {
                   rows={5}
                   className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all resize-none"
                   style={inputStyle}
-                  placeholder="Decrivez votre projet ou votre demande..."
+                  placeholder={formMessagePlaceholder}
                 />
               </div>
 
@@ -186,7 +199,7 @@ export default function Contact() {
                   }}
                   role="status"
                 >
-                  Votre message a ete envoye avec succes.
+                  {formSuccessMessage}
                 </p>
               )}
 
@@ -212,10 +225,10 @@ export default function Contact() {
                 variant="primary"
                 disabled={status.loading}
                 className="w-full justify-center"
-                aria-label="Envoyer le message de contact"
+                aria-label={formSubmitLabel}
               >
                 <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
-                {status.loading ? 'Envoi en cours...' : 'Envoyer le message'}
+                {status.loading ? formSubmittingLabel : formSubmitLabel}
               </Button>
             </div>
           </form>

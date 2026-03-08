@@ -68,6 +68,8 @@ export default function Hero() {
   const photoAlt = settings.hero_photo_alt || `Portrait de ${heroNameRaw}`
   const photoObjectPosition = settings.hero_photo_object_position || '50% 30%'
   const avatarUrl = settings.avatar_url || ''
+  const heroCtaProjects = settings.ui_hero_cta_projects || 'Voir mes projets'
+  const heroCtaContact = settings.ui_hero_cta_contact || 'Me contacter'
   const stats = [
     {
       value: settings.stat_1_value || '3+',
@@ -233,10 +235,10 @@ export default function Hero() {
               className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4"
             >
               <Button variant="primary" href="projets">
-                Voir mes projets
+                {heroCtaProjects}
               </Button>
               <Button variant="secondary" href="contact">
-                Me contacter
+                {heroCtaContact}
               </Button>
             </motion.div>
 

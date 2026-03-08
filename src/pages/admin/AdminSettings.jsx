@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
@@ -39,6 +39,7 @@ const TABS = [
   { id: 'identity', label: 'Identite' },
   { id: 'social', label: 'Reseaux sociaux' },
   { id: 'contact', label: 'Contact' },
+  { id: 'content', label: 'Contenus' },
   { id: 'seo', label: 'SEO' },
   { id: 'appearance', label: 'Apparence' },
   { id: 'animations', label: 'Animations' },
@@ -54,6 +55,7 @@ const inputStyle = {
 
 const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 const DEFAULT_CINEMATIC_PRESET = 'cine-portfolio'
+const MAX_ANIMATION_PRESET_FILE_BYTES = 512 * 1024
 
 const DARK_COLOR_FIELDS = [
   { key: 'theme_dark_bg_primary', label: 'Fond principal (sombre)' },
@@ -75,6 +77,143 @@ const LIGHT_COLOR_FIELDS = [
   { key: 'theme_light_text_primary', label: 'Texte principal (clair)' },
   { key: 'theme_light_text_secondary', label: 'Texte secondaire (clair)' },
   { key: 'theme_light_border', label: 'Bordures (clair)' },
+]
+
+const CONTENT_TAB_SECTIONS = [
+  {
+    title: 'Navigation',
+    fields: [
+      { key: 'ui_nav_label_home', label: 'Menu: Accueil' },
+      { key: 'ui_nav_label_about', label: 'Menu: A propos' },
+      { key: 'ui_nav_label_skills', label: 'Menu: Competences' },
+      { key: 'ui_nav_label_projects', label: 'Menu: Projets' },
+      { key: 'ui_nav_label_blog', label: 'Menu: Blog' },
+      { key: 'ui_nav_label_contact', label: 'Menu: Contact' },
+      { key: 'ui_nav_label_admin', label: 'Menu mobile: Administration' },
+      { key: 'ui_nav_aria_main', label: 'ARIA: Navigation principale' },
+      { key: 'ui_nav_aria_home', label: 'ARIA: Lien accueil logo' },
+      { key: 'ui_nav_toggle_to_light', label: 'ARIA: Passer en mode clair' },
+      { key: 'ui_nav_toggle_to_dark', label: 'ARIA: Passer en mode sombre' },
+      { key: 'ui_nav_open_menu', label: 'ARIA: Ouvrir menu mobile' },
+      { key: 'ui_nav_close_menu', label: 'ARIA: Fermer menu mobile' },
+    ],
+  },
+  {
+    title: 'Accueil',
+    fields: [
+      { key: 'ui_hero_cta_projects', label: 'Hero CTA: Projets' },
+      { key: 'ui_hero_cta_contact', label: 'Hero CTA: Contact' },
+      { key: 'ui_about_title', label: 'Section About: titre' },
+      { key: 'ui_section_projects_title', label: 'Section Projets: titre' },
+      { key: 'ui_section_projects_subtitle', label: 'Section Projets: sous-titre' },
+      { key: 'ui_section_projects_view_all', label: 'Section Projets: lien voir tout' },
+      { key: 'ui_section_skills_title', label: 'Section Competences: titre' },
+      { key: 'ui_section_skills_subtitle', label: 'Section Competences: sous-titre' },
+      { key: 'ui_section_skills_empty', label: 'Section Competences: vide' },
+      { key: 'ui_section_blog_title', label: 'Section Blog: titre' },
+      { key: 'ui_section_blog_subtitle', label: 'Section Blog: sous-titre' },
+      { key: 'ui_section_blog_view_all', label: 'Section Blog: lien voir tout' },
+      { key: 'ui_section_contact_title', label: 'Section Contact: titre' },
+      { key: 'ui_section_contact_subtitle', label: 'Section Contact: sous-titre' },
+      { key: 'ui_contact_intro', label: 'Section Contact: texte intro', textarea: true, fullWidth: true },
+      { key: 'ui_project_badge_featured', label: 'Projet: badge mis en avant' },
+      { key: 'ui_project_action_github', label: 'Projet: bouton GitHub' },
+      { key: 'ui_project_action_demo', label: 'Projet: bouton Demo' },
+      { key: 'ui_project_demo_unavailable', label: 'Projet: demo indisponible' },
+    ],
+  },
+  {
+    title: 'Formulaire Contact',
+    fields: [
+      { key: 'ui_contact_form_name_label', label: 'Form Contact: label Nom' },
+      { key: 'ui_contact_form_email_label', label: 'Form Contact: label Email' },
+      { key: 'ui_contact_form_message_label', label: 'Form Contact: label Message' },
+      { key: 'ui_contact_form_name_placeholder', label: 'Form Contact: placeholder Nom' },
+      { key: 'ui_contact_form_email_placeholder', label: 'Form Contact: placeholder Email' },
+      { key: 'ui_contact_form_message_placeholder', label: 'Form Contact: placeholder Message', textarea: true },
+      { key: 'ui_contact_form_success', label: 'Form Contact: succes', textarea: true, fullWidth: true },
+      { key: 'ui_contact_form_submit', label: 'Form Contact: bouton Envoyer' },
+      { key: 'ui_contact_form_submitting', label: 'Form Contact: envoi en cours' },
+      { key: 'ui_contact_testimonials_title', label: 'Page Contact: titre temoignages' },
+    ],
+  },
+  {
+    title: 'Pages Listes',
+    fields: [
+      { key: 'ui_blog_page_title', label: 'Page Blog: titre' },
+      { key: 'ui_blog_page_subtitle', label: 'Page Blog: sous-titre' },
+      { key: 'ui_blog_page_empty', label: 'Page Blog: etat vide' },
+      { key: 'ui_projects_page_title', label: 'Page Projets: titre' },
+      { key: 'ui_projects_page_subtitle', label: 'Page Projets: sous-titre' },
+      { key: 'ui_skills_page_title', label: 'Page Competences: titre' },
+      { key: 'ui_skills_page_subtitle', label: 'Page Competences: sous-titre' },
+    ],
+  },
+  {
+    title: 'Pages Systeme',
+    fields: [
+      { key: 'ui_notfound_title', label: '404: titre' },
+      { key: 'ui_notfound_message', label: '404: message', textarea: true, fullWidth: true },
+      { key: 'ui_notfound_cta', label: '404: bouton retour' },
+      { key: 'ui_maintenance_badge', label: 'Maintenance: badge' },
+      { key: 'ui_maintenance_message', label: 'Maintenance: message', textarea: true, fullWidth: true },
+      { key: 'ui_cms_default_title', label: 'CMS: titre fallback' },
+      { key: 'ui_cms_not_found_title', label: 'CMS: titre introuvable' },
+      { key: 'ui_cms_not_found_message', label: 'CMS: message introuvable', textarea: true, fullWidth: true },
+    ],
+  },
+  {
+    title: 'Page Projet Detail',
+    fields: [
+      { key: 'ui_project_detail_not_found', label: 'Projet detail: introuvable' },
+      { key: 'ui_project_detail_back', label: 'Projet detail: bouton retour' },
+      { key: 'ui_project_detail_view_code', label: 'Projet detail: bouton code' },
+      { key: 'ui_project_detail_view_demo', label: 'Projet detail: bouton demo' },
+      { key: 'ui_project_detail_copy_link', label: 'Projet detail: copier lien' },
+      { key: 'ui_project_detail_link_copied', label: 'Projet detail: lien copie' },
+    ],
+  },
+  {
+    title: 'Page Article Detail (General)',
+    fields: [
+      { key: 'ui_article_not_found', label: 'Article detail: introuvable' },
+      { key: 'ui_article_back_to_top', label: 'Article detail: retour haut' },
+      { key: 'ui_article_back_to_blog', label: 'Article detail: retour blog' },
+      { key: 'ui_article_toc_title', label: 'Article detail: titre table matieres' },
+      { key: 'ui_article_copy_link', label: 'Article detail: copier lien (sidebar)' },
+      { key: 'ui_article_link_copied', label: 'Article detail: lien copie (sidebar)' },
+      { key: 'ui_article_copy_short', label: 'Article detail: copier (mobile)' },
+      { key: 'ui_article_copy_short_copied', label: 'Article detail: copie (mobile)' },
+      { key: 'ui_article_like_add', label: 'Article detail: ARIA like' },
+      { key: 'ui_article_like_remove', label: 'Article detail: ARIA unlike' },
+      { key: 'ui_article_like_label_on', label: 'Article detail: label like actif' },
+      { key: 'ui_article_like_label_off', label: 'Article detail: label like inactif' },
+      { key: 'ui_article_like_error', label: 'Article detail: erreur like', textarea: true, fullWidth: true },
+      { key: 'ui_article_reading_time_suffix', label: 'Article detail: suffixe lecture' },
+      { key: 'ui_article_views_suffix', label: 'Article detail: suffixe vues' },
+      { key: 'ui_article_generic_error', label: 'Article detail: erreur generique', textarea: true, fullWidth: true },
+      { key: 'ui_article_related_title', label: 'Article detail: titre similaires' },
+    ],
+  },
+  {
+    title: 'Page Article Detail (Commentaires + Newsletter)',
+    fields: [
+      { key: 'ui_article_comments_title', label: 'Article detail: titre commentaires' },
+      { key: 'ui_article_comment_word', label: 'Article detail: mot commentaire' },
+      { key: 'ui_article_leave_comment', label: 'Article detail: titre formulaire commentaire' },
+      { key: 'ui_article_comment_pending', label: 'Article detail: commentaire en attente', textarea: true, fullWidth: true },
+      { key: 'ui_article_comment_name_placeholder', label: 'Article detail: placeholder nom' },
+      { key: 'ui_article_comment_email_placeholder', label: 'Article detail: placeholder email' },
+      { key: 'ui_article_comment_content_placeholder', label: 'Article detail: placeholder commentaire', textarea: true },
+      { key: 'ui_article_comment_submit', label: 'Article detail: bouton publier' },
+      { key: 'ui_article_comment_submitting', label: 'Article detail: publication en cours' },
+      { key: 'ui_article_newsletter_success', label: 'Article detail: newsletter succes', textarea: true, fullWidth: true },
+      { key: 'ui_article_newsletter_title', label: 'Article detail: newsletter texte', textarea: true, fullWidth: true },
+      { key: 'ui_article_newsletter_email_placeholder', label: 'Article detail: newsletter placeholder email' },
+      { key: 'ui_article_newsletter_submit', label: 'Article detail: newsletter bouton' },
+      { key: 'ui_article_newsletter_submitting', label: 'Article detail: newsletter envoi' },
+    ],
+  },
 ]
 
 function normalizeColor(rawValue, fallback) {
@@ -294,6 +433,7 @@ export default function AdminSettings() {
   const [twoFactorQrLoading, setTwoFactorQrLoading] = useState(false)
   const [selectedCinematicPreset, setSelectedCinematicPreset] = useState(DEFAULT_CINEMATIC_PRESET)
   const [animationPresetJson, setAnimationPresetJson] = useState('')
+  const animationPresetFileInputRef = useRef(null)
 
   const styleKeys = useMemo(() => Object.keys(DEFAULT_THEME_SETTINGS), [])
 
@@ -400,32 +540,14 @@ export default function AdminSettings() {
     addToast('Scenes de section reinitialisees.', 'success')
   }
 
-  const handleFillAnimationPresetJson = () => {
-    const payload = {
-      version: 1,
-      type: 'portfolio-animation-preset',
-      generated_at: new Date().toISOString(),
-      settings: extractAnimationSettings(settings),
-    }
-    setAnimationPresetJson(JSON.stringify(payload, null, 2))
-    addToast('JSON du preset charge dans le champ.', 'success')
-  }
+  const createAnimationPresetPayload = () => ({
+    version: 1,
+    type: 'portfolio-animation-preset',
+    generated_at: new Date().toISOString(),
+    settings: extractAnimationSettings(settings),
+  })
 
-  const handleImportAnimationPreset = () => {
-    const source = String(animationPresetJson || '').trim()
-    if (!source) {
-      addToast('Colle un JSON de preset avant import.', 'error')
-      return
-    }
-
-    let parsed = null
-    try {
-      parsed = JSON.parse(source)
-    } catch {
-      addToast('JSON invalide.', 'error')
-      return
-    }
-
+  const applyParsedAnimationPreset = (parsed, successMessage = 'Preset animation importe.') => {
     const rawSettings =
       parsed &&
       typeof parsed === 'object' &&
@@ -439,13 +561,97 @@ export default function AdminSettings() {
     const patch = sanitizeImportedAnimationSettings(rawSettings)
     if (Object.keys(patch).length === 0) {
       addToast('Aucun parametre animation valide detecte.', 'error')
-      return
+      return false
     }
 
     const nextSettings = mergeWithThemeDefaults({ ...settings, ...patch })
     setSettings(nextSettings)
     updateLocalSettings(nextSettings)
-    addToast('Preset animation importe.', 'success')
+    addToast(successMessage, 'success')
+    return true
+  }
+
+  const handleFillAnimationPresetJson = () => {
+    const payload = createAnimationPresetPayload()
+    setAnimationPresetJson(JSON.stringify(payload, null, 2))
+    addToast('JSON du preset charge dans le champ.', 'success')
+  }
+
+  const handleExportAnimationPresetFile = () => {
+    const payload = createAnimationPresetPayload()
+    const serialized = JSON.stringify(payload, null, 2)
+    const blob = new Blob([serialized], { type: 'application/json' })
+    const downloadUrl = URL.createObjectURL(blob)
+    const dateStamp = new Date().toISOString().slice(0, 10)
+
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = `animation-preset-${dateStamp}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(downloadUrl)
+    addToast('Fichier JSON exporte.', 'success')
+  }
+
+  const handleOpenAnimationPresetFilePicker = () => {
+    animationPresetFileInputRef.current?.click()
+  }
+
+  const handleImportAnimationPresetFile = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) {
+      return
+    }
+
+    if (file.size > MAX_ANIMATION_PRESET_FILE_BYTES) {
+      addToast('Fichier trop volumineux. Maximum 512 KB.', 'error')
+      return
+    }
+
+    let source = ''
+    try {
+      source = String(await file.text()).replace(/^\uFEFF/, '').trim()
+    } catch {
+      addToast('Impossible de lire ce fichier JSON.', 'error')
+      return
+    }
+
+    if (!source) {
+      addToast('Fichier vide.', 'error')
+      return
+    }
+
+    setAnimationPresetJson(source)
+
+    let parsed = null
+    try {
+      parsed = JSON.parse(source)
+    } catch {
+      addToast('JSON invalide dans le fichier.', 'error')
+      return
+    }
+
+    applyParsedAnimationPreset(parsed, `Preset importe depuis ${file.name}.`)
+  }
+
+  const handleImportAnimationPreset = () => {
+    const source = String(animationPresetJson || '').trim()
+    if (!source) {
+      addToast('Aucun JSON detecte. Importe un fichier ou colle un preset.', 'error')
+      return
+    }
+
+    let parsed = null
+    try {
+      parsed = JSON.parse(source)
+    } catch {
+      addToast('JSON invalide.', 'error')
+      return
+    }
+
+    applyParsedAnimationPreset(parsed)
   }
 
   const handleSave = async () => {
@@ -690,6 +896,29 @@ export default function AdminSettings() {
             </CardSection>
           )}
 
+          {activeTab === 'content' && (
+            <>
+              {CONTENT_TAB_SECTIONS.map((section) => (
+                <CardSection key={section.title}>
+                  <SectionTitle>{section.title}</SectionTitle>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {section.fields.map((field) => (
+                      <div key={field.key} className={field.fullWidth ? 'md:col-span-2' : ''}>
+                        <FieldInput
+                          label={field.label}
+                          fieldKey={field.key}
+                          settings={settings}
+                          onChange={handleChange}
+                          textarea={field.textarea === true}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </CardSection>
+              ))}
+            </>
+          )}
+
           {activeTab === 'seo' && (
             <CardSection className="max-w-2xl">
               <FieldInput label="Titre SEO" fieldKey="seo_title" settings={settings} onChange={handleChange} />
@@ -915,7 +1144,7 @@ export default function AdminSettings() {
                       className="px-4 py-2.5 rounded-lg text-sm font-medium border"
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
                     >
-                      Generer JSON
+                      Generer JSON (zone)
                     </button>
                     <button
                       type="button"
@@ -927,18 +1156,44 @@ export default function AdminSettings() {
                     </button>
                     <button
                       type="button"
+                      onClick={handleOpenAnimationPresetFilePicker}
+                      className="px-4 py-2.5 rounded-lg text-sm font-medium border"
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                    >
+                      Importer fichier .json
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportAnimationPresetFile}
+                      className="px-4 py-2.5 rounded-lg text-sm font-medium border"
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                    >
+                      Exporter fichier .json
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleImportAnimationPreset}
                       className="px-4 py-2.5 rounded-lg text-sm font-medium border"
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
                     >
-                      Importer JSON
+                      Importer depuis zone
                     </button>
+                    <input
+                      ref={animationPresetFileInputRef}
+                      type="file"
+                      accept=".json,application/json"
+                      className="hidden"
+                      onChange={handleImportAnimationPresetFile}
+                    />
                   </div>
 
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
                       JSON de preset animation
                     </label>
+                    <InlineTip>
+                      Option rapide recommandee: utilise le bouton "Importer fichier .json". Cette zone reste utile pour debug/coller un preset.
+                    </InlineTip>
                     <textarea
                       value={animationPresetJson}
                       onChange={(e) => setAnimationPresetJson(e.target.value)}

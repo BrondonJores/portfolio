@@ -24,6 +24,12 @@ export default function ProjectsPage() {
   const [pagination, setPagination] = useState(null)
   const { settings } = useSettings()
   const pageTitle = buildPageTitle(settings, 'Projets')
+  const projectsPageHeading = settings.ui_projects_page_title || 'Mes Projets'
+  const projectsPageSubtitle =
+    settings.ui_projects_page_subtitle || "L'ensemble de mes realisations et experiences de developpement"
+  const projectsBadgeFeatured = settings.ui_project_badge_featured || 'Mis en avant'
+  const projectsActionGithub = settings.ui_project_action_github || 'GitHub'
+  const projectsActionDemo = settings.ui_project_action_demo || 'Demo'
 
   useEffect(() => {
     const params = { page, limit: 9 }
@@ -56,8 +62,8 @@ export default function ProjectsPage() {
       <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionTitle
-            title="Mes Projets"
-            subtitle="L'ensemble de mes realisations et experiences de developpement"
+            title={projectsPageHeading}
+            subtitle={projectsPageSubtitle}
           />
 
           {/* Filtres par tag */}
@@ -127,7 +133,7 @@ export default function ProjectsPage() {
                             />
                           )}
                           {project.featured && (
-                            <Badge className="ml-auto">Mis en avant</Badge>
+                            <Badge className="ml-auto">{projectsBadgeFeatured}</Badge>
                           )}
                         </div>
                         <h2
@@ -159,20 +165,20 @@ export default function ProjectsPage() {
                             <Button
                               variant="ghost"
                               href={project.github_url}
-                              aria-label={`Voir le code de ${project.title}`}
+                              aria-label={`${projectsActionGithub} - ${project.title}`}
                             >
                               <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
-                              GitHub
+                              {projectsActionGithub}
                             </Button>
                           )}
                           {project.demo_url && (
                             <Button
                               variant="secondary"
                               href={project.demo_url}
-                              aria-label={`Demo de ${project.title}`}
+                              aria-label={`${projectsActionDemo} - ${project.title}`}
                             >
                               <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
-                              Demo
+                              {projectsActionDemo}
                             </Button>
                           )}
                         </div>

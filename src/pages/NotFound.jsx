@@ -7,11 +7,15 @@ import { buildPageTitle } from '../utils/seoSettings.js'
 
 export default function NotFound() {
   const { settings } = useSettings()
+  const notFoundTitle = settings.ui_notfound_title || 'Page introuvable'
+  const notFoundMessage =
+    settings.ui_notfound_message || "La page que vous recherchez n'existe pas ou a ete deplacee."
+  const notFoundCta = settings.ui_notfound_cta || "Retourner a l'accueil"
 
   return (
     <>
       <Helmet>
-        <title>{buildPageTitle(settings, 'Page introuvable')}</title>
+        <title>{buildPageTitle(settings, notFoundTitle)}</title>
       </Helmet>
       <div
         className="min-h-screen flex flex-col items-center justify-center px-4 text-center"
@@ -32,13 +36,13 @@ export default function NotFound() {
           className="text-2xl font-semibold mb-2"
           style={{ color: 'var(--color-text-primary)' }}
         >
-          Page introuvable
+          {notFoundTitle}
         </p>
         <p
           className="text-base mb-8 max-w-md"
           style={{ color: 'var(--color-text-secondary)' }}
         >
-          La page que vous recherchez n&apos;existe pas ou a ete deplacee.
+          {notFoundMessage}
         </p>
         <Link
           to="/"
@@ -48,7 +52,7 @@ export default function NotFound() {
             color: '#fff',
           }}
         >
-          Retourner a l&apos;accueil
+          {notFoundCta}
         </Link>
       </div>
     </>

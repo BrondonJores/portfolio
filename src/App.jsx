@@ -51,7 +51,7 @@ function normalizeBaseUrl(rawValue) {
   return rawValue.trim().replace(/\/+$/, '')
 }
 
-function MaintenanceScreen({ siteName, tagline }) {
+function MaintenanceScreen({ siteName, tagline, badgeLabel, message }) {
   return (
     <section
       className="min-h-screen flex items-center justify-center px-4"
@@ -65,13 +65,13 @@ function MaintenanceScreen({ siteName, tagline }) {
         }}
       >
         <p className="text-sm font-semibold mb-2" style={{ color: 'var(--color-accent)' }}>
-          Maintenance
+          {badgeLabel || 'Maintenance'}
         </p>
         <h1 className="text-3xl font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>
           {siteName}
         </h1>
         <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          {tagline || 'Le site est temporairement en maintenance. Revenez dans quelques instants.'}
+          {tagline || message || 'Le site est temporairement en maintenance. Revenez dans quelques instants.'}
         </p>
       </div>
     </section>
@@ -105,6 +105,8 @@ export default function App() {
   const siteBaseUrl = normalizeBaseUrl(settings.site_url)
   const canonicalUrl = siteBaseUrl ? `${siteBaseUrl}${location.pathname}` : ''
   const maintenanceMode = parseBooleanSetting(settings.maintenance_mode, false)
+  const maintenanceBadge = (settings.ui_maintenance_badge || 'Maintenance').trim()
+  const maintenanceMessage = (settings.ui_maintenance_message || '').trim()
 
   return (
     <>
@@ -136,7 +138,12 @@ export default function App() {
         {!maintenanceMode && <AnimatedSpriteSystem />}
         <main>
           {maintenanceMode ? (
-            <MaintenanceScreen siteName={siteName} tagline={tagline} />
+            <MaintenanceScreen
+              siteName={siteName}
+              tagline={tagline}
+              badgeLabel={maintenanceBadge}
+              message={maintenanceMessage}
+            />
           ) : (
             <Outlet />
           )}

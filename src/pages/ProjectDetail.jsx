@@ -21,6 +21,12 @@ export default function ProjectDetail() {
   const [notFound, setNotFound] = useState(false)
   const [copied, setCopied] = useState(false)
   const { settings } = useSettings()
+  const projectNotFoundLabel = settings.ui_project_detail_not_found || 'Projet introuvable.'
+  const projectBackLabel = settings.ui_project_detail_back || 'Retour'
+  const projectViewCodeLabel = settings.ui_project_detail_view_code || 'Voir le code'
+  const projectViewDemoLabel = settings.ui_project_detail_view_demo || 'Voir la demo'
+  const projectCopyLinkLabel = settings.ui_project_detail_copy_link || 'Copier le lien'
+  const projectLinkCopiedLabel = settings.ui_project_detail_link_copied || 'Lien copie !'
 
   useEffect(() => {
     getProjectBySlug(slug)
@@ -52,7 +58,7 @@ export default function ProjectDetail() {
       <>
         <Navbar />
         <main className="pt-24 min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-          <p style={{ color: 'var(--color-text-secondary)' }}>Projet introuvable.</p>
+          <p style={{ color: 'var(--color-text-secondary)' }}>{projectNotFoundLabel}</p>
         </main>
       </>
     )
@@ -75,7 +81,7 @@ export default function ProjectDetail() {
             onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
           >
             <ArrowLeftIcon className="h-4 w-4" aria-hidden="true" />
-            Retour
+            {projectBackLabel}
           </button>
 
           {/* En-tete */}
@@ -116,13 +122,13 @@ export default function ProjectDetail() {
             {project.github_url && (
               <Button variant="secondary" href={project.github_url}>
                 <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
-                Voir le code
+                {projectViewCodeLabel}
               </Button>
             )}
             {project.demo_url && (
               <Button variant="primary" href={project.demo_url}>
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
-                Voir la demo
+                {projectViewDemoLabel}
               </Button>
             )}
             {/* Bouton de partage */}
@@ -134,7 +140,7 @@ export default function ProjectDetail() {
               onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
             >
               <LinkIcon className="h-4 w-4" aria-hidden="true" />
-              {copied ? 'Lien copié !' : 'Copier le lien'}
+              {copied ? projectLinkCopiedLabel : projectCopyLinkLabel}
             </button>
           </div>
 

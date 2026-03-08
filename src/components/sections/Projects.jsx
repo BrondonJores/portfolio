@@ -46,6 +46,13 @@ export default function Projects() {
     [settings, prefersReducedMotion]
   )
   const canAnimate = animationConfig.canAnimate
+  const projectsTitle = settings.ui_section_projects_title || 'Projets'
+  const projectsSubtitle = settings.ui_section_projects_subtitle || 'Quelques-uns de mes realisations recentes'
+  const projectsBadgeFeatured = settings.ui_project_badge_featured || 'Mis en avant'
+  const projectsActionGithub = settings.ui_project_action_github || 'GitHub'
+  const projectsActionDemo = settings.ui_project_action_demo || 'Demo'
+  const projectsDemoUnavailable = settings.ui_project_demo_unavailable || 'Demo non disponible'
+  const projectsViewAllLabel = settings.ui_section_projects_view_all || 'Voir tous mes projets'
 
   useEffect(() => {
     getProjects({ featured: true, limit: 3 })
@@ -85,8 +92,8 @@ export default function Projects() {
     >
       <div className="max-w-6xl mx-auto">
         <SectionTitle
-          title="Projets"
-          subtitle="Quelques-uns de mes realisations recentes"
+          title={projectsTitle}
+          subtitle={projectsSubtitle}
         />
 
         {/* Grille de cartes projets */}
@@ -146,7 +153,7 @@ export default function Projects() {
                           backgroundColor: 'rgba(99, 102, 241, 0.12)',
                         }}
                       >
-                        Mis en avant
+                        {projectsBadgeFeatured}
                       </span>
                     )}
                   </div>
@@ -187,28 +194,28 @@ export default function Projects() {
                     <Button
                       variant="ghost"
                       href={project.github_url}
-                      aria-label={`Voir le code source de ${project.title} sur GitHub`}
+                      aria-label={`${projectsActionGithub} - ${project.title}`}
                     >
                       <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
-                      GitHub
+                      {projectsActionGithub}
                     </Button>
                     {project.demo_url ? (
                       <Button
                         variant="secondary"
                         href={project.demo_url}
-                        aria-label={`Voir la demo de ${project.title}`}
+                        aria-label={`${projectsActionDemo} - ${project.title}`}
                       >
                         <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
-                        Demo
+                        {projectsActionDemo}
                       </Button>
                     ) : (
                       <Button
                         variant="ghost"
                         disabled
-                        aria-label="Demo non disponible"
+                        aria-label={projectsDemoUnavailable}
                       >
                         <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
-                        Demo
+                        {projectsActionDemo}
                       </Button>
                     )}
                   </div>
@@ -225,7 +232,7 @@ export default function Projects() {
             className="inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200"
             style={{ color: 'var(--color-accent)' }}
           >
-            Voir tous mes projets
+            {projectsViewAllLabel}
             <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>

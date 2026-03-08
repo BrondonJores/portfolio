@@ -21,6 +21,9 @@ export default function Blog() {
     [settings, prefersReducedMotion]
   )
   const canAnimate = animationConfig.canAnimate
+  const blogTitle = settings.ui_section_blog_title || 'Blog'
+  const blogSubtitle = settings.ui_section_blog_subtitle || 'Mes derniers articles et reflexions'
+  const blogViewAllLabel = settings.ui_section_blog_view_all || 'Voir tous les articles'
 
   useEffect(() => {
     getArticles({ limit: 3 })
@@ -39,8 +42,8 @@ export default function Blog() {
     >
       <div className="max-w-6xl mx-auto">
         <SectionTitle
-          title="Blog"
-          subtitle="Mes derniers articles et reflexions"
+          title={blogTitle}
+          subtitle={blogSubtitle}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -125,7 +128,7 @@ export default function Blog() {
             className="inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200"
             style={{ color: 'var(--color-accent-light)' }}
           >
-            Voir tous les articles
+            {blogViewAllLabel}
             <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
