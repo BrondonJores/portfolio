@@ -18,7 +18,7 @@ function sanitizeKeyPart(value) {
 
 /**
  * Construit l'identifiant de canal pour un contenu donne.
- * @param {string} entity Entite metier (article/project/newsletter).
+ * @param {string} entity Entite metier (article/project/newsletter/page).
  * @param {string|number|undefined|null} resourceId Identifiant de ressource.
  * @returns {string} Identifiant de canal stable.
  */

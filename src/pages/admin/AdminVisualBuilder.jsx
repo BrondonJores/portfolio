@@ -19,7 +19,12 @@ import {
 import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import Button from '../../components/ui/Button.jsx'
 import ImageUploader from '../../components/ui/ImageUploader.jsx'
-import { ARTICLE_BLOCK_TEMPLATES, NEWSLETTER_BLOCK_TEMPLATES, PROJECT_BLOCK_TEMPLATES } from '../../constants/blockTemplates.js'
+import {
+  ARTICLE_BLOCK_TEMPLATES,
+  NEWSLETTER_BLOCK_TEMPLATES,
+  PROJECT_BLOCK_TEMPLATES,
+  PAGE_BLOCK_TEMPLATES,
+} from '../../constants/blockTemplates.js'
 import useAdminBlockTemplates from '../../hooks/useAdminBlockTemplates.js'
 import { notifyAdminEditorSaved } from '../../utils/adminEditorWindow.js'
 import {
@@ -53,6 +58,13 @@ const ENTITY_CONFIG = {
     label: 'Newsletter',
     notifyEntity: 'newsletter',
     defaultTitle: 'Nouvelle campagne',
+  },
+  page: {
+    context: 'all',
+    fallbackTemplates: PAGE_BLOCK_TEMPLATES,
+    label: 'Page',
+    notifyEntity: 'pages',
+    defaultTitle: 'Nouvelle page',
   },
 }
 

@@ -39,6 +39,17 @@ const {
   upsertCurrent: upsertCurrentVisualBuilderDraft,
   removeCurrent: deleteCurrentVisualBuilderDraft,
 } = require('../controllers/visualBuilderDraftController')
+const {
+  getAllAdmin: getAllCmsPagesAdmin,
+  getByIdAdmin: getCmsPageByIdAdmin,
+  create: createCmsPage,
+  update: updateCmsPage,
+  publish: publishCmsPage,
+  unpublish: unpublishCmsPage,
+  remove: deleteCmsPage,
+  listRevisions: listCmsPageRevisions,
+  rollback: rollbackCmsPage,
+} = require('../controllers/cmsPageController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
 const { createProjectValidator, updateProjectValidator } = require('../validators/projectValidator')
@@ -65,6 +76,14 @@ const {
   currentVisualBuilderDraftQueryValidator,
   upsertVisualBuilderDraftValidator,
 } = require('../validators/visualBuilderDraftValidator')
+const {
+  cmsPageIdParamValidator,
+  listAdminCmsPagesValidator,
+  createCmsPageValidator,
+  updateCmsPageValidator,
+  publishCmsPageValidator,
+  rollbackCmsPageValidator,
+} = require('../validators/cmsPageValidator')
 
 const router = Router()
 
@@ -166,5 +185,16 @@ router.get('/theme-presets/:id/export-package', validate(themePresetIdParamValid
 router.post('/theme-presets/import-package', validate(importThemePresetPackageValidator), importThemePresetPackage)
 router.get('/theme-marketplace', validate(marketplaceListValidator), getThemeMarketplaceAdmin)
 router.post('/theme-marketplace/:slug/import', validate(importThemeMarketplaceValidator), importThemeFromMarketplace)
+
+/* Routes pages CMS admin */
+router.get('/pages', validate(listAdminCmsPagesValidator), getAllCmsPagesAdmin)
+router.get('/pages/:id', validate(cmsPageIdParamValidator), getCmsPageByIdAdmin)
+router.post('/pages', validate(createCmsPageValidator), createCmsPage)
+router.put('/pages/:id', validate(updateCmsPageValidator), updateCmsPage)
+router.post('/pages/:id/publish', validate(publishCmsPageValidator), publishCmsPage)
+router.post('/pages/:id/unpublish', validate(cmsPageIdParamValidator), unpublishCmsPage)
+router.delete('/pages/:id', validate(cmsPageIdParamValidator), deleteCmsPage)
+router.get('/pages/:id/revisions', validate(cmsPageIdParamValidator), listCmsPageRevisions)
+router.post('/pages/:id/rollback', validate(rollbackCmsPageValidator), rollbackCmsPage)
 
 module.exports = router

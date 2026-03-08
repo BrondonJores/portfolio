@@ -15,6 +15,7 @@ import {
   Squares2X2Icon,
   PaintBrushIcon,
   ShieldExclamationIcon,
+  RectangleStackIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../hooks/useAuth.jsx'
 
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { to: '/admin/temoignages', label: 'Temoignages', icon: ChatBubbleLeftRightIcon },
   { to: '/admin/commentaires', label: 'Commentaires', icon: ChatBubbleLeftIcon },
   { to: '/admin/newsletter', label: 'Newsletter', icon: NewspaperIcon },
+  { to: '/admin/pages', label: 'Pages CMS', icon: RectangleStackIcon },
   { to: '/admin/templates', label: 'Marketplace Templates', icon: Squares2X2Icon },
   { to: '/admin/themes', label: 'Marketplace Themes', icon: PaintBrushIcon },
   { to: '/admin/security', label: 'Securite', icon: ShieldExclamationIcon },

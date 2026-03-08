@@ -1,7 +1,7 @@
 /* Validateurs des routes de persistance du visual builder admin. */
 const { body, query } = require('express-validator')
 
-const BUILDER_ENTITIES = ['article', 'project', 'newsletter']
+const BUILDER_ENTITIES = ['article', 'project', 'newsletter', 'page']
 const CHANNEL_REGEX = /^[a-z0-9:_-]{3,120}$/
 
 /**
@@ -11,7 +11,7 @@ const CHANNEL_REGEX = /^[a-z0-9:_-]{3,120}$/
 const currentVisualBuilderDraftQueryValidator = [
   query('entity')
     .isIn(BUILDER_ENTITIES)
-    .withMessage("L'entite builder doit etre article, project ou newsletter."),
+    .withMessage("L'entite builder doit etre article, project, newsletter ou page."),
   query('channel')
     .isString()
     .withMessage('Le channel builder est obligatoire.')
@@ -26,7 +26,7 @@ const currentVisualBuilderDraftQueryValidator = [
 const upsertVisualBuilderDraftValidator = [
   body('entity')
     .isIn(BUILDER_ENTITIES)
-    .withMessage("L'entite builder doit etre article, project ou newsletter."),
+    .withMessage("L'entite builder doit etre article, project, newsletter ou page."),
   body('channel')
     .isString()
     .withMessage('Le channel builder est obligatoire.')

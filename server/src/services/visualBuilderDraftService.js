@@ -3,7 +3,7 @@ const crypto = require('node:crypto')
 const { VisualBuilderDraft } = require('../models')
 const { createHttpError } = require('../utils/httpError')
 
-const ALLOWED_ENTITIES = new Set(['article', 'project', 'newsletter'])
+const ALLOWED_ENTITIES = new Set(['article', 'project', 'newsletter', 'page'])
 const ALLOWED_BLOCK_TYPES = new Set(['paragraph', 'heading', 'image', 'code', 'quote', 'list'])
 const MAX_BLOCKS = 250
 
@@ -47,13 +47,13 @@ function parsePositiveInteger(value) {
 /**
  * Valide et normalise l'entite du builder.
  * @param {unknown} entity Entite source.
- * @returns {'article'|'project'|'newsletter'} Entite valide.
+ * @returns {'article'|'project'|'newsletter'|'page'} Entite valide.
  * @throws {Error} Erreur 422 si invalide.
  */
 function normalizeEntity(entity) {
   const normalized = sanitizeIdentifier(entity, 30)
   if (!ALLOWED_ENTITIES.has(normalized)) {
-    throw createHttpError(422, "L'entite builder doit etre article, project ou newsletter.")
+    throw createHttpError(422, "L'entite builder doit etre article, project, newsletter ou page.")
   }
   return normalized
 }

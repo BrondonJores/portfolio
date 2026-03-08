@@ -11,7 +11,7 @@ const VisualBuilderDraft = sequelize.define(
       primaryKey: true,
     },
     entity_type: {
-      type: DataTypes.ENUM('article', 'project', 'newsletter'),
+      type: DataTypes.ENUM('article', 'project', 'newsletter', 'page'),
       allowNull: false,
     },
     channel: {

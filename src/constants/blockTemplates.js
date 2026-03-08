@@ -76,6 +76,44 @@ export const PROJECT_BLOCK_TEMPLATES = [
 ]
 
 /**
+ * Templates pour les pages CMS generiques.
+ */
+export const PAGE_BLOCK_TEMPLATES = [
+  {
+    id: 'page-landing',
+    label: 'Landing simple',
+    description: 'Hero, arguments, section details et CTA final.',
+    blocks: [
+      { type: 'heading', level: 2, content: 'Titre principal de la page' },
+      { type: 'paragraph', content: 'Sous-titre qui explique rapidement la proposition de valeur.' },
+      { type: 'image', url: '', caption: 'Visuel principal' },
+      { type: 'heading', level: 2, content: 'Pourquoi c est utile' },
+      { type: 'list', items: ['Benefice 1', 'Benefice 2', 'Benefice 3'] },
+      { type: 'heading', level: 2, content: 'Details' },
+      { type: 'paragraph', content: 'Developpe ici la section principale de ta page.' },
+      { type: 'quote', content: 'Preuve sociale ou citation marquante.', author: '' },
+      { type: 'heading', level: 2, content: 'Appel a l action' },
+      { type: 'paragraph', content: 'Invite clairement le visiteur a passer a l action.' },
+    ],
+  },
+  {
+    id: 'page-about',
+    label: 'Page About',
+    description: 'Parcours, valeurs, expertise, conclusion.',
+    blocks: [
+      { type: 'heading', level: 2, content: 'Qui je suis' },
+      { type: 'paragraph', content: 'Presente ton parcours et ta mission.' },
+      { type: 'heading', level: 2, content: 'Mes valeurs' },
+      { type: 'list', items: ['Valeur 1', 'Valeur 2', 'Valeur 3'] },
+      { type: 'heading', level: 2, content: 'Mon expertise' },
+      { type: 'paragraph', content: 'Explique ce que tu sais faire concretement.' },
+      { type: 'heading', level: 2, content: 'Et maintenant' },
+      { type: 'paragraph', content: 'Conclue avec un message clair et humain.' },
+    ],
+  },
+]
+
+/**
  * Templates pour les campagnes newsletter.
  */
 export const NEWSLETTER_BLOCK_TEMPLATES = [

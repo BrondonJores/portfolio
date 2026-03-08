@@ -21,6 +21,7 @@ const SkillsPage = lazy(() => import('./pages/SkillsPage.jsx'))
 const BlogPage = lazy(() => import('./pages/BlogPage.jsx'))
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail.jsx'))
 const ContactPage = lazy(() => import('./pages/ContactPage.jsx'))
+const CmsPage = lazy(() => import('./pages/CmsPage.jsx'))
 const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 
 /* Pages admin */
@@ -42,6 +43,8 @@ const AdminBlockTemplates = lazy(() => import('./pages/admin/AdminBlockTemplates
 const AdminThemePresets = lazy(() => import('./pages/admin/AdminThemePresets.jsx'))
 const AdminSecurity = lazy(() => import('./pages/admin/AdminSecurity.jsx'))
 const AdminVisualBuilder = lazy(() => import('./pages/admin/AdminVisualBuilder.jsx'))
+const AdminPages = lazy(() => import('./pages/admin/AdminPages.jsx'))
+const AdminPageForm = lazy(() => import('./pages/admin/AdminPageForm.jsx'))
 
 /* Fallback de chargement pour Suspense */
 function LoadingFallback() {
@@ -72,6 +75,7 @@ const router = createBrowserRouter([
       { path: 'projets/:slug', element: <Suspense fallback={<LoadingFallback />}><ProjectDetail /></Suspense> },
       { path: 'blog', element: <Suspense fallback={<LoadingFallback />}><BlogPage /></Suspense> },
       { path: 'blog/:slug', element: <Suspense fallback={<LoadingFallback />}><ArticleDetail /></Suspense> },
+      { path: 'pages/:slug', element: <Suspense fallback={<LoadingFallback />}><CmsPage /></Suspense> },
       { path: 'contact', element: <Suspense fallback={<LoadingFallback />}><ContactPage /></Suspense> },
       { path: '*', element: <Suspense fallback={<LoadingFallback />}><NotFound /></Suspense> },
     ],
@@ -118,6 +122,9 @@ const router = createBrowserRouter([
       { path: 'templates', element: <Suspense fallback={<LoadingFallback />}><AdminBlockTemplates /></Suspense> },
       { path: 'themes', element: <Suspense fallback={<LoadingFallback />}><AdminThemePresets /></Suspense> },
       { path: 'security', element: <Suspense fallback={<LoadingFallback />}><AdminSecurity /></Suspense> },
+      { path: 'pages', element: <Suspense fallback={<LoadingFallback />}><AdminPages /></Suspense> },
+      { path: 'pages/nouveau', element: <Suspense fallback={<LoadingFallback />}><AdminPageForm /></Suspense> },
+      { path: 'pages/:id', element: <Suspense fallback={<LoadingFallback />}><AdminPageForm /></Suspense> },
     ],
   },
 ])

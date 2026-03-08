@@ -15,6 +15,7 @@ const { getByArticleId, create: createComment } = require('../controllers/commen
 const { getAll: getSettingsPublic } = require('../controllers/settingController')
 const { getAllPublic: getThemePresetsPublic } = require('../controllers/themePresetController')
 const { getAllPublic: getThemeMarketplacePublic } = require('../controllers/themeMarketplaceController')
+const { getAllPublic: getAllCmsPagesPublic, getBySlugPublic: getCmsPageBySlugPublic } = require('../controllers/cmsPageController')
 const { subscribe, unsubscribe } = require('../controllers/subscriberController')
 const { getSitemapXml } = require('../controllers/sitemapController')
 const { validate } = require('../middleware/validateMiddleware')
@@ -23,6 +24,7 @@ const { createMessageValidator } = require('../validators/messageValidator')
 const { subscribeValidator } = require('../validators/subscriberValidator')
 const { createCommentValidator } = require('../validators/commentValidator')
 const { marketplaceListValidator } = require('../validators/themeMarketplaceValidator')
+const { listPublicCmsPagesValidator, cmsPageSlugParamValidator } = require('../validators/cmsPageValidator')
 
 const router = Router()
 
@@ -77,6 +79,8 @@ router.post('/comments', commentLimiter, validate(createCommentValidator), verif
 router.get('/settings', getSettingsPublic)
 router.get('/theme-presets', getThemePresetsPublic)
 router.get('/theme-marketplace', validate(marketplaceListValidator), getThemeMarketplacePublic)
+router.get('/pages', validate(listPublicCmsPagesValidator), getAllCmsPagesPublic)
+router.get('/pages/:slug', validate(cmsPageSlugParamValidator), getCmsPageBySlugPublic)
 router.post('/subscribe', subscribeLimiter, validate(subscribeValidator), verifySubscribeCaptcha, subscribe)
 router.get('/unsubscribe/:token', unsubscribe)
 
