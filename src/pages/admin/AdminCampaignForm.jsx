@@ -11,6 +11,12 @@ import { NEWSLETTER_BLOCK_TEMPLATES } from '../../constants/blockTemplates.js'
 import useAdminBlockTemplates from '../../hooks/useAdminBlockTemplates.js'
 import useLocalDraftAutosave from '../../hooks/useLocalDraftAutosave.jsx'
 import { isAdminEditorPopup, notifyAdminEditorSaved } from '../../utils/adminEditorWindow.js'
+import {
+  createBuilderChannel,
+  openAdminVisualBuilder,
+  subscribeBuilderChannel,
+  writeBuilderChannelSnapshot,
+} from '../../utils/adminVisualBuilderBridge.js'
 import { getArticles } from '../../services/articleService.js'
 import {
   createCampaign,
@@ -331,6 +337,7 @@ export default function AdminCampaignForm() {
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
   const [availableArticles, setAvailableArticles] = useState([])
+  const builderChannel = useMemo(() => createBuilderChannel('newsletter', id || 'new'), [id])
 
   const isSent = status === 'sent'
 
@@ -381,6 +388,19 @@ export default function AdminCampaignForm() {
     context: 'newsletter',
     fallbackTemplates: NEWSLETTER_BLOCK_TEMPLATES,
   })
+
+  useEffect(() => {
+    return subscribeBuilderChannel(builderChannel, (snapshot) => {
+      const payload = snapshot?.payload
+      if (!payload || (payload.type !== 'builder-draft' && payload.type !== 'builder-save')) {
+        return
+      }
+
+      const nextBlocks = Array.isArray(payload.blocks) ? payload.blocks : []
+      setBlocks(nextBlocks)
+      setForm((prev) => ({ ...prev, body_html: blocksToHtml(nextBlocks) }))
+    })
+  }, [builderChannel])
 
   /**
    * Retourne a la liste newsletter ou ferme la popup d'edition.
@@ -442,6 +462,29 @@ export default function AdminCampaignForm() {
   const handleBlocksChange = (nextBlocks) => {
     setBlocks(nextBlocks)
     setForm((prev) => ({ ...prev, body_html: blocksToHtml(nextBlocks) }))
+  }
+
+  /**
+   * Ouvre le builder visuel plein ecran (style Elementor) dans un nouvel onglet.
+   * @returns {void}
+   */
+  const openVisualBuilder = () => {
+    writeBuilderChannelSnapshot(builderChannel, {
+      type: 'builder-init',
+      entity: 'newsletter',
+      title: form.subject || 'Newsletter',
+      blocks,
+      templates: editorTemplates,
+    })
+
+    const builderTab = openAdminVisualBuilder({
+      entity: 'newsletter',
+      channel: builderChannel,
+    })
+
+    if (!builderTab) {
+      navigate(`/admin/builder?entity=newsletter&channel=${encodeURIComponent(builderChannel)}`)
+    }
   }
 
   /**
@@ -573,12 +616,17 @@ export default function AdminCampaignForm() {
 
               {!isSent && (
                 <div>
-                  <label
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    Contenu *
-                  </label>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <label
+                      className="block text-sm font-medium"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      Contenu *
+                    </label>
+                    <Button type="button" variant="ghost" onClick={openVisualBuilder}>
+                      Builder visuel
+                    </Button>
+                  </div>
                   <BlockEditor
                     blocks={blocks}
                     onChange={handleBlocksChange}

@@ -41,6 +41,7 @@ const AdminSubscribers = lazy(() => import('./pages/admin/AdminSubscribers.jsx')
 const AdminBlockTemplates = lazy(() => import('./pages/admin/AdminBlockTemplates.jsx'))
 const AdminThemePresets = lazy(() => import('./pages/admin/AdminThemePresets.jsx'))
 const AdminSecurity = lazy(() => import('./pages/admin/AdminSecurity.jsx'))
+const AdminVisualBuilder = lazy(() => import('./pages/admin/AdminVisualBuilder.jsx'))
 
 /* Fallback de chargement pour Suspense */
 function LoadingFallback() {
@@ -79,6 +80,15 @@ const router = createBrowserRouter([
   {
     path: '/admin/login',
     element: <Suspense fallback={<LoadingFallback />}><AdminLogin /></Suspense>,
+  },
+  /* Builder visuel admin plein ecran (protege, hors layout lateral). */
+  {
+    path: '/admin/builder',
+    element: (
+      <Protected>
+        <Suspense fallback={<LoadingFallback />}><AdminVisualBuilder /></Suspense>
+      </Protected>
+    ),
   },
   /* Routes admin protegees */
   {

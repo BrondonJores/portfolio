@@ -526,9 +526,17 @@ function BlockContent({ block, onChange }) {
  * @param {Array<object>} props.blocks Tableau des blocs.
  * @param {Function} props.onChange Callback appele avec la nouvelle liste.
  * @param {Array<{id: string, label: string, description?: string, blocks: Array<object>}>} [props.templates] Templates predefinis optionnels.
+ * @param {string | null} [props.activeBlockId] Bloc actif force depuis le parent.
+ * @param {(blockId: string | null) => void} [props.onActiveBlockChange] Callback changement de bloc actif.
  * @returns {JSX.Element} Interface de gestion des blocs.
  */
-export default function BlockEditor({ blocks = [], onChange, templates = [] }) {
+export default function BlockEditor({
+  blocks = [],
+  onChange,
+  templates = [],
+  activeBlockId: externalActiveBlockId = null,
+  onActiveBlockChange,
+}) {
   const [paletteQuery, setPaletteQuery] = useState('')
   const [insertionIndex, setInsertionIndex] = useState(null)
   const [collapsedMap, setCollapsedMap] = useState({})
@@ -572,6 +580,18 @@ export default function BlockEditor({ blocks = [], onChange, templates = [] }) {
       setActiveBlockId(blocks[0].id)
     }
   }, [blocks, activeBlockId])
+
+  useEffect(() => {
+    if (!externalActiveBlockId) return
+    if (!blocks.some((block) => block.id === externalActiveBlockId)) return
+    if (externalActiveBlockId === activeBlockId) return
+    setActiveBlockId(externalActiveBlockId)
+  }, [externalActiveBlockId, blocks, activeBlockId])
+
+  useEffect(() => {
+    if (typeof onActiveBlockChange !== 'function') return
+    onActiveBlockChange(activeBlockId || null)
+  }, [activeBlockId, onActiveBlockChange])
 
   useEffect(() => {
     if (availableTemplates.length === 0) {

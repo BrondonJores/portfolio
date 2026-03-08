@@ -15,6 +15,12 @@ import useAdminBlockTemplates from '../../hooks/useAdminBlockTemplates.js'
 import useLocalDraftAutosave from '../../hooks/useLocalDraftAutosave.jsx'
 import { isAdminEditorPopup, notifyAdminEditorSaved } from '../../utils/adminEditorWindow.js'
 import {
+  createBuilderChannel,
+  openAdminVisualBuilder,
+  subscribeBuilderChannel,
+  writeBuilderChannelSnapshot,
+} from '../../utils/adminVisualBuilderBridge.js'
+import {
   createProject,
   getAdminProjects,
   updateProject,
@@ -94,6 +100,7 @@ export default function AdminProjectForm() {
   const [tagInput, setTagInput] = useState('')
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
+  const builderChannel = useMemo(() => createBuilderChannel('project', id || 'new'), [id])
 
   const draftStorageKey = useMemo(() => getLocalDraftKey(isEdit, id), [isEdit, id])
   const previewContent = useMemo(() => JSON.stringify({ blocks }), [blocks])
@@ -171,6 +178,19 @@ export default function AdminProjectForm() {
     fallbackTemplates: PROJECT_BLOCK_TEMPLATES,
   })
 
+  useEffect(() => {
+    return subscribeBuilderChannel(builderChannel, (snapshot) => {
+      const payload = snapshot?.payload
+      if (!payload || (payload.type !== 'builder-draft' && payload.type !== 'builder-save')) {
+        return
+      }
+
+      const nextBlocks = Array.isArray(payload.blocks) ? payload.blocks : []
+      setBlocks(nextBlocks)
+      setForm((prev) => ({ ...prev, content: JSON.stringify({ blocks: nextBlocks }) }))
+    })
+  }, [builderChannel])
+
   /**
    * Retourne a la liste projets ou ferme la popup d'edition.
    * @returns {void}
@@ -230,6 +250,29 @@ export default function AdminProjectForm() {
   const handleBlocksChange = (nextBlocks) => {
     setBlocks(nextBlocks)
     setForm((prev) => ({ ...prev, content: JSON.stringify({ blocks: nextBlocks }) }))
+  }
+
+  /**
+   * Ouvre le builder visuel plein ecran (style Elementor) dans un nouvel onglet.
+   * @returns {void}
+   */
+  const openVisualBuilder = () => {
+    writeBuilderChannelSnapshot(builderChannel, {
+      type: 'builder-init',
+      entity: 'project',
+      title: form.title || 'Projet',
+      blocks,
+      templates: editorTemplates,
+    })
+
+    const builderTab = openAdminVisualBuilder({
+      entity: 'project',
+      channel: builderChannel,
+    })
+
+    if (!builderTab) {
+      navigate(`/admin/builder?entity=project&channel=${encodeURIComponent(builderChannel)}`)
+    }
   }
 
   /**
@@ -357,9 +400,14 @@ export default function AdminProjectForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                  Contenu <span style={{ color: '#f87171' }}>*</span>
-                </label>
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                    Contenu <span style={{ color: '#f87171' }}>*</span>
+                  </label>
+                  <Button type="button" variant="ghost" onClick={openVisualBuilder}>
+                    Builder visuel
+                  </Button>
+                </div>
                 <BlockEditor
                   blocks={blocks}
                   onChange={handleBlocksChange}
