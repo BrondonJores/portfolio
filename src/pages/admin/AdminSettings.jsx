@@ -1865,10 +1865,11 @@ export default function AdminSettings() {
               <CardSection>
                 <SectionTitle>Mascottes Animees (Petits Bonhommes)</SectionTitle>
                 <InlineTip>
-                  Une grande mascotte est affichee par section, avec alternance gauche/droite pour un rendu editorial.
+                  Branche ici des assets humains reels (Humaaans/Open Peeps/Storyset/Lottie exportee en GIF ou WebM) : 1 mascotte tres grande par section.
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox label="Activer les mascottes" fieldKey="anim_mascots_enabled" settings={settings} onChange={handleChange} />
+                  <FieldCheckbox label="Afficher aussi dans le Hero" fieldKey="anim_mascot_show_hero" settings={settings} onChange={handleChange} />
                   <FieldCheckbox label="Bulles de dialogue mascottes" fieldKey="anim_mascot_bubbles_enabled" settings={settings} onChange={handleChange} />
                   <FieldSelect
                     label="Style de mascotte"
@@ -1892,11 +1893,11 @@ export default function AdminSettings() {
                     fieldKey="anim_mascot_size"
                     settings={settings}
                     onChange={handleChange}
-                    min={72}
-                    max={220}
+                    min={180}
+                    max={520}
                     step={1}
                     unit="px"
-                    defaultValue={112}
+                    defaultValue={340}
                   />
                   <FieldRange
                     label="Vitesse des mascottes"
@@ -1919,6 +1920,16 @@ export default function AdminSettings() {
                     step={0.05}
                     defaultValue={0.85}
                   />
+                  <FieldSelect
+                    label="Mode de cadrage asset"
+                    fieldKey="anim_mascot_asset_fit"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={[
+                      { value: 'contain', label: 'Contain (recommande)' },
+                      { value: 'cover', label: 'Cover' },
+                    ]}
+                  />
                   <FieldRange
                     label="Frequence des bulles"
                     fieldKey="anim_mascot_bubble_interval_ms"
@@ -1938,6 +1949,60 @@ export default function AdminSettings() {
                       onChange={handleChange}
                       textarea
                       placeholder={"Salut !\\nBienvenue sur mon portfolio."}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <FieldInput
+                      label="Asset URL par defaut (utilise si une section n'a pas d'override)"
+                      fieldKey="anim_mascot_asset_default_url"
+                      settings={settings}
+                      onChange={handleChange}
+                      placeholder="https://.../mascot-human.webp"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <FieldInput
+                      label="Asset URL section About"
+                      fieldKey="anim_mascot_asset_about_url"
+                      settings={settings}
+                      onChange={handleChange}
+                      placeholder="https://.../about-human.gif"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <FieldInput
+                      label="Asset URL section Skills"
+                      fieldKey="anim_mascot_asset_skills_url"
+                      settings={settings}
+                      onChange={handleChange}
+                      placeholder="https://.../skills-human.webm"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <FieldInput
+                      label="Asset URL section Projects"
+                      fieldKey="anim_mascot_asset_projects_url"
+                      settings={settings}
+                      onChange={handleChange}
+                      placeholder="https://.../projects-human.webp"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <FieldInput
+                      label="Asset URL section Blog"
+                      fieldKey="anim_mascot_asset_blog_url"
+                      settings={settings}
+                      onChange={handleChange}
+                      placeholder="https://.../blog-human.gif"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <FieldInput
+                      label="Asset URL section Contact"
+                      fieldKey="anim_mascot_asset_contact_url"
+                      settings={settings}
+                      onChange={handleChange}
+                      placeholder="https://.../contact-human.webm"
                     />
                   </div>
                 </div>
