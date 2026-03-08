@@ -1,6 +1,7 @@
 /* Hook de chargement des templates de blocs admin, avec fallback local. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getAdminBlockTemplates } from '../services/blockTemplateService.js'
+import { normalizeAdminPagePayload } from '../utils/adminPagination.js'
 
 /**
  * Transforme un template API en structure attendue par BlockEditor.
@@ -34,7 +35,8 @@ export default function useAdminBlockTemplates({ context, fallbackTemplates = []
     setLoading(true)
     try {
       const response = await getAdminBlockTemplates(context ? { context } : undefined)
-      setRemoteTemplates(Array.isArray(response?.data) ? response.data : [])
+      const normalized = normalizeAdminPagePayload(response?.data)
+      setRemoteTemplates(normalized.items)
     } catch {
       setRemoteTemplates([])
     } finally {

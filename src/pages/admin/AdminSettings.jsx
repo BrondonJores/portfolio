@@ -12,6 +12,7 @@ import {
   getTwoFactorStatus,
   regenerateTwoFactorRecoveryCodes,
 } from '../../services/authService.js'
+import QRCode from 'qrcode'
 import {
   DEFAULT_THEME_SETTINGS,
   FONT_FAMILY_OPTIONS,
@@ -280,6 +281,8 @@ export default function AdminSettings() {
   const [twoFactorDisableRecoveryCode, setTwoFactorDisableRecoveryCode] = useState('')
   const [twoFactorRegenerateCode, setTwoFactorRegenerateCode] = useState('')
   const [freshRecoveryCodes, setFreshRecoveryCodes] = useState([])
+  const [twoFactorQrCodeUrl, setTwoFactorQrCodeUrl] = useState('')
+  const [twoFactorQrLoading, setTwoFactorQrLoading] = useState(false)
 
   const styleKeys = useMemo(() => Object.keys(DEFAULT_THEME_SETTINGS), [])
 
@@ -309,6 +312,44 @@ export default function AdminSettings() {
   useEffect(() => {
     loadTwoFactorStatus()
   }, [loadTwoFactorStatus])
+
+  useEffect(() => {
+    const otpauthUrl = String(twoFactorSetup?.otpauthUrl || '').trim()
+    if (!otpauthUrl) {
+      setTwoFactorQrCodeUrl('')
+      setTwoFactorQrLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setTwoFactorQrLoading(true)
+
+    QRCode.toDataURL(otpauthUrl, {
+      errorCorrectionLevel: 'M',
+      width: 240,
+      margin: 1,
+      color: {
+        dark: '#0f172a',
+        light: '#0000',
+      },
+    })
+      .then((dataUrl) => {
+        if (cancelled) return
+        setTwoFactorQrCodeUrl(dataUrl)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setTwoFactorQrCodeUrl('')
+      })
+      .finally(() => {
+        if (cancelled) return
+        setTwoFactorQrLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [twoFactorSetup?.otpauthUrl])
 
   const handleChange = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
@@ -1112,6 +1153,30 @@ export default function AdminSettings() {
 
                   {twoFactorSetup && (
                     <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                          QR code Authenticator
+                        </label>
+                        <div
+                          className="rounded-lg border p-3 inline-flex"
+                          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
+                        >
+                          {twoFactorQrLoading ? (
+                            <Spinner size="sm" />
+                          ) : twoFactorQrCodeUrl ? (
+                            <img
+                              src={twoFactorQrCodeUrl}
+                              alt="QR code 2FA"
+                              className="h-52 w-52 rounded-md"
+                            />
+                          ) : (
+                            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                              QR indisponible. Utilise le secret manuel ci-dessous.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
                       <div className="space-y-2">
                         <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                           Secret manuel

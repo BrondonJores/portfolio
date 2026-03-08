@@ -13,6 +13,7 @@ import {
   SparklesIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline'
+import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -39,6 +40,7 @@ import {
 import { getThemeMarketplace, importThemeFromMarketplace } from '../../services/themeMarketplaceService.js'
 import { PAGE_THEME_TARGETS } from '../../utils/pageThemeTargets.js'
 import { DEFAULT_THEME_SETTINGS } from '../../utils/themeSettings.js'
+import { toOffsetFromPage } from '../../utils/adminPagination.js'
 
 const inputStyle = {
   backgroundColor: 'var(--color-bg-primary)',
@@ -49,6 +51,8 @@ const inputStyle = {
 const THEME_KEYS = Object.keys(DEFAULT_THEME_SETTINGS)
 const MARKETPLACE_FAVORITES_SETTING_KEY = 'theme_marketplace_favorites'
 const MARKETPLACE_RATINGS_SETTING_KEY = 'theme_marketplace_ratings'
+const PRESETS_PAGE_LIMIT = 8
+const MARKETPLACE_PAGE_LIMIT = 6
 
 /**
  * Extrait uniquement les cles de theme supportees.
@@ -315,6 +319,8 @@ export default function AdminThemePresets() {
   const [rollingBackReleaseId, setRollingBackReleaseId] = useState(null)
   const [comparingReleaseId, setComparingReleaseId] = useState(null)
   const [form, setForm] = useState(() => createEmptyForm())
+  const [presetPage, setPresetPage] = useState(1)
+  const [marketplacePage, setMarketplacePage] = useState(1)
   const editorParam = searchParams.get('editor')
 
   const importInputRef = useRef(null)
@@ -402,6 +408,44 @@ export default function AdminThemePresets() {
     })
   }, [marketplaceThemes, marketplaceCategory, marketplaceQuery, showFavoritesOnly, marketplaceFavoriteSet])
 
+  const presetOffset = useMemo(
+    () => toOffsetFromPage(presetPage, PRESETS_PAGE_LIMIT),
+    [presetPage]
+  )
+  const pagedPresets = useMemo(
+    () => presets.slice(presetOffset, presetOffset + PRESETS_PAGE_LIMIT),
+    [presets, presetOffset]
+  )
+  const presetPagination = useMemo(
+    () => ({
+      total: presets.length,
+      limit: PRESETS_PAGE_LIMIT,
+      offset: presetOffset,
+    }),
+    [presets.length, presetOffset]
+  )
+
+  const marketplaceOffset = useMemo(
+    () => toOffsetFromPage(marketplacePage, MARKETPLACE_PAGE_LIMIT),
+    [marketplacePage]
+  )
+  const pagedMarketplaceThemes = useMemo(
+    () =>
+      filteredMarketplaceThemes.slice(
+        marketplaceOffset,
+        marketplaceOffset + MARKETPLACE_PAGE_LIMIT
+      ),
+    [filteredMarketplaceThemes, marketplaceOffset]
+  )
+  const marketplacePagination = useMemo(
+    () => ({
+      total: filteredMarketplaceThemes.length,
+      limit: MARKETPLACE_PAGE_LIMIT,
+      offset: marketplaceOffset,
+    }),
+    [filteredMarketplaceThemes.length, marketplaceOffset]
+  )
+
   const loadData = async () => {
     setLoading(true)
     try {
@@ -448,6 +492,27 @@ export default function AdminThemePresets() {
   useEffect(() => {
     loadMarketplace()
   }, [])
+
+  useEffect(() => {
+    const maxPresetPage = Math.max(1, Math.ceil(presets.length / PRESETS_PAGE_LIMIT))
+    if (presetPage > maxPresetPage) {
+      setPresetPage(maxPresetPage)
+    }
+  }, [presets.length, presetPage])
+
+  useEffect(() => {
+    const maxMarketplacePage = Math.max(
+      1,
+      Math.ceil(filteredMarketplaceThemes.length / MARKETPLACE_PAGE_LIMIT)
+    )
+    if (marketplacePage > maxMarketplacePage) {
+      setMarketplacePage(maxMarketplacePage)
+    }
+  }, [filteredMarketplaceThemes.length, marketplacePage])
+
+  useEffect(() => {
+    setMarketplacePage(1)
+  }, [marketplaceCategory, marketplaceQuery, showFavoritesOnly])
 
   useEffect(() => {
     return () => {
@@ -1202,8 +1267,9 @@ export default function AdminThemePresets() {
                   Aucun preset pour le moment.
                 </p>
               ) : (
+                <>
                 <div className="space-y-2">
-                  {presets.map((preset) => {
+                  {pagedPresets.map((preset) => {
                     const isPreviewing = previewingId === toPresetPreviewId(preset.id)
 
                     return (
@@ -1302,6 +1368,13 @@ export default function AdminThemePresets() {
                     )
                   })}
                 </div>
+                <AdminPagination
+                  total={presetPagination.total}
+                  limit={presetPagination.limit}
+                  offset={presetPagination.offset}
+                  onPageChange={(nextPage) => setPresetPage(nextPage)}
+                />
+                </>
               )}
             </section>
 
@@ -1614,8 +1687,9 @@ export default function AdminThemePresets() {
                   Aucun theme marketplace ne correspond a ce filtre.
                 </p>
               ) : (
+                <>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {filteredMarketplaceThemes.map((theme) => {
+                  {pagedMarketplaceThemes.map((theme) => {
                     const isPreviewingMarketplace = previewingId === toMarketplacePreviewId(theme.slug)
                     const isImportingMarketplace = marketplaceImportingSlug === theme.slug
                     const isFavorite = marketplaceFavoriteSet.has(theme.slug)
@@ -1780,6 +1854,13 @@ export default function AdminThemePresets() {
                     )
                   })}
                 </div>
+                <AdminPagination
+                  total={marketplacePagination.total}
+                  limit={marketplacePagination.limit}
+                  offset={marketplacePagination.offset}
+                  onPageChange={(nextPage) => setMarketplacePage(nextPage)}
+                />
+                </>
               )}
             </section>
           </>

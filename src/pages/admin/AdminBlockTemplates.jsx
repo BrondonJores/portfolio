@@ -3,11 +3,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowDownTrayIcon, PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
+import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPagination.js'
 import {
   isAdminEditorPopup,
   notifyAdminEditorSaved,
@@ -45,6 +47,8 @@ const inputStyle = {
   borderColor: 'var(--color-border)',
   color: 'var(--color-text-primary)',
 }
+
+const PAGE_LIMIT = 10
 
 /**
  * Genere un identifiant temporaire pour les blocs de l'editeur.
@@ -267,6 +271,12 @@ export default function AdminBlockTemplates() {
   const [rollingBackReleaseId, setRollingBackReleaseId] = useState(null)
   const [comparingReleaseId, setComparingReleaseId] = useState(null)
   const [form, setForm] = useState(() => createEmptyForm())
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: PAGE_LIMIT,
+    offset: 0,
+  })
   const editorParam = searchParams.get('editor')
 
   const selectedTemplate = useMemo(
@@ -289,11 +299,41 @@ export default function AdminBlockTemplates() {
     [selectedTemplate, selectedComparedRelease]
   )
 
-  const loadTemplates = async () => {
+  const loadTemplates = async (requestedPage = page) => {
     setLoading(true)
     try {
-      const response = await getAdminBlockTemplates()
-      setTemplates(Array.isArray(response?.data) ? response.data : [])
+      const requestedOffset = toOffsetFromPage(requestedPage, PAGE_LIMIT)
+      const response = await getAdminBlockTemplates({
+        limit: PAGE_LIMIT,
+        offset: requestedOffset,
+      })
+      if (Array.isArray(response?.data)) {
+        const total = response.data.length
+        const maxOffset = total === 0 ? 0 : Math.floor((total - 1) / PAGE_LIMIT) * PAGE_LIMIT
+        const safeOffset = Math.min(requestedOffset, maxOffset)
+        const items = response.data.slice(safeOffset, safeOffset + PAGE_LIMIT)
+        setTemplates(items)
+        setPagination({
+          total,
+          limit: PAGE_LIMIT,
+          offset: safeOffset,
+        })
+        const nextPage = Math.floor(safeOffset / PAGE_LIMIT) + 1
+        setPage(nextPage)
+        return
+      }
+      const normalized = normalizeAdminPagePayload(response?.data, {
+        defaultLimit: PAGE_LIMIT,
+        requestedOffset,
+      })
+      setTemplates(normalized.items)
+      setPagination({
+        total: normalized.total,
+        limit: normalized.limit,
+        offset: normalized.offset,
+      })
+      const nextPage = Math.floor(normalized.offset / normalized.limit) + 1
+      setPage(nextPage)
     } catch (error) {
       addToast(error.message || 'Erreur lors du chargement des templates.', 'error')
     } finally {
@@ -302,16 +342,23 @@ export default function AdminBlockTemplates() {
   }
 
   useEffect(() => {
-    loadTemplates()
-  }, [])
+    loadTemplates(page)
+  }, [page])
 
   useEffect(() => {
     return subscribeAdminEditorRefresh((payload) => {
       if (payload?.entity === 'templates' || payload?.entity === 'global') {
-        loadTemplates()
+        loadTemplates(page)
       }
     })
-  }, [])
+  }, [page])
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil((pagination.total || 0) / (pagination.limit || PAGE_LIMIT)))
+    if (page > maxPage) {
+      setPage(maxPage)
+    }
+  }, [pagination.total, pagination.limit, page])
 
   /**
    * Charge l'historique des releases d'un template.
@@ -735,6 +782,7 @@ export default function AdminBlockTemplates() {
                   Aucun template personnalise pour le moment.
                 </p>
               ) : (
+                <>
                 <div className="space-y-2">
                   {templates.map((template) => (
                     <article
@@ -802,6 +850,13 @@ export default function AdminBlockTemplates() {
                     </article>
                   ))}
                 </div>
+                <AdminPagination
+                  total={pagination.total}
+                  limit={pagination.limit}
+                  offset={pagination.offset}
+                  onPageChange={(nextPage) => setPage(nextPage)}
+                />
+                </>
               )}
             </section>
 
