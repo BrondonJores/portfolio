@@ -93,6 +93,66 @@ function getAllowedOrigins() {
   return Array.from(origins)
 }
 
+/**
+ * Normalise un chemin API pour les comparaisons de categories.
+ * @param {unknown} value Valeur brute de chemin.
+ * @returns {string} Chemin normalise en minuscule.
+ */
+function normalizeApiPath(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+}
+
+/**
+ * Indique si un chemin appartient a la zone `/api/auth`.
+ * @param {string} path Chemin API normalise.
+ * @returns {boolean} True si endpoint auth.
+ */
+function isAuthPath(path) {
+  return path === '/auth' || path.startsWith('/auth/')
+}
+
+/**
+ * Indique si un chemin appartient a la zone `/api/admin`.
+ * @param {string} path Chemin API normalise.
+ * @returns {boolean} True si endpoint admin.
+ */
+function isAdminPath(path) {
+  return path === '/admin' || path.startsWith('/admin/')
+}
+
+/**
+ * Construit un rate limiter segmente avec journalisation securite.
+ * @param {object} options Configuration limiter.
+ * @param {number} options.windowMs Duree fenetre.
+ * @param {number} options.max Nombre max de requetes.
+ * @param {string} options.eventType Type d'evenement securite.
+ * @param {string} options.source Source metier.
+ * @param {string} options.errorMessage Message utilisateur.
+ * @param {(req: import('express').Request) => boolean} [options.skip] Regle de bypass.
+ * @returns {import('express').RequestHandler} Middleware rate limiter.
+ */
+function createScopedRateLimiter(options) {
+  return rateLimit({
+    windowMs: options.windowMs,
+    max: options.max,
+    message: { error: options.errorMessage },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: options.skip,
+    handler(req, res) {
+      void logSecurityEventFromRequest(req, {
+        eventType: options.eventType,
+        severity: 'warning',
+        source: options.source,
+        message: options.errorMessage,
+      })
+      res.status(429).json({ error: options.errorMessage })
+    },
+  })
+}
+
 /* Rend la detection IP compatible Render/Reverse proxy pour le rate limit. */
 app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY))
 
@@ -168,24 +228,52 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'))
 }
 
-/* Rate limiter global configurable (plus large en production). */
-const globalLimiter = rateLimit({
-  windowMs: parsePositiveInteger(process.env.RATE_LIMIT_GLOBAL_WINDOW_MS, 15 * 60 * 1000),
-  max: parsePositiveInteger(process.env.RATE_LIMIT_GLOBAL_MAX, process.env.NODE_ENV === 'production' ? 600 : 200),
-  message: { error: 'Trop de requetes. Reessayez dans 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler(req, res) {
-    void logSecurityEventFromRequest(req, {
-      eventType: 'request.rate_limited',
-      severity: 'warning',
-      source: 'global_rate_limiter',
-      message: 'Requete bloquee par le rate limiter global.',
-    })
-    res.status(429).json({ error: 'Trop de requetes. Reessayez dans 15 minutes.' })
+/* Rate limiting segmente par zone API pour eviter les 429 en cascade. */
+const rateLimitWindowMs = parsePositiveInteger(process.env.RATE_LIMIT_GLOBAL_WINDOW_MS, 15 * 60 * 1000)
+const publicRateLimitMax = parsePositiveInteger(
+  process.env.RATE_LIMIT_PUBLIC_MAX,
+  parsePositiveInteger(process.env.RATE_LIMIT_GLOBAL_MAX, process.env.NODE_ENV === 'production' ? 1200 : 400)
+)
+const adminRateLimitMax = parsePositiveInteger(
+  process.env.RATE_LIMIT_ADMIN_MAX,
+  process.env.NODE_ENV === 'production' ? 900 : 300
+)
+const authRateLimitMax = parsePositiveInteger(
+  process.env.RATE_LIMIT_AUTH_MAX,
+  process.env.NODE_ENV === 'production' ? 240 : 100
+)
+
+const publicApiLimiter = createScopedRateLimiter({
+  windowMs: rateLimitWindowMs,
+  max: publicRateLimitMax,
+  eventType: 'request.rate_limited.public',
+  source: 'public_rate_limiter',
+  errorMessage: 'Trop de requetes publiques. Reessayez dans 15 minutes.',
+  skip(req) {
+    const path = normalizeApiPath(req.path)
+    return isAuthPath(path) || isAdminPath(path)
   },
 })
-app.use(globalLimiter)
+
+const adminApiLimiter = createScopedRateLimiter({
+  windowMs: rateLimitWindowMs,
+  max: adminRateLimitMax,
+  eventType: 'request.rate_limited.admin',
+  source: 'admin_rate_limiter',
+  errorMessage: 'Trop de requetes admin. Reessayez dans 15 minutes.',
+})
+
+const authApiLimiter = createScopedRateLimiter({
+  windowMs: rateLimitWindowMs,
+  max: authRateLimitMax,
+  eventType: 'request.rate_limited.auth',
+  source: 'auth_rate_limiter',
+  errorMessage: "Trop de requetes d'authentification. Reessayez dans 15 minutes.",
+})
+
+app.use('/api/auth', authApiLimiter)
+app.use('/api/admin', adminApiLimiter)
+app.use('/api', publicApiLimiter)
 
 /* Endpoint sitemap XML public pour les robots SEO. */
 app.get('/sitemap.xml', getSitemapXml)

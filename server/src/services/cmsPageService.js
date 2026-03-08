@@ -3,6 +3,8 @@ const slugify = require('slugify')
 const { Op } = require('sequelize')
 const { CmsPage, CmsPageRevision } = require('../models')
 const { createHttpError } = require('../utils/httpError')
+const { createBlockContentSanitizer } = require('../utils/blockContentSanitizer')
+const { withOptionalTransaction } = require('../utils/transaction')
 
 const ALLOWED_STATUSES = new Set(['draft', 'published', 'archived'])
 const ALLOWED_BLOCK_TYPES = new Set(['paragraph', 'heading', 'image', 'code', 'quote', 'list', 'section'])
@@ -107,205 +109,25 @@ function normalizeSlugWithFallback(value) {
   return cleaned || 'page'
 }
 
-/**
- * Nettoie recursivement des items de liste.
- * @param {unknown} items Liste brute.
- * @param {number} [depth=0] Profondeur courante.
- * @returns {Array<string | {content: string, items: Array}>} Liste nettoyee.
- */
-function sanitizeListItems(items, depth = 0) {
-  if (!Array.isArray(items)) return ['']
-
-  if (depth >= 3) {
-    const flatItems = items
-      .map((item) => (typeof item === 'string' ? sanitizeText(item, 500) : sanitizeText(item?.content, 500)))
-      .filter(Boolean)
-
-    return flatItems.length > 0 ? flatItems.slice(0, 80) : ['']
-  }
-
-  const sanitized = items
-    .slice(0, 80)
-    .map((item) => {
-      if (typeof item === 'string') {
-        return sanitizeText(item, 500)
-      }
-
-      if (!item || typeof item !== 'object') {
-        return ''
-      }
-
-      return {
-        content: sanitizeText(item.content, 500),
-        items: sanitizeListItems(item.items, depth + 1),
-      }
-    })
-    .filter((item) => {
-      if (typeof item === 'string') return item.length > 0
-      return Boolean(item?.content || (Array.isArray(item?.items) && item.items.length > 0))
-    })
-
-  return sanitized.length > 0 ? sanitized : ['']
-}
-
-/**
- * Nettoie le layout d'une section (`1-col`, `2-col`, `3-col`).
- * @param {unknown} value Valeur brute.
- * @returns {'1-col'|'2-col'|'3-col'} Layout section normalise.
- */
-function sanitizeSectionLayout(value) {
-  const normalized = sanitizeIdentifier(value, 12)
-  if (Object.prototype.hasOwnProperty.call(SECTION_LAYOUT_COLUMNS, normalized)) {
-    return normalized
-  }
-  return '2-col'
-}
-
-/**
- * Retourne le nombre de colonnes attendu pour un layout section.
- * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
- * @returns {number} Nombre de colonnes.
- */
-function getSectionColumnCount(layout) {
-  return SECTION_LAYOUT_COLUMNS[layout] || 2
-}
-
-/**
- * Nettoie le variant visuel d'une section.
- * @param {unknown} value Valeur brute.
- * @returns {'default'|'soft'|'accent'} Variant section.
- */
-function sanitizeSectionVariant(value) {
-  const normalized = sanitizeIdentifier(value, 20)
-  if (SECTION_VARIANTS.has(normalized)) {
-    return normalized
-  }
-  return 'default'
-}
-
-/**
- * Nettoie l'espacement vertical d'une section.
- * @param {unknown} value Valeur brute.
- * @returns {'sm'|'md'|'lg'} Spacing section.
- */
-function sanitizeSectionSpacing(value) {
-  const normalized = sanitizeIdentifier(value, 20)
-  if (SECTION_SPACINGS.has(normalized)) {
-    return normalized
-  }
-  return 'md'
-}
-
-/**
- * Nettoie les colonnes/widgets d'une section.
- * @param {unknown} columns Colonnes brutes.
- * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
- * @param {number} depth Profondeur de nettoyage.
- * @returns {Array<Array<object>>} Colonnes normalisees.
- */
-function sanitizeSectionColumns(columns, layout, depth) {
-  const columnCount = getSectionColumnCount(layout)
-  const sourceColumns = Array.isArray(columns) ? columns : []
-
-  return Array.from({ length: columnCount }, (_, index) => {
-    const rawColumn = Array.isArray(sourceColumns[index]) ? sourceColumns[index] : []
-    return sanitizeLayout(rawColumn, {
-      allowSection: false,
-      depth,
-      limit: 80,
-    })
-  })
-}
-
-/**
- * Nettoie un bloc de layout.
- * @param {unknown} block Bloc brut.
- * @param {number} [depth=0] Profondeur de nettoyage.
- * @param {boolean} [allowSection=true] Autorise ou non les sections.
- * @returns {object|null} Bloc normalise ou `null`.
- */
-function sanitizeBlock(block, depth = 0, allowSection = true) {
-  if (!block || typeof block !== 'object') return null
-
-  const type = sanitizeIdentifier(block.type, 20)
-  if (!ALLOWED_BLOCK_TYPES.has(type)) return null
-  if (type === 'section' && !allowSection) return null
-
-  const common = {
-    id: sanitizeIdentifier(block.id, 64) || null,
-    type,
-  }
-
-  switch (type) {
-    case 'section': {
-      if (depth >= 2) return null
-      const layout = sanitizeSectionLayout(block.layout)
-      return {
-        ...common,
-        layout,
-        variant: sanitizeSectionVariant(block.variant),
-        spacing: sanitizeSectionSpacing(block.spacing),
-        anchor: sanitizeIdentifier(block.anchor, 80) || '',
-        columns: sanitizeSectionColumns(block.columns, layout, depth + 1),
-      }
-    }
-    case 'heading':
-      return {
-        ...common,
-        level: Number(block.level) === 3 ? 3 : 2,
-        content: sanitizeText(block.content, 2000),
-      }
-    case 'image':
-      return {
-        ...common,
-        url: sanitizeText(block.url, 2000),
-        caption: sanitizeText(block.caption, 500),
-      }
-    case 'code':
-      return {
-        ...common,
-        language: sanitizeText(block.language, 40, 'js') || 'js',
-        content: sanitizeText(block.content, 200000),
-      }
-    case 'quote':
-      return {
-        ...common,
-        content: sanitizeText(block.content, 4000),
-        author: sanitizeText(block.author, 200),
-      }
-    case 'list':
-      return {
-        ...common,
-        items: sanitizeListItems(block.items),
-      }
-    case 'paragraph':
-    default:
-      return {
-        ...common,
-        content: sanitizeText(block.content, 8000),
-      }
-  }
-}
+/* Mutualise la sanitization blocs/sections/lists pour le CMS. */
+const cmsLayoutSanitizer = createBlockContentSanitizer({
+  allowedBlockTypes: ALLOWED_BLOCK_TYPES,
+  sectionLayoutColumns: SECTION_LAYOUT_COLUMNS,
+  sectionVariants: SECTION_VARIANTS,
+  sectionSpacings: SECTION_SPACINGS,
+  maxBlocks: MAX_BLOCKS,
+  sanitizeText,
+  sanitizeIdentifier,
+})
 
 /**
  * Nettoie une collection de blocs.
  * @param {unknown} layout Layout brut.
  * @param {object} [options={}] Options de nettoyage.
- * @param {boolean} [options.allowSection=true] Autorise les sections.
- * @param {number} [options.depth=0] Profondeur de nettoyage.
- * @param {number} [options.limit=MAX_BLOCKS] Limite de blocs.
  * @returns {Array<object>} Layout normalise.
  */
 function sanitizeLayout(layout, options = {}) {
-  if (!Array.isArray(layout)) return []
-  const allowSection = options.allowSection !== false
-  const depth = Number.isInteger(options.depth) ? options.depth : 0
-  const limit = Number.isInteger(options.limit) && options.limit > 0 ? options.limit : MAX_BLOCKS
-
-  return layout
-    .slice(0, limit)
-    .map((block) => sanitizeBlock(block, depth, allowSection))
-    .filter(Boolean)
+  return cmsLayoutSanitizer.sanitizeBlocks(layout, options)
 }
 
 /**
@@ -501,6 +323,7 @@ function createCmsPageService(deps = {}) {
   const likeOperator = deps.likeOperator || Op.iLike
   const notEqualOperator = deps.notEqualOperator || Op.ne
   const revisionRepositoryEnabled = canUseRevisionRepository(cmsPageRevisionModel)
+  const transactionProvider = deps.transactionProvider
 
   /**
    * Charge une page par id ou leve 404.
@@ -508,8 +331,11 @@ function createCmsPageService(deps = {}) {
    * @returns {Promise<object>} Page trouvee.
    * @throws {Error} Erreur 404 si introuvable.
    */
-  async function ensureCmsPageById(id) {
-    const page = await cmsPageModel.findByPk(id)
+  async function ensureCmsPageById(id, transaction = null) {
+    const page = await cmsPageModel.findByPk(
+      id,
+      transaction ? { transaction } : undefined
+    )
     if (!page) {
       throw createHttpError(404, 'Page introuvable.')
     }
@@ -523,14 +349,16 @@ function createCmsPageService(deps = {}) {
    * @returns {Promise<void>} Promise resolue si unique.
    * @throws {Error} Erreur 409 si collision.
    */
-  async function ensureCmsPageSlugUnique(slug, ignoreId = null) {
+  async function ensureCmsPageSlugUnique(slug, ignoreId = null, transaction = null) {
     const where = { slug }
     const safeIgnoreId = parsePositiveInteger(ignoreId)
     if (safeIgnoreId) {
       where.id = { [notEqualOperator]: safeIgnoreId }
     }
 
-    const existing = await cmsPageModel.findOne({ where })
+    const existing = await cmsPageModel.findOne(
+      transaction ? { where, transaction } : { where }
+    )
     if (existing) {
       throw createHttpError(409, 'Ce slug est deja utilise par une autre page.')
     }
@@ -541,13 +369,21 @@ function createCmsPageService(deps = {}) {
    * @param {number|string} pageId Id page.
    * @returns {Promise<number>} Prochain numero de revision.
    */
-  async function getNextRevisionVersion(pageId) {
+  async function getNextRevisionVersion(pageId, transaction = null) {
     if (!revisionRepositoryEnabled) return 1
 
-    const latest = await cmsPageRevisionModel.findOne({
-      where: { page_id: pageId },
-      order: [['version_number', 'DESC']],
-    })
+    const latest = await cmsPageRevisionModel.findOne(
+      transaction
+        ? {
+            where: { page_id: pageId },
+            order: [['version_number', 'DESC']],
+            transaction,
+          }
+        : {
+            where: { page_id: pageId },
+            order: [['version_number', 'DESC']],
+          }
+    )
 
     const current = parsePositiveInteger(latest?.version_number) || 0
     return current + 1
@@ -561,19 +397,22 @@ function createCmsPageService(deps = {}) {
    * @param {number|null} adminId Id admin auteur.
    * @returns {Promise<object|null>} Revision creee ou `null`.
    */
-  async function createRevisionEntry(page, stage, changeNote, adminId) {
+  async function createRevisionEntry(page, stage, changeNote, adminId, transaction = null) {
     if (!revisionRepositoryEnabled) return null
 
-    const versionNumber = await getNextRevisionVersion(page.id)
+    const versionNumber = await getNextRevisionVersion(page.id, transaction)
     const snapshot = buildCmsPageSnapshot(page)
-    return cmsPageRevisionModel.create({
-      page_id: page.id,
-      version_number: versionNumber,
-      stage,
-      change_note: sanitizeText(changeNote, 255) || null,
-      snapshot,
-      created_by_admin_id: adminId,
-    })
+    return cmsPageRevisionModel.create(
+      {
+        page_id: page.id,
+        version_number: versionNumber,
+        stage,
+        change_note: sanitizeText(changeNote, 255) || null,
+        snapshot,
+        created_by_admin_id: adminId,
+      },
+      transaction ? { transaction } : undefined
+    )
   }
 
   /**
@@ -649,29 +488,37 @@ function createCmsPageService(deps = {}) {
       throw createHttpError(422, 'Le slug de la page est invalide.')
     }
 
-    await ensureCmsPageSlugUnique(slug)
-
     const draftLayout = resolvePayloadLayout(payload) || []
     const draftSeo = sanitizeSeo(payload?.seo || {})
+    return withOptionalTransaction(
+      { model: cmsPageModel, transactionProvider },
+      async (transaction) => {
+        await ensureCmsPageSlugUnique(slug, null, transaction)
 
-    const page = await cmsPageModel.create({
-      slug,
-      status: 'draft',
-      draft_title: draftTitle,
-      draft_layout: draftLayout,
-      draft_seo: draftSeo,
-      created_by_admin_id: safeAdminId,
-      updated_by_admin_id: safeAdminId,
-    })
+        const page = await cmsPageModel.create(
+          {
+            slug,
+            status: 'draft',
+            draft_title: draftTitle,
+            draft_layout: draftLayout,
+            draft_seo: draftSeo,
+            created_by_admin_id: safeAdminId,
+            updated_by_admin_id: safeAdminId,
+          },
+          transaction ? { transaction } : undefined
+        )
 
-    await createRevisionEntry(
-      page,
-      'draft',
-      sanitizeText(payload?.change_note, 255, 'Creation de la page'),
-      safeAdminId
+        await createRevisionEntry(
+          page,
+          'draft',
+          sanitizeText(payload?.change_note, 255, 'Creation de la page'),
+          safeAdminId,
+          transaction
+        )
+
+        return mapCmsPageForAdmin(page)
+      }
     )
-
-    return mapCmsPageForAdmin(page)
   }
 
   /**
@@ -682,51 +529,57 @@ function createCmsPageService(deps = {}) {
    * @returns {Promise<object>} DTO page admin.
    */
   async function updateCmsPage(id, payload, adminId) {
-    const page = await ensureCmsPageById(id)
-    const safeAdminId = sanitizeAdminId(adminId)
-    const updates = {}
+    return withOptionalTransaction(
+      { model: cmsPageModel, transactionProvider },
+      async (transaction) => {
+        const page = await ensureCmsPageById(id, transaction)
+        const safeAdminId = sanitizeAdminId(adminId)
+        const updates = {}
 
-    if (payload?.slug !== undefined) {
-      const slug = sanitizeSlug(payload.slug)
-      if (!slug) {
-        throw createHttpError(422, 'Le slug de la page est invalide.')
+        if (payload?.slug !== undefined) {
+          const slug = sanitizeSlug(payload.slug)
+          if (!slug) {
+            throw createHttpError(422, 'Le slug de la page est invalide.')
+          }
+          await ensureCmsPageSlugUnique(slug, page.id, transaction)
+          updates.slug = slug
+        }
+
+        if (payload?.title !== undefined) {
+          const title = sanitizeText(payload.title, 180)
+          if (!title) {
+            throw createHttpError(422, 'Le titre de la page est obligatoire.')
+          }
+          updates.draft_title = title
+        }
+
+        const layout = resolvePayloadLayout(payload)
+        if (layout !== null) {
+          updates.draft_layout = layout
+        }
+
+        if (payload?.seo !== undefined) {
+          updates.draft_seo = sanitizeSeo(payload.seo)
+        }
+
+        if (payload?.status !== undefined) {
+          updates.status = sanitizeStatus(payload.status, page.status)
+        }
+
+        updates.updated_by_admin_id = safeAdminId
+
+        await page.update(updates, transaction ? { transaction } : undefined)
+        await createRevisionEntry(
+          page,
+          'draft',
+          sanitizeText(payload?.change_note, 255, 'Mise a jour de la page'),
+          safeAdminId,
+          transaction
+        )
+
+        return mapCmsPageForAdmin(page)
       }
-      await ensureCmsPageSlugUnique(slug, page.id)
-      updates.slug = slug
-    }
-
-    if (payload?.title !== undefined) {
-      const title = sanitizeText(payload.title, 180)
-      if (!title) {
-        throw createHttpError(422, 'Le titre de la page est obligatoire.')
-      }
-      updates.draft_title = title
-    }
-
-    const layout = resolvePayloadLayout(payload)
-    if (layout !== null) {
-      updates.draft_layout = layout
-    }
-
-    if (payload?.seo !== undefined) {
-      updates.draft_seo = sanitizeSeo(payload.seo)
-    }
-
-    if (payload?.status !== undefined) {
-      updates.status = sanitizeStatus(payload.status, page.status)
-    }
-
-    updates.updated_by_admin_id = safeAdminId
-
-    await page.update(updates)
-    await createRevisionEntry(
-      page,
-      'draft',
-      sanitizeText(payload?.change_note, 255, 'Mise a jour de la page'),
-      safeAdminId
     )
-
-    return mapCmsPageForAdmin(page)
   }
 
   /**
@@ -737,37 +590,46 @@ function createCmsPageService(deps = {}) {
    * @returns {Promise<object>} DTO page admin.
    */
   async function publishCmsPage(id, payload = {}, adminId) {
-    const page = await ensureCmsPageById(id)
-    const safeAdminId = sanitizeAdminId(adminId)
+    return withOptionalTransaction(
+      { model: cmsPageModel, transactionProvider },
+      async (transaction) => {
+        const page = await ensureCmsPageById(id, transaction)
+        const safeAdminId = sanitizeAdminId(adminId)
 
-    const draftTitle = sanitizeText(page.draft_title, 180)
-    if (!draftTitle) {
-      throw createHttpError(422, 'Le draft doit contenir un titre avant publication.')
-    }
+        const draftTitle = sanitizeText(page.draft_title, 180)
+        if (!draftTitle) {
+          throw createHttpError(422, 'Le draft doit contenir un titre avant publication.')
+        }
 
-    const draftLayout = sanitizeLayout(page.draft_layout)
-    if (draftLayout.length === 0) {
-      throw createHttpError(422, 'Le draft doit contenir au moins un bloc avant publication.')
-    }
+        const draftLayout = sanitizeLayout(page.draft_layout)
+        if (draftLayout.length === 0) {
+          throw createHttpError(422, 'Le draft doit contenir au moins un bloc avant publication.')
+        }
 
-    await page.update({
-      status: 'published',
-      published_title: draftTitle,
-      published_layout: draftLayout,
-      published_seo: sanitizeSeo(page.draft_seo || {}),
-      published_at: now(),
-      published_by_admin_id: safeAdminId,
-      updated_by_admin_id: safeAdminId,
-    })
+        await page.update(
+          {
+            status: 'published',
+            published_title: draftTitle,
+            published_layout: draftLayout,
+            published_seo: sanitizeSeo(page.draft_seo || {}),
+            published_at: now(),
+            published_by_admin_id: safeAdminId,
+            updated_by_admin_id: safeAdminId,
+          },
+          transaction ? { transaction } : undefined
+        )
 
-    await createRevisionEntry(
-      page,
-      'published',
-      sanitizeText(payload?.change_note, 255, 'Publication de la page'),
-      safeAdminId
+        await createRevisionEntry(
+          page,
+          'published',
+          sanitizeText(payload?.change_note, 255, 'Publication de la page'),
+          safeAdminId,
+          transaction
+        )
+
+        return mapCmsPageForAdmin(page)
+      }
     )
-
-    return mapCmsPageForAdmin(page)
   }
 
   /**
@@ -777,16 +639,24 @@ function createCmsPageService(deps = {}) {
    * @returns {Promise<object>} DTO page admin.
    */
   async function unpublishCmsPage(id, adminId) {
-    const page = await ensureCmsPageById(id)
-    const safeAdminId = sanitizeAdminId(adminId)
+    return withOptionalTransaction(
+      { model: cmsPageModel, transactionProvider },
+      async (transaction) => {
+        const page = await ensureCmsPageById(id, transaction)
+        const safeAdminId = sanitizeAdminId(adminId)
 
-    await page.update({
-      status: 'draft',
-      updated_by_admin_id: safeAdminId,
-    })
+        await page.update(
+          {
+            status: 'draft',
+            updated_by_admin_id: safeAdminId,
+          },
+          transaction ? { transaction } : undefined
+        )
 
-    await createRevisionEntry(page, 'draft', 'Depublication de la page', safeAdminId)
-    return mapCmsPageForAdmin(page)
+        await createRevisionEntry(page, 'draft', 'Depublication de la page', safeAdminId, transaction)
+        return mapCmsPageForAdmin(page)
+      }
+    )
   }
 
   /**
@@ -821,45 +691,64 @@ function createCmsPageService(deps = {}) {
       throw createHttpError(422, 'Historique des revisions indisponible.')
     }
 
-    const page = await ensureCmsPageById(id)
-    const safeRevisionId = parsePositiveInteger(revisionId)
-    if (!safeRevisionId) {
-      throw createHttpError(422, 'revisionId invalide.')
-    }
+    return withOptionalTransaction(
+      { model: cmsPageModel, transactionProvider },
+      async (transaction) => {
+        const page = await ensureCmsPageById(id, transaction)
+        const safeRevisionId = parsePositiveInteger(revisionId)
+        if (!safeRevisionId) {
+          throw createHttpError(422, 'revisionId invalide.')
+        }
 
-    const revision = await cmsPageRevisionModel.findOne({
-      where: {
-        id: safeRevisionId,
-        page_id: page.id,
-      },
-    })
+        const revision = await cmsPageRevisionModel.findOne(
+          transaction
+            ? {
+                where: {
+                  id: safeRevisionId,
+                  page_id: page.id,
+                },
+                transaction,
+              }
+            : {
+                where: {
+                  id: safeRevisionId,
+                  page_id: page.id,
+                },
+              }
+        )
 
-    if (!revision) {
-      throw createHttpError(404, 'Revision introuvable.')
-    }
+        if (!revision) {
+          throw createHttpError(404, 'Revision introuvable.')
+        }
 
-    const snapshot = sanitizeRevisionSnapshot(revision.snapshot)
-    if (!snapshot) {
-      throw createHttpError(422, 'Snapshot de revision invalide.')
-    }
+        const snapshot = sanitizeRevisionSnapshot(revision.snapshot)
+        if (!snapshot) {
+          throw createHttpError(422, 'Snapshot de revision invalide.')
+        }
 
-    const safeAdminId = sanitizeAdminId(adminId)
-    await page.update({
-      ...snapshot,
-      updated_by_admin_id: safeAdminId,
-    })
+        const safeAdminId = sanitizeAdminId(adminId)
+        await page.update(
+          {
+            ...snapshot,
+            updated_by_admin_id: safeAdminId,
+          },
+          transaction ? { transaction } : undefined
+        )
 
-    await createRevisionEntry(
-      page,
-      'rollback',
-      `Rollback vers revision #${revision.id}`,
-      safeAdminId
+        await createRevisionEntry(
+          page,
+          'rollback',
+          `Rollback vers revision #${revision.id}`,
+          safeAdminId,
+          transaction
+        )
+
+        return {
+          page: mapCmsPageForAdmin(page),
+          revision,
+        }
+      }
     )
-
-    return {
-      page: mapCmsPageForAdmin(page),
-      revision,
-    }
   }
 
   /**

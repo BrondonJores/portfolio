@@ -2,6 +2,7 @@
 const crypto = require('node:crypto')
 const { VisualBuilderDraft } = require('../models')
 const { createHttpError } = require('../utils/httpError')
+const { createBlockContentSanitizer } = require('../utils/blockContentSanitizer')
 
 const ALLOWED_ENTITIES = new Set(['article', 'project', 'newsletter', 'page'])
 const ALLOWED_BLOCK_TYPES = new Set(['paragraph', 'heading', 'image', 'code', 'quote', 'list', 'section'])
@@ -95,212 +96,25 @@ function extractResourceIdFromChannel(channel) {
   return resource
 }
 
-/**
- * Nettoie recursivement les elements d'une liste.
- * @param {unknown} items Valeur brute.
- * @param {number} [depth=0] Profondeur courante.
- * @returns {Array<string | {content: string, items: Array}>} Liste nettoyee.
- */
-function sanitizeListItems(items, depth = 0) {
-  if (!Array.isArray(items)) {
-    return ['']
-  }
-
-  if (depth >= 3) {
-    const flatItems = items
-      .map((item) => {
-        if (typeof item === 'string') return sanitizeText(item, 500)
-        return sanitizeText(item?.content, 500)
-      })
-      .filter(Boolean)
-
-    return flatItems.length > 0 ? flatItems.slice(0, 80) : ['']
-  }
-
-  const sanitized = items
-    .slice(0, 80)
-    .map((item) => {
-      if (typeof item === 'string') {
-        return sanitizeText(item, 500)
-      }
-
-      if (!item || typeof item !== 'object') {
-        return ''
-      }
-
-      return {
-        content: sanitizeText(item.content, 500),
-        items: sanitizeListItems(item.items, depth + 1),
-      }
-    })
-    .filter((item) => {
-      if (typeof item === 'string') return item.length > 0
-      return Boolean(item?.content || (Array.isArray(item?.items) && item.items.length > 0))
-    })
-
-  return sanitized.length > 0 ? sanitized : ['']
-}
-
-/**
- * Nettoie le layout d'une section (`1-col`, `2-col`, `3-col`).
- * @param {unknown} value Valeur brute.
- * @returns {'1-col'|'2-col'|'3-col'} Layout section normalise.
- */
-function sanitizeSectionLayout(value) {
-  const normalized = sanitizeIdentifier(value, 12)
-  if (Object.prototype.hasOwnProperty.call(SECTION_LAYOUT_COLUMNS, normalized)) {
-    return normalized
-  }
-  return '2-col'
-}
-
-/**
- * Retourne le nombre de colonnes attendu pour un layout section.
- * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
- * @returns {number} Nombre de colonnes.
- */
-function getSectionColumnCount(layout) {
-  return SECTION_LAYOUT_COLUMNS[layout] || 2
-}
-
-/**
- * Nettoie le variant visuel d'une section.
- * @param {unknown} value Valeur brute.
- * @returns {'default'|'soft'|'accent'} Variant section.
- */
-function sanitizeSectionVariant(value) {
-  const normalized = sanitizeIdentifier(value, 20)
-  if (SECTION_VARIANTS.has(normalized)) {
-    return normalized
-  }
-  return 'default'
-}
-
-/**
- * Nettoie l'espacement vertical d'une section.
- * @param {unknown} value Valeur brute.
- * @returns {'sm'|'md'|'lg'} Spacing section.
- */
-function sanitizeSectionSpacing(value) {
-  const normalized = sanitizeIdentifier(value, 20)
-  if (SECTION_SPACINGS.has(normalized)) {
-    return normalized
-  }
-  return 'md'
-}
-
-/**
- * Nettoie les colonnes/widgets d'une section.
- * @param {unknown} columns Colonnes brutes.
- * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
- * @param {number} depth Profondeur courante.
- * @returns {Array<Array<object>>} Colonnes normalisees.
- */
-function sanitizeSectionColumns(columns, layout, depth) {
-  const columnCount = getSectionColumnCount(layout)
-  const sourceColumns = Array.isArray(columns) ? columns : []
-
-  return Array.from({ length: columnCount }, (_, index) => {
-    const rawColumn = Array.isArray(sourceColumns[index]) ? sourceColumns[index] : []
-    return sanitizeBlocks(rawColumn, {
-      allowSection: false,
-      depth,
-      limit: 80,
-    })
-  })
-}
-
-/**
- * Nettoie un bloc du builder et force un schema autorise.
- * @param {unknown} block Bloc source.
- * @param {number} [depth=0] Profondeur de nettoyage.
- * @param {boolean} [allowSection=true] Autorise ou non les sections.
- * @returns {object|null} Bloc normalise ou `null` si invalide.
- */
-function sanitizeBlock(block, depth = 0, allowSection = true) {
-  if (!block || typeof block !== 'object') return null
-
-  const type = sanitizeIdentifier(block.type, 20)
-  if (!ALLOWED_BLOCK_TYPES.has(type)) {
-    return null
-  }
-  if (type === 'section' && !allowSection) return null
-
-  const common = {
-    id: sanitizeIdentifier(block.id, 64) || null,
-    type,
-  }
-
-  switch (type) {
-    case 'section': {
-      if (depth >= 2) return null
-      const layout = sanitizeSectionLayout(block.layout)
-      return {
-        ...common,
-        layout,
-        variant: sanitizeSectionVariant(block.variant),
-        spacing: sanitizeSectionSpacing(block.spacing),
-        anchor: sanitizeIdentifier(block.anchor, 80) || '',
-        columns: sanitizeSectionColumns(block.columns, layout, depth + 1),
-      }
-    }
-    case 'heading':
-      return {
-        ...common,
-        level: Number(block.level) === 3 ? 3 : 2,
-        content: sanitizeText(block.content, 2000),
-      }
-    case 'image':
-      return {
-        ...common,
-        url: sanitizeText(block.url, 2000),
-        caption: sanitizeText(block.caption, 500),
-      }
-    case 'code':
-      return {
-        ...common,
-        language: sanitizeText(block.language, 40, 'js') || 'js',
-        content: sanitizeText(block.content, 200000),
-      }
-    case 'quote':
-      return {
-        ...common,
-        content: sanitizeText(block.content, 4000),
-        author: sanitizeText(block.author, 200),
-      }
-    case 'list':
-      return {
-        ...common,
-        items: sanitizeListItems(block.items),
-      }
-    case 'paragraph':
-    default:
-      return {
-        ...common,
-        content: sanitizeText(block.content, 8000),
-      }
-  }
-}
+/* Mutualise la sanitization blocs/sections/lists pour le visual builder. */
+const visualBuilderBlockSanitizer = createBlockContentSanitizer({
+  allowedBlockTypes: ALLOWED_BLOCK_TYPES,
+  sectionLayoutColumns: SECTION_LAYOUT_COLUMNS,
+  sectionVariants: SECTION_VARIANTS,
+  sectionSpacings: SECTION_SPACINGS,
+  maxBlocks: MAX_BLOCKS,
+  sanitizeText,
+  sanitizeIdentifier,
+})
 
 /**
  * Nettoie la collection complete des blocs du builder.
  * @param {unknown} blocks Collection brute.
  * @param {object} [options={}] Options de nettoyage.
- * @param {boolean} [options.allowSection=true] Autorise les sections.
- * @param {number} [options.depth=0] Profondeur de nettoyage.
- * @param {number} [options.limit=MAX_BLOCKS] Limite de blocs.
  * @returns {Array<object>} Blocs valides.
  */
 function sanitizeBlocks(blocks, options = {}) {
-  if (!Array.isArray(blocks)) return []
-  const allowSection = options.allowSection !== false
-  const depth = Number.isInteger(options.depth) ? options.depth : 0
-  const limit = Number.isInteger(options.limit) && options.limit > 0 ? options.limit : MAX_BLOCKS
-
-  return blocks
-    .slice(0, limit)
-    .map((block) => sanitizeBlock(block, depth, allowSection))
-    .filter(Boolean)
+  return visualBuilderBlockSanitizer.sanitizeBlocks(blocks, options)
 }
 
 /**

@@ -2,6 +2,8 @@
 const { Op } = require('sequelize')
 const { BlockTemplate, MarketplaceItem, BlockTemplateRelease } = require('../models')
 const { createHttpError } = require('../utils/httpError')
+const { createBlockContentSanitizer } = require('../utils/blockContentSanitizer')
+const { withOptionalTransaction } = require('../utils/transaction')
 
 const TEMPLATE_CONTEXTS = new Set(['article', 'project', 'newsletter', 'all'])
 const BLOCK_TYPES = new Set(['paragraph', 'heading', 'image', 'code', 'quote', 'list', 'section'])
@@ -83,204 +85,26 @@ function sanitizeIdentifier(value, maxLength) {
     .slice(0, maxLength)
 }
 
-/**
- * Nettoie recursivement les items d'une liste imbriquee.
- * @param {unknown} items Elements bruts de liste.
- * @param {number} [depth=0] Profondeur courante.
- * @returns {Array<string | {content: string, items: Array}>} Liste nettoyee.
- */
-function sanitizeListItems(items, depth = 0) {
-  if (!Array.isArray(items)) {
-    return ['']
-  }
-
-  if (depth >= 3) {
-    return items
-      .map((item) => (typeof item === 'string' ? sanitizeText(item, 500) : sanitizeText(item?.content, 500)))
-      .filter((item) => item.length > 0)
-  }
-
-  const nextItems = items
-    .map((item) => {
-      if (typeof item === 'string') {
-        return sanitizeText(item, 500)
-      }
-
-      if (item && typeof item === 'object') {
-        return {
-          content: sanitizeText(item.content, 500),
-          items: sanitizeListItems(item.items, depth + 1),
-        }
-      }
-
-      return ''
-    })
-    .filter((item) => {
-      if (typeof item === 'string') return item.length > 0
-      return Boolean(item?.content || (Array.isArray(item?.items) && item.items.length > 0))
-    })
-
-  return nextItems.length > 0 ? nextItems : ['']
-}
-
-/**
- * Nettoie le layout d'une section (`1-col`, `2-col`, `3-col`).
- * @param {unknown} value Valeur brute.
- * @returns {'1-col'|'2-col'|'3-col'} Layout section normalise.
- */
-function sanitizeSectionLayout(value) {
-  const normalized = sanitizeIdentifier(value, 12)
-  if (Object.prototype.hasOwnProperty.call(SECTION_LAYOUT_COLUMNS, normalized)) {
-    return normalized
-  }
-  return '2-col'
-}
-
-/**
- * Retourne le nombre de colonnes pour un layout section.
- * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
- * @returns {number} Nombre de colonnes.
- */
-function getSectionColumnCount(layout) {
-  return SECTION_LAYOUT_COLUMNS[layout] || 2
-}
-
-/**
- * Nettoie le variant visuel d'une section.
- * @param {unknown} value Valeur brute.
- * @returns {'default'|'soft'|'accent'} Variant section.
- */
-function sanitizeSectionVariant(value) {
-  const normalized = sanitizeIdentifier(value, 20)
-  if (SECTION_VARIANTS.has(normalized)) {
-    return normalized
-  }
-  return 'default'
-}
-
-/**
- * Nettoie l'espacement vertical d'une section.
- * @param {unknown} value Valeur brute.
- * @returns {'sm'|'md'|'lg'} Spacing section.
- */
-function sanitizeSectionSpacing(value) {
-  const normalized = sanitizeIdentifier(value, 20)
-  if (SECTION_SPACINGS.has(normalized)) {
-    return normalized
-  }
-  return 'md'
-}
-
-/**
- * Nettoie les widgets d'une section.
- * @param {unknown} columns Colonnes brutes.
- * @param {'1-col'|'2-col'|'3-col'} layout Layout section.
- * @param {number} depth Profondeur de nettoyage.
- * @returns {Array<Array<object>>} Colonnes normalisees.
- */
-function sanitizeSectionColumns(columns, layout, depth) {
-  const columnCount = getSectionColumnCount(layout)
-  const sourceColumns = Array.isArray(columns) ? columns : []
-
-  return Array.from({ length: columnCount }, (_, index) => {
-    const rawColumn = Array.isArray(sourceColumns[index]) ? sourceColumns[index] : []
-    return sanitizeBlocks(rawColumn, {
-      allowSection: false,
-      depth,
-      limit: 80,
-    })
-  })
-}
-
-/**
- * Normalise un bloc brut en structure autorisee pour le CMS.
- * @param {unknown} block Bloc source.
- * @param {number} [depth=0] Profondeur de nettoyage.
- * @param {boolean} [allowSection=true] Autorise les sections top-level.
- * @returns {object | null} Bloc nettoye ou null si invalide.
- */
-function sanitizeBlock(block, depth = 0, allowSection = true) {
-  if (!block || typeof block !== 'object') return null
-
-  const type = sanitizeIdentifier(block.type, 20)
-  if (!BLOCK_TYPES.has(type)) return null
-  if (type === 'section' && !allowSection) return null
-
-  const common = {
-    id: sanitizeIdentifier(block.id, 64) || null,
-    type,
-  }
-
-  switch (type) {
-    case 'section': {
-      if (depth >= 2) return null
-      const layout = sanitizeSectionLayout(block.layout)
-      return {
-        ...common,
-        layout,
-        variant: sanitizeSectionVariant(block.variant),
-        spacing: sanitizeSectionSpacing(block.spacing),
-        anchor: sanitizeIdentifier(block.anchor, 80) || '',
-        columns: sanitizeSectionColumns(block.columns, layout, depth + 1),
-      }
-    }
-    case 'heading':
-      return {
-        ...common,
-        level: Number(block.level) === 3 ? 3 : 2,
-        content: sanitizeText(block.content, 2000),
-      }
-    case 'image':
-      return {
-        ...common,
-        url: sanitizeText(block.url, 2000),
-        caption: sanitizeText(block.caption, 500),
-      }
-    case 'code':
-      return {
-        ...common,
-        language: sanitizeText(block.language, 40, 'js') || 'js',
-        content: sanitizeText(block.content, 200000),
-      }
-    case 'quote':
-      return {
-        ...common,
-        content: sanitizeText(block.content, 4000),
-        author: sanitizeText(block.author, 200),
-      }
-    case 'list':
-      return {
-        ...common,
-        items: sanitizeListItems(block.items),
-      }
-    case 'paragraph':
-    default:
-      return {
-        ...common,
-        content: sanitizeText(block.content, 8000),
-      }
-  }
-}
+/* Mutualise la sanitization blocs/sections/lists pour les templates. */
+const templateBlockSanitizer = createBlockContentSanitizer({
+  allowedBlockTypes: BLOCK_TYPES,
+  sectionLayoutColumns: SECTION_LAYOUT_COLUMNS,
+  sectionVariants: SECTION_VARIANTS,
+  sectionSpacings: SECTION_SPACINGS,
+  maxBlocks: MAX_BLOCKS,
+  truncateDepthLimitItems: false,
+  sanitizeText,
+  sanitizeIdentifier,
+})
 
 /**
  * Nettoie une collection de blocs.
  * @param {unknown} blocks Valeur source.
  * @param {object} [options={}] Options de nettoyage.
- * @param {boolean} [options.allowSection=true] Autorise les sections.
- * @param {number} [options.depth=0] Profondeur de nettoyage.
- * @param {number} [options.limit=MAX_BLOCKS] Limite de blocs.
  * @returns {Array<object>} Tableau de blocs valides.
  */
 function sanitizeBlocks(blocks, options = {}) {
-  if (!Array.isArray(blocks)) return []
-  const allowSection = options.allowSection !== false
-  const depth = Number.isInteger(options.depth) ? options.depth : 0
-  const limit = Number.isInteger(options.limit) && options.limit > 0 ? options.limit : MAX_BLOCKS
-
-  return blocks
-    .slice(0, limit)
-    .map((block) => sanitizeBlock(block, depth, allowSection))
-    .filter(Boolean)
+  return templateBlockSanitizer.sanitizeBlocks(blocks, options)
 }
 
 /**
@@ -458,6 +282,7 @@ function createBlockTemplateService(deps = {}) {
         ? null
         : BlockTemplateRelease
   const releaseRepositoryEnabled = canUseBlockTemplateReleaseRepository(blockTemplateReleaseModel)
+  const transactionProvider = deps.transactionProvider
 
   /**
    * Charge un template par id ou leve 404.
@@ -465,8 +290,11 @@ function createBlockTemplateService(deps = {}) {
    * @returns {Promise<object>} Template charge.
    * @throws {Error} Erreur 404 si introuvable.
    */
-  async function ensureBlockTemplateById(id) {
-    const template = await blockTemplateModel.findByPk(id)
+  async function ensureBlockTemplateById(id, transaction = null) {
+    const template = await blockTemplateModel.findByPk(
+      id,
+      transaction ? { transaction } : undefined
+    )
     if (!template) {
       throw createHttpError(404, 'Template introuvable.')
     }
@@ -478,13 +306,21 @@ function createBlockTemplateService(deps = {}) {
    * @param {number|string} templateId Identifiant template.
    * @returns {Promise<number>} Prochaine version.
    */
-  async function getNextBlockTemplateReleaseVersion(templateId) {
+  async function getNextBlockTemplateReleaseVersion(templateId, transaction = null) {
     if (!releaseRepositoryEnabled) return 1
 
-    const latest = await blockTemplateReleaseModel.findOne({
-      where: { block_template_id: templateId },
-      order: [['version_number', 'DESC']],
-    })
+    const latest = await blockTemplateReleaseModel.findOne(
+      transaction
+        ? {
+            where: { block_template_id: templateId },
+            order: [['version_number', 'DESC']],
+            transaction,
+          }
+        : {
+            where: { block_template_id: templateId },
+            order: [['version_number', 'DESC']],
+          }
+    )
 
     const currentVersion = Number.parseInt(String(latest?.version_number ?? 0), 10)
     return (Number.isFinite(currentVersion) ? currentVersion : 0) + 1
@@ -496,7 +332,7 @@ function createBlockTemplateService(deps = {}) {
    * @param {string} [changeNote=''] Note de release.
    * @returns {Promise<object|null>} Release creee ou null si repository indisponible.
    */
-  async function createBlockTemplateReleaseEntry(template, changeNote = '') {
+  async function createBlockTemplateReleaseEntry(template, changeNote = '', transaction = null) {
     if (!releaseRepositoryEnabled) return null
 
     const snapshot = buildTemplateSnapshot(template)
@@ -504,14 +340,17 @@ function createBlockTemplateService(deps = {}) {
       return null
     }
 
-    const versionNumber = await getNextBlockTemplateReleaseVersion(template.id)
+    const versionNumber = await getNextBlockTemplateReleaseVersion(template.id, transaction)
 
-    return blockTemplateReleaseModel.create({
-      block_template_id: template.id,
-      version_number: versionNumber,
-      change_note: sanitizeText(changeNote, 255, '') || null,
-      snapshot,
-    })
+    return blockTemplateReleaseModel.create(
+      {
+        block_template_id: template.id,
+        version_number: versionNumber,
+        change_note: sanitizeText(changeNote, 255, '') || null,
+        snapshot,
+      },
+      transaction ? { transaction } : undefined
+    )
   }
 
   /**
@@ -519,15 +358,23 @@ function createBlockTemplateService(deps = {}) {
    * @param {object} template Template source.
    * @returns {Promise<void>} Promise resolue meme si la synchro echoue.
    */
-  async function syncTemplateToMarketplace(template) {
+  async function syncTemplateToMarketplace(template, options = {}) {
+    const transaction = options?.transaction || null
+    const suppressErrors = options?.suppressErrors !== false
     if (!marketplaceRepositoryEnabled) return
 
     const payload = buildTemplateMarketplacePayload(template)
     if (!payload) return
 
     try {
-      await marketplaceItemModel.upsert(payload)
-    } catch {
+      await marketplaceItemModel.upsert(
+        payload,
+        transaction ? { transaction } : undefined
+      )
+    } catch (err) {
+      if (!suppressErrors) {
+        throw err
+      }
       /* Le CRUD principal reste prioritaire si la synchro marketplace echoue. */
     }
   }
@@ -537,7 +384,9 @@ function createBlockTemplateService(deps = {}) {
    * @param {number|string} templateId Identifiant template supprime.
    * @returns {Promise<void>} Promise resolue meme si la synchro echoue.
    */
-  async function deactivateTemplateInMarketplace(templateId) {
+  async function deactivateTemplateInMarketplace(templateId, options = {}) {
+    const transaction = options?.transaction || null
+    const suppressErrors = options?.suppressErrors !== false
     if (!marketplaceRepositoryEnabled) return
 
     const slug = buildTemplateMarketplaceSlug(templateId)
@@ -546,9 +395,14 @@ function createBlockTemplateService(deps = {}) {
     try {
       await marketplaceItemModel.update(
         { is_active: false },
-        { where: { type: 'template', slug } }
+        transaction
+          ? { where: { type: 'template', slug }, transaction }
+          : { where: { type: 'template', slug } }
       )
-    } catch {
+    } catch (err) {
+      if (!suppressErrors) {
+        throw err
+      }
       /* Ignore les erreurs de synchro pour ne pas casser la suppression. */
     }
   }
@@ -594,13 +448,25 @@ function createBlockTemplateService(deps = {}) {
       throw createHttpError(422, 'Le template doit contenir au moins un bloc valide.')
     }
 
-    const template = await blockTemplateModel.create(sanitized)
-    await syncTemplateToMarketplace(template)
-    await createBlockTemplateReleaseEntry(
-      template,
-      sanitizeText(payload?.change_note, 255, 'Creation du template')
+    return withOptionalTransaction(
+      { model: blockTemplateModel, transactionProvider },
+      async (transaction) => {
+        const template = await blockTemplateModel.create(
+          sanitized,
+          transaction ? { transaction } : undefined
+        )
+        await syncTemplateToMarketplace(template, {
+          transaction,
+          suppressErrors: false,
+        })
+        await createBlockTemplateReleaseEntry(
+          template,
+          sanitizeText(payload?.change_note, 255, 'Creation du template'),
+          transaction
+        )
+        return template
+      }
     )
-    return template
   }
 
   /**
@@ -611,37 +477,46 @@ function createBlockTemplateService(deps = {}) {
    * @throws {Error} Erreur 404 si introuvable.
    */
   async function updateBlockTemplate(id, payload) {
-    const template = await ensureBlockTemplateById(id)
+    return withOptionalTransaction(
+      { model: blockTemplateModel, transactionProvider },
+      async (transaction) => {
+        const template = await ensureBlockTemplateById(id, transaction)
 
-    const updates = {}
+        const updates = {}
 
-    if (payload.name !== undefined) {
-      updates.name = sanitizeText(payload.name, 120)
-    }
+        if (payload.name !== undefined) {
+          updates.name = sanitizeText(payload.name, 120)
+        }
 
-    if (payload.context !== undefined) {
-      updates.context = sanitizeContext(payload.context, template.context || 'all')
-    }
+        if (payload.context !== undefined) {
+          updates.context = sanitizeContext(payload.context, template.context || 'all')
+        }
 
-    if (payload.description !== undefined) {
-      updates.description = sanitizeText(payload.description, 2000, '')
-    }
+        if (payload.description !== undefined) {
+          updates.description = sanitizeText(payload.description, 2000, '')
+        }
 
-    if (payload.blocks !== undefined) {
-      const blocks = sanitizeBlocks(payload.blocks)
-      if (blocks.length === 0) {
-        throw createHttpError(422, 'Le template doit contenir au moins un bloc valide.')
+        if (payload.blocks !== undefined) {
+          const blocks = sanitizeBlocks(payload.blocks)
+          if (blocks.length === 0) {
+            throw createHttpError(422, 'Le template doit contenir au moins un bloc valide.')
+          }
+          updates.blocks = blocks
+        }
+
+        await template.update(updates, transaction ? { transaction } : undefined)
+        await syncTemplateToMarketplace(template, {
+          transaction,
+          suppressErrors: false,
+        })
+        await createBlockTemplateReleaseEntry(
+          template,
+          sanitizeText(payload?.change_note, 255, 'Mise a jour du template'),
+          transaction
+        )
+        return template
       }
-      updates.blocks = blocks
-    }
-
-    await template.update(updates)
-    await syncTemplateToMarketplace(template)
-    await createBlockTemplateReleaseEntry(
-      template,
-      sanitizeText(payload?.change_note, 255, 'Mise a jour du template')
     )
-    return template
   }
 
   /**
@@ -651,9 +526,17 @@ function createBlockTemplateService(deps = {}) {
    * @throws {Error} Erreur 404 si introuvable.
    */
   async function deleteBlockTemplate(id) {
-    const template = await ensureBlockTemplateById(id)
-    await template.destroy()
-    await deactivateTemplateInMarketplace(template.id)
+    return withOptionalTransaction(
+      { model: blockTemplateModel, transactionProvider },
+      async (transaction) => {
+        const template = await ensureBlockTemplateById(id, transaction)
+        await template.destroy(transaction ? { transaction } : undefined)
+        await deactivateTemplateInMarketplace(template.id, {
+          transaction,
+          suppressErrors: false,
+        })
+      }
+    )
   }
 
   /**
@@ -682,43 +565,62 @@ function createBlockTemplateService(deps = {}) {
    * @throws {Error} Erreur 404/422 selon le cas.
    */
   async function rollbackBlockTemplate(id, releaseId) {
-    const template = await ensureBlockTemplateById(id)
     if (!releaseRepositoryEnabled) {
       throw createHttpError(422, 'Historique des releases indisponible.')
     }
 
-    const safeReleaseId = Number.parseInt(String(releaseId), 10)
-    if (!Number.isFinite(safeReleaseId) || safeReleaseId <= 0) {
-      throw createHttpError(422, 'releaseId invalide.')
-    }
+    return withOptionalTransaction(
+      { model: blockTemplateModel, transactionProvider },
+      async (transaction) => {
+        const template = await ensureBlockTemplateById(id, transaction)
+        const safeReleaseId = Number.parseInt(String(releaseId), 10)
+        if (!Number.isFinite(safeReleaseId) || safeReleaseId <= 0) {
+          throw createHttpError(422, 'releaseId invalide.')
+        }
 
-    const release = await blockTemplateReleaseModel.findOne({
-      where: {
-        id: safeReleaseId,
-        block_template_id: template.id,
-      },
-    })
+        const release = await blockTemplateReleaseModel.findOne(
+          transaction
+            ? {
+                where: {
+                  id: safeReleaseId,
+                  block_template_id: template.id,
+                },
+                transaction,
+              }
+            : {
+                where: {
+                  id: safeReleaseId,
+                  block_template_id: template.id,
+                },
+              }
+        )
 
-    if (!release) {
-      throw createHttpError(404, 'Release introuvable.')
-    }
+        if (!release) {
+          throw createHttpError(404, 'Release introuvable.')
+        }
 
-    const snapshot = sanitizeTemplatePayload(release.snapshot || {})
-    if (!snapshot.name || snapshot.blocks.length === 0) {
-      throw createHttpError(422, 'Snapshot release invalide.')
-    }
+        const snapshot = sanitizeTemplatePayload(release.snapshot || {})
+        if (!snapshot.name || snapshot.blocks.length === 0) {
+          throw createHttpError(422, 'Snapshot release invalide.')
+        }
 
-    await template.update(snapshot)
-    await syncTemplateToMarketplace(template)
-    await createBlockTemplateReleaseEntry(
-      template,
-      `Rollback vers v${release.version_number}`
+        await template.update(snapshot, transaction ? { transaction } : undefined)
+        await syncTemplateToMarketplace(template, {
+          transaction,
+          suppressErrors: false,
+        })
+        await createBlockTemplateReleaseEntry(
+          template,
+          `Rollback vers v${release.version_number}`,
+          transaction
+        )
+
+        return {
+          template,
+          release,
+        }
+      }
     )
-
-    return {
-      template,
-      release,
-    }
   }
 
   /**
@@ -777,37 +679,62 @@ function createBlockTemplateService(deps = {}) {
     const replaceExisting = toBoolean(payload?.replaceExisting, true)
     const { snapshot, changeNote } = normalized
 
-    const existing = await blockTemplateModel.findOne({
-      where: {
-        name: snapshot.name,
-        context: snapshot.context,
-      },
-    })
+    return withOptionalTransaction(
+      { model: blockTemplateModel, transactionProvider },
+      async (transaction) => {
+        const existing = await blockTemplateModel.findOne(
+          transaction
+            ? {
+                where: {
+                  name: snapshot.name,
+                  context: snapshot.context,
+                },
+                transaction,
+              }
+            : {
+                where: {
+                  name: snapshot.name,
+                  context: snapshot.context,
+                },
+              }
+        )
 
-    let template = existing
-    let action = 'created'
+        let template = existing
+        let action = 'created'
 
-    if (template) {
-      if (!replaceExisting) {
-        action = 'skipped'
-      } else {
-        await template.update(snapshot)
-        action = 'updated'
+        if (template) {
+          if (!replaceExisting) {
+            action = 'skipped'
+          } else {
+            await template.update(snapshot, transaction ? { transaction } : undefined)
+            action = 'updated'
+          }
+        } else {
+          template = await blockTemplateModel.create(
+            snapshot,
+            transaction ? { transaction } : undefined
+          )
+          action = 'created'
+        }
+
+        if (action !== 'skipped' && template) {
+          await syncTemplateToMarketplace(template, {
+            transaction,
+            suppressErrors: false,
+          })
+          await createBlockTemplateReleaseEntry(
+            template,
+            changeNote || 'Import package',
+            transaction
+          )
+        }
+
+        return {
+          action,
+          template,
+        }
       }
-    } else {
-      template = await blockTemplateModel.create(snapshot)
-      action = 'created'
-    }
-
-    if (action !== 'skipped' && template) {
-      await syncTemplateToMarketplace(template)
-      await createBlockTemplateReleaseEntry(template, changeNote || 'Import package')
-    }
-
-    return {
-      action,
-      template,
-    }
+    )
   }
 
   /**
@@ -860,25 +787,51 @@ function createBlockTemplateService(deps = {}) {
           continue
         }
 
-        await existing.update({
-          description: sanitized.description,
-          blocks: sanitized.blocks,
-        })
-        await syncTemplateToMarketplace(existing)
-        await createBlockTemplateReleaseEntry(
-          existing,
-          sanitizeText(payload?.change_note, 255, 'Import templates')
+        const updatedTemplate = await withOptionalTransaction(
+          { model: blockTemplateModel, transactionProvider },
+          async (transaction) => {
+            await existing.update(
+              {
+                description: sanitized.description,
+                blocks: sanitized.blocks,
+              },
+              transaction ? { transaction } : undefined
+            )
+            await syncTemplateToMarketplace(existing, {
+              transaction,
+              suppressErrors: false,
+            })
+            await createBlockTemplateReleaseEntry(
+              existing,
+              sanitizeText(payload?.change_note, 255, 'Import templates'),
+              transaction
+            )
+            return existing
+          }
         )
         updated += 1
-        items.push(existing)
+        items.push(updatedTemplate)
         continue
       }
 
-      const createdTemplate = await blockTemplateModel.create(sanitized)
-      await syncTemplateToMarketplace(createdTemplate)
-      await createBlockTemplateReleaseEntry(
-        createdTemplate,
-        sanitizeText(payload?.change_note, 255, 'Import templates')
+      const createdTemplate = await withOptionalTransaction(
+        { model: blockTemplateModel, transactionProvider },
+        async (transaction) => {
+          const template = await blockTemplateModel.create(
+            sanitized,
+            transaction ? { transaction } : undefined
+          )
+          await syncTemplateToMarketplace(template, {
+            transaction,
+            suppressErrors: false,
+          })
+          await createBlockTemplateReleaseEntry(
+            template,
+            sanitizeText(payload?.change_note, 255, 'Import templates'),
+            transaction
+          )
+          return template
+        }
       )
       created += 1
       items.push(createdTemplate)

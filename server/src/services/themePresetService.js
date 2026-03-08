@@ -1,6 +1,7 @@
 /* Service metier des presets de theme (CRUD + releases + package + rollback). */
 const { ThemePreset, Setting, ThemePresetRelease } = require('../models')
 const { createHttpError } = require('../utils/httpError')
+const { withOptionalTransaction } = require('../utils/transaction')
 
 /**
  * Normalise un texte avec longueur maximale.
@@ -137,6 +138,7 @@ function createThemePresetService(deps = {}) {
         : ThemePresetRelease
   const releaseRepositoryEnabled = canUseThemePresetReleaseRepository(themePresetReleaseModel)
   const now = deps.now || (() => new Date())
+  const transactionProvider = deps.transactionProvider
 
   /**
    * Charge un preset par id ou leve 404.
@@ -144,8 +146,11 @@ function createThemePresetService(deps = {}) {
    * @returns {Promise<object>} Preset charge.
    * @throws {Error} Erreur 404 si introuvable.
    */
-  async function ensureThemePresetById(id) {
-    const preset = await themePresetModel.findByPk(id)
+  async function ensureThemePresetById(id, transaction = null) {
+    const preset = await themePresetModel.findByPk(
+      id,
+      transaction ? { transaction } : undefined
+    )
     if (!preset) {
       throw createHttpError(404, 'Preset de theme introuvable.')
     }
@@ -157,13 +162,21 @@ function createThemePresetService(deps = {}) {
    * @param {number|string} presetId Identifiant preset.
    * @returns {Promise<number>} Prochaine version.
    */
-  async function getNextThemePresetReleaseVersion(presetId) {
+  async function getNextThemePresetReleaseVersion(presetId, transaction = null) {
     if (!releaseRepositoryEnabled) return 1
 
-    const latest = await themePresetReleaseModel.findOne({
-      where: { theme_preset_id: presetId },
-      order: [['version_number', 'DESC']],
-    })
+    const latest = await themePresetReleaseModel.findOne(
+      transaction
+        ? {
+            where: { theme_preset_id: presetId },
+            order: [['version_number', 'DESC']],
+            transaction,
+          }
+        : {
+            where: { theme_preset_id: presetId },
+            order: [['version_number', 'DESC']],
+          }
+    )
 
     const currentVersion = Number.parseInt(String(latest?.version_number ?? 0), 10)
     return (Number.isFinite(currentVersion) ? currentVersion : 0) + 1
@@ -175,7 +188,7 @@ function createThemePresetService(deps = {}) {
    * @param {string} [changeNote=''] Note de release.
    * @returns {Promise<object|null>} Release creee ou null si repository indisponible.
    */
-  async function createThemePresetReleaseEntry(preset, changeNote = '') {
+  async function createThemePresetReleaseEntry(preset, changeNote = '', transaction = null) {
     if (!releaseRepositoryEnabled) return null
 
     const snapshot = buildThemePresetSnapshot(preset)
@@ -183,14 +196,17 @@ function createThemePresetService(deps = {}) {
       return null
     }
 
-    const versionNumber = await getNextThemePresetReleaseVersion(preset.id)
+    const versionNumber = await getNextThemePresetReleaseVersion(preset.id, transaction)
 
-    return themePresetReleaseModel.create({
-      theme_preset_id: preset.id,
-      version_number: versionNumber,
-      change_note: sanitizeText(changeNote, 255, '') || null,
-      snapshot,
-    })
+    return themePresetReleaseModel.create(
+      {
+        theme_preset_id: preset.id,
+        version_number: versionNumber,
+        change_note: sanitizeText(changeNote, 255, '') || null,
+        snapshot,
+      },
+      transaction ? { transaction } : undefined
+    )
   }
 
   /**
@@ -218,18 +234,27 @@ function createThemePresetService(deps = {}) {
       throw createHttpError(422, 'Le preset doit contenir des settings valides.')
     }
 
-    const preset = await themePresetModel.create({
-      name: sanitizeText(payload.name, 120),
-      description: sanitizeText(payload.description, 2000, ''),
-      settings,
-    })
+    return withOptionalTransaction(
+      { model: themePresetModel, transactionProvider },
+      async (transaction) => {
+        const preset = await themePresetModel.create(
+          {
+            name: sanitizeText(payload.name, 120),
+            description: sanitizeText(payload.description, 2000, ''),
+            settings,
+          },
+          transaction ? { transaction } : undefined
+        )
 
-    await createThemePresetReleaseEntry(
-      preset,
-      sanitizeText(payload?.change_note, 255, 'Creation du preset')
+        await createThemePresetReleaseEntry(
+          preset,
+          sanitizeText(payload?.change_note, 255, 'Creation du preset'),
+          transaction
+        )
+
+        return preset
+      }
     )
-
-    return preset
   }
 
   /**
@@ -240,33 +265,39 @@ function createThemePresetService(deps = {}) {
    * @throws {Error} Erreur 404 si introuvable.
    */
   async function updateThemePreset(id, payload) {
-    const preset = await ensureThemePresetById(id)
+    return withOptionalTransaction(
+      { model: themePresetModel, transactionProvider },
+      async (transaction) => {
+        const preset = await ensureThemePresetById(id, transaction)
 
-    const updates = {}
+        const updates = {}
 
-    if (payload.name !== undefined) {
-      updates.name = sanitizeText(payload.name, 120)
-    }
+        if (payload.name !== undefined) {
+          updates.name = sanitizeText(payload.name, 120)
+        }
 
-    if (payload.description !== undefined) {
-      updates.description = sanitizeText(payload.description, 2000, '')
-    }
+        if (payload.description !== undefined) {
+          updates.description = sanitizeText(payload.description, 2000, '')
+        }
 
-    if (payload.settings !== undefined) {
-      const settings = sanitizeSettingsMap(payload.settings)
-      if (Object.keys(settings).length === 0) {
-        throw createHttpError(422, 'Le preset doit contenir des settings valides.')
+        if (payload.settings !== undefined) {
+          const settings = sanitizeSettingsMap(payload.settings)
+          if (Object.keys(settings).length === 0) {
+            throw createHttpError(422, 'Le preset doit contenir des settings valides.')
+          }
+          updates.settings = settings
+        }
+
+        await preset.update(updates, transaction ? { transaction } : undefined)
+        await createThemePresetReleaseEntry(
+          preset,
+          sanitizeText(payload?.change_note, 255, 'Mise a jour du preset'),
+          transaction
+        )
+
+        return preset
       }
-      updates.settings = settings
-    }
-
-    await preset.update(updates)
-    await createThemePresetReleaseEntry(
-      preset,
-      sanitizeText(payload?.change_note, 255, 'Mise a jour du preset')
     )
-
-    return preset
   }
 
   /**
@@ -287,16 +318,26 @@ function createThemePresetService(deps = {}) {
    * @throws {Error} Erreur 404 si introuvable.
    */
   async function applyThemePreset(id) {
-    const preset = await ensureThemePresetById(id)
+    return withOptionalTransaction(
+      { model: themePresetModel, transactionProvider },
+      async (transaction) => {
+        const preset = await ensureThemePresetById(id, transaction)
 
-    const settings = sanitizeSettingsMap(preset.settings)
-    const entries = Object.entries(settings)
+        const settings = sanitizeSettingsMap(preset.settings)
+        const entries = Object.entries(settings)
 
-    await Promise.all(
-      entries.map(([key, value]) => settingModel.upsert({ key, value, updated_at: now() }))
+        await Promise.all(
+          entries.map(([key, value]) =>
+            settingModel.upsert(
+              { key, value, updated_at: now() },
+              transaction ? { transaction } : undefined
+            )
+          )
+        )
+
+        return preset
+      }
     )
-
-    return preset
   }
 
   /**
@@ -325,42 +366,58 @@ function createThemePresetService(deps = {}) {
    * @throws {Error} Erreur 404/422 selon le cas.
    */
   async function rollbackThemePreset(id, releaseId) {
-    const preset = await ensureThemePresetById(id)
     if (!releaseRepositoryEnabled) {
       throw createHttpError(422, 'Historique des releases indisponible.')
     }
 
-    const safeReleaseId = Number.parseInt(String(releaseId), 10)
-    if (!Number.isFinite(safeReleaseId) || safeReleaseId <= 0) {
-      throw createHttpError(422, 'releaseId invalide.')
-    }
+    return withOptionalTransaction(
+      { model: themePresetModel, transactionProvider },
+      async (transaction) => {
+        const preset = await ensureThemePresetById(id, transaction)
+        const safeReleaseId = Number.parseInt(String(releaseId), 10)
+        if (!Number.isFinite(safeReleaseId) || safeReleaseId <= 0) {
+          throw createHttpError(422, 'releaseId invalide.')
+        }
 
-    const release = await themePresetReleaseModel.findOne({
-      where: {
-        id: safeReleaseId,
-        theme_preset_id: preset.id,
-      },
-    })
+        const release = await themePresetReleaseModel.findOne(
+          transaction
+            ? {
+                where: {
+                  id: safeReleaseId,
+                  theme_preset_id: preset.id,
+                },
+                transaction,
+              }
+            : {
+                where: {
+                  id: safeReleaseId,
+                  theme_preset_id: preset.id,
+                },
+              }
+        )
 
-    if (!release) {
-      throw createHttpError(404, 'Release introuvable.')
-    }
+        if (!release) {
+          throw createHttpError(404, 'Release introuvable.')
+        }
 
-    const snapshot = buildThemePresetSnapshot(release.snapshot || {})
-    if (!snapshot.name || Object.keys(snapshot.settings).length === 0) {
-      throw createHttpError(422, 'Snapshot release invalide.')
-    }
+        const snapshot = buildThemePresetSnapshot(release.snapshot || {})
+        if (!snapshot.name || Object.keys(snapshot.settings).length === 0) {
+          throw createHttpError(422, 'Snapshot release invalide.')
+        }
 
-    await preset.update(snapshot)
-    await createThemePresetReleaseEntry(
-      preset,
-      `Rollback vers v${release.version_number}`
+        await preset.update(snapshot, transaction ? { transaction } : undefined)
+        await createThemePresetReleaseEntry(
+          preset,
+          `Rollback vers v${release.version_number}`,
+          transaction
+        )
+
+        return {
+          preset,
+          release,
+        }
+      }
     )
-
-    return {
-      preset,
-      release,
-    }
   }
 
   /**
@@ -418,34 +475,48 @@ function createThemePresetService(deps = {}) {
     const replaceExisting = toBoolean(payload?.replaceExisting, true)
     const { snapshot, changeNote } = normalized
 
-    const allPresets = await themePresetModel.findAll()
-    const existing = allPresets.find(
-      (preset) => sanitizeText(preset?.name, 120).toLowerCase() === snapshot.name.toLowerCase()
-    )
+    return withOptionalTransaction(
+      { model: themePresetModel, transactionProvider },
+      async (transaction) => {
+        const allPresets = await themePresetModel.findAll(
+          transaction ? { transaction } : undefined
+        )
+        const existing = allPresets.find(
+          (preset) => sanitizeText(preset?.name, 120).toLowerCase() === snapshot.name.toLowerCase()
+        )
 
-    let preset = existing
-    let action = 'created'
+        let preset = existing
+        let action = 'created'
 
-    if (preset) {
-      if (!replaceExisting) {
-        action = 'skipped'
-      } else {
-        await preset.update(snapshot)
-        action = 'updated'
+        if (preset) {
+          if (!replaceExisting) {
+            action = 'skipped'
+          } else {
+            await preset.update(snapshot, transaction ? { transaction } : undefined)
+            action = 'updated'
+          }
+        } else {
+          preset = await themePresetModel.create(
+            snapshot,
+            transaction ? { transaction } : undefined
+          )
+          action = 'created'
+        }
+
+        if (action !== 'skipped') {
+          await createThemePresetReleaseEntry(
+            preset,
+            changeNote || 'Import package',
+            transaction
+          )
+        }
+
+        return {
+          action,
+          preset,
+        }
       }
-    } else {
-      preset = await themePresetModel.create(snapshot)
-      action = 'created'
-    }
-
-    if (action !== 'skipped') {
-      await createThemePresetReleaseEntry(preset, changeNote || 'Import package')
-    }
-
-    return {
-      action,
-      preset,
-    }
+    )
   }
 
   return {
