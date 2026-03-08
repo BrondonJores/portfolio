@@ -1865,7 +1865,7 @@ export default function AdminSettings() {
               <CardSection>
                 <SectionTitle>Mascottes Animees (Petits Bonhommes)</SectionTitle>
                 <InlineTip>
-                  Ces mascottes apparaissent dans les sections clefs et flottent selon ton style.
+                  Une grande mascotte est affichee par section, avec alternance gauche/droite pour un rendu editorial.
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox label="Activer les mascottes" fieldKey="anim_mascots_enabled" settings={settings} onChange={handleChange} />
@@ -1878,25 +1878,25 @@ export default function AdminSettings() {
                     options={MASCOT_STYLE_OPTIONS}
                   />
                   <FieldRange
-                    label="Nombre de mascottes"
+                    label="Mascotte par section (0 ou 1)"
                     fieldKey="anim_mascot_count"
                     settings={settings}
                     onChange={handleChange}
                     min={0}
-                    max={8}
+                    max={1}
                     step={1}
-                    defaultValue={4}
+                    defaultValue={1}
                   />
                   <FieldRange
                     label="Taille des mascottes"
                     fieldKey="anim_mascot_size"
                     settings={settings}
                     onChange={handleChange}
-                    min={56}
-                    max={180}
+                    min={72}
+                    max={220}
                     step={1}
                     unit="px"
-                    defaultValue={96}
+                    defaultValue={112}
                   />
                   <FieldRange
                     label="Vitesse des mascottes"
@@ -1929,16 +1929,6 @@ export default function AdminSettings() {
                     step={100}
                     unit="ms"
                     defaultValue={4200}
-                  />
-                  <FieldRange
-                    label="Bulles visibles en meme temps"
-                    fieldKey="anim_mascot_bubble_max_visible"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={1}
-                    max={3}
-                    step={1}
-                    defaultValue={1}
                   />
                   <div className="md:col-span-2">
                     <FieldInput
