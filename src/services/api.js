@@ -13,6 +13,12 @@ let _cachedGetResponses = new Map()
 let _cacheGeneration = 0
 let _isAuthenticatedScope = false
 
+/* Politique de retry 429 (limitee aux GET pour eviter les effets de bord sur les ecritures). */
+const DEFAULT_GET_429_RETRIES = 2
+const RETRY_BACKOFF_BASE_MS = 350
+const RETRY_BACKOFF_MAX_MS = 5_000
+const RETRY_AFTER_MAX_MS = 20_000
+
 /**
  * Invalide toutes les optimisations GET (dedup + cache TTL).
  * @returns {void}
@@ -34,6 +40,77 @@ function sanitizeCacheTtl(cacheTtlMs) {
     return 0
   }
   return Math.floor(ttl)
+}
+
+/**
+ * Normalise le nombre maximal de retries 429.
+ * @param {unknown} retryCount Valeur candidate.
+ * @param {number} fallback Valeur de repli.
+ * @returns {number} Entier >= 0.
+ */
+function sanitizeRetryCount(retryCount, fallback = 0) {
+  const value = Number(retryCount)
+  if (!Number.isFinite(value)) {
+    return Math.max(0, Math.floor(fallback))
+  }
+  return Math.max(0, Math.floor(value))
+}
+
+/**
+ * Attend un delai en millisecondes.
+ * @param {number} ms Delai.
+ * @returns {Promise<void>} Promesse resolue apres attente.
+ */
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+/**
+ * Parse l'entete Retry-After (secondes ou date HTTP) en millisecondes.
+ * @param {string | null} retryAfterValue Valeur brute d'entete.
+ * @returns {number | null} Delai en ms si valide, sinon null.
+ */
+function parseRetryAfterMs(retryAfterValue) {
+  if (!retryAfterValue) {
+    return null
+  }
+
+  const asSeconds = Number(retryAfterValue)
+  if (Number.isFinite(asSeconds) && asSeconds >= 0) {
+    return Math.floor(asSeconds * 1000)
+  }
+
+  const asDateEpoch = Date.parse(retryAfterValue)
+  if (Number.isFinite(asDateEpoch)) {
+    const delta = asDateEpoch - Date.now()
+    if (delta > 0) {
+      return Math.floor(delta)
+    }
+  }
+
+  return null
+}
+
+/**
+ * Calcule le delai de retry pour une reponse 429.
+ * @param {number} attemptIndex Index de tentative (0-based).
+ * @param {string | null} retryAfterValue Entete Retry-After.
+ * @returns {number} Delai en millisecondes.
+ */
+function computeRetryDelayFor429(attemptIndex, retryAfterValue) {
+  const retryAfterMs = parseRetryAfterMs(retryAfterValue)
+  if (retryAfterMs !== null) {
+    return Math.min(Math.max(0, retryAfterMs), RETRY_AFTER_MAX_MS)
+  }
+
+  const exponential = Math.min(
+    RETRY_BACKOFF_BASE_MS * Math.pow(2, Math.max(0, attemptIndex)),
+    RETRY_BACKOFF_MAX_MS
+  )
+  const jitter = Math.floor(Math.random() * RETRY_BACKOFF_BASE_MS)
+  return exponential + jitter
 }
 
 /**
@@ -186,7 +263,14 @@ function buildHeaders(extra = {}) {
 }
 
 /* Execute une requete HTTP brute avec gestion du rafraichissement automatique en cas de 401. */
-async function executeRequest(method, path, body, retried = false) {
+async function executeRequest(
+  method,
+  path,
+  body,
+  retried = false,
+  max429Retries = 0,
+  retry429Attempt = 0
+) {
   const options = {
     method,
     headers: buildHeaders(),
@@ -203,13 +287,20 @@ async function executeRequest(method, path, body, retried = false) {
   if (response.status === 401 && !retried && _refreshTokenFn) {
     try {
       await getFreshAccessToken()
-      return executeRequest(method, path, body, true)
+      return executeRequest(method, path, body, true, max429Retries, retry429Attempt)
     } catch {
       /* Rafraichissement echoue : deconnexion et redirection */
       if (_logoutFn) _logoutFn()
       window.location.href = '/admin/login'
       throw new Error('Session expiree. Reconnexion requise.')
     }
+  }
+
+  /* Retry progressif sur 429 pour lisser les rafales cote client. */
+  if (response.status === 429 && retry429Attempt < max429Retries) {
+    const delayMs = computeRetryDelayFor429(retry429Attempt, response.headers.get('Retry-After'))
+    await sleep(delayMs)
+    return executeRequest(method, path, body, retried, max429Retries, retry429Attempt + 1)
   }
 
   if (!response.ok) {
@@ -239,9 +330,12 @@ function request(method, path, body, options = {}) {
   const normalizedOptions = options && typeof options === 'object' ? options : {}
   const cacheTtlMs = sanitizeCacheTtl(normalizedOptions.cacheTtlMs)
   const isGet = method === 'GET' && body === undefined
+  const max429Retries = isGet
+    ? sanitizeRetryCount(normalizedOptions.max429Retries, DEFAULT_GET_429_RETRIES)
+    : 0
 
   if (!isGet) {
-    return executeRequest(method, path, body).then((payload) => {
+    return executeRequest(method, path, body, false, max429Retries).then((payload) => {
       invalidateGetOptimizations()
       return payload
     })
@@ -261,7 +355,7 @@ function request(method, path, body, options = {}) {
   }
 
   const generationAtStart = _cacheGeneration
-  const requestPromise = executeRequest(method, path, body)
+  const requestPromise = executeRequest(method, path, body, false, max429Retries)
     .then((payload) => {
       if (cacheTtlMs > 0) {
         writeCachedGetPayload(cacheKey, payload, cacheTtlMs, generationAtStart)
