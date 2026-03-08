@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSettings } from '../../context/SettingsContext.jsx'
+import { useVisibilityGate } from '../../hooks/useVisibilityGate.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 import {
   detectAnimationAssetMode,
@@ -152,6 +153,13 @@ function SceneAssetRenderer({ asset, fit, onError }) {
 export default function AnimatedSceneAsset({ scope = 'section', sceneKey = '' }) {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
+  const isHero = scope === 'hero'
+  const { targetRef, isVisible } = useVisibilityGate({
+    disabled: isHero,
+    once: true,
+    rootMargin: '260px 0px 260px 0px',
+    threshold: 0.01,
+  })
   const resolvedSceneKey = sceneKey || scope
   const animationConfig = useMemo(
     () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), resolvedSceneKey),
@@ -171,11 +179,11 @@ export default function AnimatedSceneAsset({ scope = 'section', sceneKey = '' })
     setAssetLoadFailed(false)
   }, [asset.url])
 
-  const isHero = scope === 'hero'
   const canDisplay = animationConfig.sceneAssetsEnabled
     && (!isHero || animationConfig.sceneAssetShowHero)
   const canUseAsset = Boolean(asset.url) && asset.mode !== 'unsupported' && !assetLoadFailed
-  const shouldAnimate = animationConfig.canAnimate
+  const shouldRenderMedia = isHero || isVisible
+  const shouldAnimate = animationConfig.canAnimate && shouldRenderMedia
 
   if (!canDisplay || !canUseAsset) {
     return null
@@ -189,6 +197,7 @@ export default function AnimatedSceneAsset({ scope = 'section', sceneKey = '' })
 
   return (
     <motion.div
+      ref={targetRef}
       className={className}
       style={{
         ...preset.position,
@@ -220,11 +229,13 @@ export default function AnimatedSceneAsset({ scope = 'section', sceneKey = '' })
           filter: 'blur(18px)',
         }}
       />
-      <SceneAssetRenderer
-        asset={asset}
-        fit={asset.fit}
-        onError={handleAssetError}
-      />
+      {shouldRenderMedia && (
+        <SceneAssetRenderer
+          asset={asset}
+          fit={asset.fit}
+          onError={handleAssetError}
+        />
+      )}
     </motion.div>
   )
 }

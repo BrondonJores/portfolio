@@ -216,6 +216,7 @@ export default function AnimatedSpriteSystem() {
   )
   const [viewport, setViewport] = useState({ width: 1280, height: 720 })
   const [failedUrls, setFailedUrls] = useState({})
+  const [isIdleReady, setIsIdleReady] = useState(false)
 
   const assets = useMemo(
     () => resolveSpriteAssets(animationConfig),
@@ -251,7 +252,29 @@ export default function AnimatedSpriteSystem() {
     return () => window.removeEventListener('resize', updateViewport)
   }, [])
 
-  if (!animationConfig.canAnimate) {
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      setIsIdleReady(true)
+      return undefined
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(
+        () => setIsIdleReady(true),
+        { timeout: 900 }
+      )
+      return () => {
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+
+    const timer = window.setTimeout(() => setIsIdleReady(true), 320)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  if (!animationConfig.canAnimate || !isIdleReady) {
     return null
   }
 

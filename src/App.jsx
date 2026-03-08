@@ -2,13 +2,16 @@
 import { Helmet } from 'react-helmet-async'
 import { Outlet, useLocation } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { useEffect, useMemo } from 'react'
-import { SpeedInsights } from "@vercel/speed-insights/react"
-import ScrollProgressBar from './components/ui/ScrollProgressBar.jsx'
-import AnimatedSpriteSystem from './components/ui/AnimatedSpriteSystem.jsx'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useSettings } from './context/SettingsContext.jsx'
 import { getAnimationConfig, parseBooleanSetting } from './utils/animationSettings.js'
 import { applyThemeSettings } from './utils/themeSettings.js'
+
+const ScrollProgressBar = lazy(() => import('./components/ui/ScrollProgressBar.jsx'))
+const AnimatedSpriteSystem = lazy(() => import('./components/ui/AnimatedSpriteSystem.jsx'))
+const SpeedInsightsWidget = lazy(() =>
+  import('@vercel/speed-insights/react').then((module) => ({ default: module.SpeedInsights }))
+)
 
 /* Politique de securite du contenu */
 const apiOrigin = import.meta.env.VITE_API_URL || ''
@@ -83,6 +86,7 @@ export default function App() {
   const { settings, getThemeSettingsForPath } = useSettings()
   const location = useLocation()
   const prefersReducedMotion = useReducedMotion()
+  const [speedInsightsReady, setSpeedInsightsReady] = useState(false)
   const activeThemeSettings = useMemo(
     () => getThemeSettingsForPath(location.pathname),
     [getThemeSettingsForPath, location.pathname]
@@ -107,6 +111,34 @@ export default function App() {
   const maintenanceMode = parseBooleanSetting(settings.maintenance_mode, false)
   const maintenanceBadge = (settings.ui_maintenance_badge || 'Maintenance').trim()
   const maintenanceMessage = (settings.ui_maintenance_message || '').trim()
+  const isAdminRoute = location.pathname.startsWith('/admin')
+  const showPublicDecorations = !maintenanceMode && !isAdminRoute
+
+  useEffect(() => {
+    if (!import.meta.env.PROD || speedInsightsReady) {
+      return undefined
+    }
+
+    if (typeof window === 'undefined') {
+      setSpeedInsightsReady(true)
+      return undefined
+    }
+
+    if (typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(
+        () => setSpeedInsightsReady(true),
+        { timeout: 1600 }
+      )
+      return () => {
+        if (typeof window.cancelIdleCallback === 'function') {
+          window.cancelIdleCallback(idleId)
+        }
+      }
+    }
+
+    const timer = window.setTimeout(() => setSpeedInsightsReady(true), 650)
+    return () => window.clearTimeout(timer)
+  }, [speedInsightsReady])
 
   return (
     <>
@@ -134,8 +166,12 @@ export default function App() {
         animate={animationConfig.canAnimate ? { opacity: 1 } : false}
         transition={{ duration: 0.4 * animationConfig.durationScale, ease: animationConfig.easePreset }}
       >
-        {!maintenanceMode && <ScrollProgressBar />}
-        {!maintenanceMode && <AnimatedSpriteSystem />}
+        {showPublicDecorations && (
+          <Suspense fallback={null}>
+            <ScrollProgressBar />
+            <AnimatedSpriteSystem />
+          </Suspense>
+        )}
         <main>
           {maintenanceMode ? (
             <MaintenanceScreen
@@ -147,7 +183,11 @@ export default function App() {
           ) : (
             <Outlet />
           )}
-          <SpeedInsights />
+          {import.meta.env.PROD && speedInsightsReady && (
+            <Suspense fallback={null}>
+              <SpeedInsightsWidget />
+            </Suspense>
+          )}
         </main>
       </motion.div>
     </>

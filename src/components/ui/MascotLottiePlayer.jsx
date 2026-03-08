@@ -4,6 +4,45 @@ import { useEffect, useMemo, useState } from 'react'
 import { sanitizeAnimationAssetUrl } from '../../utils/animationAsset.js'
 
 setWasmUrl(dotLottieWasmUrl)
+const LOTTIE_JSON_CACHE = new Map()
+const LOTTIE_JSON_IN_FLIGHT = new Map()
+
+/**
+ * Charge un JSON Lottie avec deduplication des requetes concurrentes.
+ * @param {string} url URL absolue du JSON.
+ * @returns {Promise<object>} Payload Lottie valide.
+ */
+async function loadLottieJsonPayload(url) {
+  if (LOTTIE_JSON_CACHE.has(url)) {
+    return LOTTIE_JSON_CACHE.get(url)
+  }
+
+  const pendingRequest = LOTTIE_JSON_IN_FLIGHT.get(url)
+  if (pendingRequest) {
+    return pendingRequest
+  }
+
+  const requestPromise = fetch(url, { credentials: 'omit' })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Lottie HTTP ${response.status}`)
+      }
+
+      const payload = await response.json()
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        throw new Error('Payload Lottie invalide')
+      }
+
+      LOTTIE_JSON_CACHE.set(url, payload)
+      return payload
+    })
+    .finally(() => {
+      LOTTIE_JSON_IN_FLIGHT.delete(url)
+    })
+
+  LOTTIE_JSON_IN_FLIGHT.set(url, requestPromise)
+  return requestPromise
+}
 
 /**
  * Rend un asset Lottie (.json ou .lottie) dans une boite responsive.
@@ -50,20 +89,13 @@ export default function MascotLottiePlayer({ url, fit = 'contain', onError }) {
       }
     }
 
-    fetch(safeUrl, { signal: controller.signal, credentials: 'omit' })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Lottie HTTP ${response.status}`)
+    loadLottieJsonPayload(safeUrl)
+      .then((payload) => {
+        if (!isMounted || controller.signal.aborted) {
+          return
         }
-        const payload = await response.json()
-        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-          throw new Error('Payload Lottie invalide')
-        }
-
-        if (isMounted) {
-          setUseSourcePlayback(false)
-          setAnimationData(payload)
-        }
+        setUseSourcePlayback(false)
+        setAnimationData(payload)
       })
       .catch((err) => {
         if (controller.signal.aborted) {

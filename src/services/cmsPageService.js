@@ -1,6 +1,9 @@
 /* Service API des pages CMS (admin + public). */
 import { api } from './api.js'
 
+const CMS_PAGE_LIST_CACHE_TTL_MS = 30_000
+const CMS_PAGE_DETAIL_CACHE_TTL_MS = 60_000
+
 /**
  * Liste admin des pages CMS.
  * @param {{status?: string, q?: string, limit?: number, offset?: number}} [params] Filtres.
@@ -78,7 +81,7 @@ export const rollbackCmsPage = (id, revisionId) =>
  */
 export const getPublicCmsPages = (params) => {
   const query = params ? `?${new URLSearchParams(params).toString()}` : ''
-  return api.get(`/pages${query}`)
+  return api.get(`/pages${query}`, { cacheTtlMs: CMS_PAGE_LIST_CACHE_TTL_MS })
 }
 
 /**
@@ -86,4 +89,5 @@ export const getPublicCmsPages = (params) => {
  * @param {string} slug Slug page.
  * @returns {Promise<{data: object}>} Reponse API.
  */
-export const getPublicCmsPageBySlug = (slug) => api.get(`/pages/${slug}`)
+export const getPublicCmsPageBySlug = (slug) =>
+  api.get(`/pages/${slug}`, { cacheTtlMs: CMS_PAGE_DETAIL_CACHE_TTL_MS })

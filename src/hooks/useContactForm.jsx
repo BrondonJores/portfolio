@@ -1,8 +1,8 @@
 /* Hook de gestion du formulaire de contact */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { sanitizeInput } from '../utils/sanitize.js'
 import { sendMessage } from '../services/messageService.js'
-import { executeRecaptcha } from '../services/recaptchaService.js'
+import { executeRecaptcha, preloadRecaptcha } from '../services/recaptchaService.js'
 
 const INITIAL_FIELDS = { name: '', email: '', message: '' }
 const INITIAL_STATUS = { loading: false, success: false, error: null }
@@ -14,6 +14,11 @@ const INITIAL_STATUS = { loading: false, success: false, error: null }
 export function useContactForm() {
   const [fields, setFields] = useState(INITIAL_FIELDS)
   const [status, setStatus] = useState(INITIAL_STATUS)
+
+  /* Precharge reCAPTCHA uniquement quand le formulaire de contact est monte. */
+  useEffect(() => {
+    preloadRecaptcha().catch(() => {})
+  }, [])
 
   /* Mise a jour d'un champ du formulaire */
   const handleChange = (e) => {

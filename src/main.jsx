@@ -10,7 +10,6 @@ import Spinner from './components/ui/Spinner.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { SettingsProvider } from './context/SettingsContext.jsx'
-import { preloadRecaptcha } from './services/recaptchaService.js'
 import './index.css'
 
 /* Chargement paresseux de toutes les pages pour le code splitting */
@@ -128,9 +127,6 @@ const router = createBrowserRouter([
     ],
   },
 ])
-
-/* Prechargement reCAPTCHA pour rendre le badge visible sans attendre un submit */
-preloadRecaptcha().catch(() => {})
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

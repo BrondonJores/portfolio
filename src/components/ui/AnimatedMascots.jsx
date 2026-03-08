@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { useSettings } from '../../context/SettingsContext.jsx'
+import { useVisibilityGate } from '../../hooks/useVisibilityGate.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 import {
   detectAnimationAssetMode,
@@ -147,6 +148,13 @@ function MascotAssetRenderer({ url, mode, fit, onError }) {
 export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
+  const isHero = scope === 'hero'
+  const { targetRef, isVisible } = useVisibilityGate({
+    disabled: isHero,
+    once: true,
+    rootMargin: '240px 0px 240px 0px',
+    threshold: 0.01,
+  })
   const resolvedSceneKey = sceneKey || (scope === 'hero' ? 'hero' : 'contact')
   const animationConfig = useMemo(
     () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), resolvedSceneKey),
@@ -167,19 +175,19 @@ export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
     setAssetLoadFailed(false)
   }, [asset.url])
 
-  const isHero = scope === 'hero'
   const canDisplayMascot = (!isHero || animationConfig.mascotShowHero)
     && animationConfig.mascotsEnabled
     && animationConfig.mascotCount > 0
 
   const preset = getScopePreset(scope)
   const count = Math.min(animationConfig.mascotCount, 1)
-  const shouldAnimate = animationConfig.canAnimate
   const supportsBubbles = BUBBLE_SCOPE_SET.has(scope)
   const bubbleCount = animationConfig.mascotBubblesEnabled && supportsBubbles
     ? Math.min(count, animationConfig.mascotBubbleMaxVisible)
     : 0
   const canUseAsset = Boolean(asset.url) && asset.mode !== 'unsupported' && !assetLoadFailed
+  const shouldRenderAsset = isHero || isVisible
+  const shouldAnimate = animationConfig.canAnimate && shouldRenderAsset
 
   useEffect(() => {
     if (!shouldAnimate || !animationConfig.mascotBubblesEnabled) {
@@ -198,8 +206,12 @@ export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
   }
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-10 overflow-visible" aria-hidden="true">
-      {Array.from({ length: count }).map((_, index) => {
+    <div
+      ref={targetRef}
+      className="absolute inset-0 pointer-events-none z-10 overflow-visible"
+      aria-hidden="true"
+    >
+      {shouldRenderAsset && Array.from({ length: count }).map((_, index) => {
         const size = Math.max(160, animationConfig.mascotSizePx * preset.sizeFactor)
         const travel = Math.max(6, 10 * preset.sizeFactor)
         const duration = 8.2 / Math.max(0.4, animationConfig.mascotSpeed)
