@@ -1,4 +1,8 @@
 /* Composant spinner de chargement */
+import { useEffect, useMemo, useState } from 'react'
+import { useSettings } from '../../context/SettingsContext.jsx'
+import { detectAnimationAssetMode, sanitizeAnimationAssetUrl } from '../../utils/animationAsset.js'
+import LoaderAssetPlayer from './LoaderAssetPlayer.jsx'
 
 /* Dimensions par taille */
 const SIZE_MAP = {
@@ -7,12 +11,63 @@ const SIZE_MAP = {
   lg: 'h-10 w-10',
 }
 
+const LOADER_SETTING_KEY_BY_VARIANT = {
+  spinner: 'anim_loader_spinner_asset_url',
+  page: 'anim_loader_page_asset_url',
+  site: 'anim_loader_site_asset_url',
+}
+
 /**
- * Spinner SVG anime pour les etats de chargement.
- * Tailles disponibles : sm, md, lg.
+ * Retourne l'URL du loader correspondant a une variante d'usage.
+ * @param {Record<string, unknown>} settings Parametres globaux.
+ * @param {'spinner'|'page'|'site'} variant Variante du loader.
+ * @returns {string} URL nettoyee ou chaine vide.
  */
-export default function Spinner({ size = 'md', className = '' }) {
+function resolveLoaderAssetUrl(settings, variant) {
+  const key = LOADER_SETTING_KEY_BY_VARIANT[variant] || LOADER_SETTING_KEY_BY_VARIANT.spinner
+  return sanitizeAnimationAssetUrl(settings?.[key])
+}
+
+/**
+ * Spinner SVG avec fallback asset (dotLottie/Rive/video/image) configurable depuis AdminSettings.
+ * @param {{size?:'sm'|'md'|'lg', className?:string, variant?:'spinner'|'page'|'site'}} props Props composant.
+ * @returns {JSX.Element} Spinner rendu.
+ */
+export default function Spinner({ size = 'md', className = '', variant = 'spinner' }) {
   const sizeClass = SIZE_MAP[size] || SIZE_MAP.md
+  const { settings } = useSettings()
+  const [assetFailed, setAssetFailed] = useState(false)
+  const assetUrl = useMemo(
+    () => resolveLoaderAssetUrl(settings || {}, variant),
+    [settings, variant]
+  )
+  const assetMode = useMemo(
+    () => detectAnimationAssetMode(assetUrl),
+    [assetUrl]
+  )
+
+  useEffect(() => {
+    setAssetFailed(false)
+  }, [assetUrl])
+
+  const canRenderAsset = Boolean(assetUrl) && assetMode !== 'unsupported' && !assetFailed
+
+  if (canRenderAsset) {
+    return (
+      <div
+        className={`${sizeClass} ${className}`}
+        aria-label="Chargement en cours"
+        role="status"
+      >
+        <LoaderAssetPlayer
+          url={assetUrl}
+          fit="contain"
+          alt="Animation de chargement"
+          onError={() => setAssetFailed(true)}
+        />
+      </div>
+    )
+  }
 
   return (
     <svg

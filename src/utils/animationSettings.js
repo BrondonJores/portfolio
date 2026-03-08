@@ -4,6 +4,9 @@ export const ANIMATION_CORE_SETTING_KEYS = [
   'anim_enabled',
   'anim_duration_scale',
   'anim_intensity',
+  'anim_loader_spinner_asset_url',
+  'anim_loader_page_asset_url',
+  'anim_loader_site_asset_url',
   'anim_scene_assets_enabled',
   'anim_scene_asset_show_hero',
   'anim_scene_asset_mobile_enabled',
@@ -163,6 +166,9 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     cardTiltDeg: 1.5 * intensity,
     ctaPulse: true,
     ctaPulseIntervalMs: 1800 / Math.max(0.7, intensity),
+    loaderSpinnerAssetUrl: toTrimmedString(settings.anim_loader_spinner_asset_url),
+    loaderPageAssetUrl: toTrimmedString(settings.anim_loader_page_asset_url),
+    loaderSiteAssetUrl: toTrimmedString(settings.anim_loader_site_asset_url),
     mascotsEnabled: parseBooleanSetting(settings.anim_mascots_enabled, true),
     mascotCount: Math.round(clampNumber(settings.anim_mascot_count, 0, 1, 1)),
     mascotSizePx: clampNumber(settings.anim_mascot_size, 180, 520, 340) * Math.max(0.75, intensity),
@@ -219,4 +225,3 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     scrollProgressThickness: 4,
   }
 }
-

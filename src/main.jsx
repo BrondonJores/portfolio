@@ -52,7 +52,7 @@ function LoadingFallback() {
       className="min-h-screen flex items-center justify-center"
       style={{ backgroundColor: 'var(--color-bg-primary)' }}
     >
-      <Spinner size="lg" />
+      <Spinner size="lg" variant="page" />
     </div>
   )
 }

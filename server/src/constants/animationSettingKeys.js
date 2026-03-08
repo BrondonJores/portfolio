@@ -4,6 +4,9 @@ const ANIMATION_CORE_SETTING_KEYS = [
   'anim_enabled',
   'anim_duration_scale',
   'anim_intensity',
+  'anim_loader_spinner_asset_url',
+  'anim_loader_page_asset_url',
+  'anim_loader_site_asset_url',
   'anim_scene_assets_enabled',
   'anim_scene_asset_show_hero',
   'anim_scene_asset_mobile_enabled',
@@ -51,4 +54,3 @@ module.exports = {
   ANIMATION_CORE_SETTING_KEYS,
   ANIMATION_CORE_SETTING_KEY_SET: new Set(ANIMATION_CORE_SETTING_KEYS),
 }
-

@@ -1737,6 +1737,36 @@ export default function AdminSettings() {
               </CardSection>
 
               <CardSection>
+                <SectionTitle>Loaders DotLottie/Rive</SectionTitle>
+                <InlineTip>
+                  Personnalise ici les animations de chargement globales: spinner classique, transition entre pages et loader de demarrage du site.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Spinner global (petits chargements)"
+                      value={settings.anim_loader_spinner_asset_url || ''}
+                      onUpload={(url) => handleChange('anim_loader_spinner_asset_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Loader entre pages (navigation)"
+                      value={settings.anim_loader_page_asset_url || ''}
+                      onUpload={(url) => handleChange('anim_loader_page_asset_url', url)}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Loader du site (demarrage)"
+                      value={settings.anim_loader_site_asset_url || ''}
+                      onUpload={(url) => handleChange('anim_loader_site_asset_url', url)}
+                    />
+                  </div>
+                </div>
+              </CardSection>
+
+              <CardSection>
                 <SectionTitle>Moteur Global</SectionTitle>
                 <InlineTip>
                   Reglages minimaux: activation globale + intensite + vitesse. Le reste est pilote en mode assets-only.

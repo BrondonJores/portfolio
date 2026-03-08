@@ -4,6 +4,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { useSettings } from './context/SettingsContext.jsx'
+import Spinner from './components/ui/Spinner.jsx'
 import { getAnimationConfig, parseBooleanSetting } from './utils/animationSettings.js'
 import { applyThemeSettings } from './utils/themeSettings.js'
 
@@ -83,10 +84,11 @@ function MaintenanceScreen({ siteName, tagline, badgeLabel, message }) {
 
 /* Layout public */
 export default function App() {
-  const { settings, getThemeSettingsForPath } = useSettings()
+  const { settings, loading, getThemeSettingsForPath } = useSettings()
   const location = useLocation()
   const prefersReducedMotion = useReducedMotion()
   const [speedInsightsReady, setSpeedInsightsReady] = useState(false)
+  const [siteLoaderDelayDone, setSiteLoaderDelayDone] = useState(false)
   const activeThemeSettings = useMemo(
     () => getThemeSettingsForPath(location.pathname),
     [getThemeSettingsForPath, location.pathname]
@@ -95,6 +97,11 @@ export default function App() {
   useEffect(() => {
     applyThemeSettings(activeThemeSettings)
   }, [activeThemeSettings])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSiteLoaderDelayDone(true), 850)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const animationConfig = useMemo(
     () => getAnimationConfig(activeThemeSettings, Boolean(prefersReducedMotion)),
@@ -113,6 +120,7 @@ export default function App() {
   const maintenanceMessage = (settings.ui_maintenance_message || '').trim()
   const isAdminRoute = location.pathname.startsWith('/admin')
   const showPublicDecorations = !maintenanceMode && !isAdminRoute
+  const showSiteLoader = !isAdminRoute && (loading || !siteLoaderDelayDone)
 
   useEffect(() => {
     if (!import.meta.env.PROD || speedInsightsReady) {
@@ -189,6 +197,19 @@ export default function App() {
             </Suspense>
           )}
         </main>
+        {showSiteLoader && (
+          <div
+            className="fixed inset-0 z-[120] flex items-center justify-center"
+            style={{ backgroundColor: 'var(--color-bg-primary)' }}
+          >
+            <div className="flex flex-col items-center gap-3">
+              <Spinner size="lg" variant="site" />
+              <p className="text-xs font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--color-text-secondary)' }}>
+                {siteName}
+              </p>
+            </div>
+          </div>
+        )}
       </motion.div>
     </>
   )
