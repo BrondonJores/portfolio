@@ -1,7 +1,7 @@
 /* Page de gestion des projets admin */
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
@@ -9,9 +9,11 @@ import Badge from '../../components/ui/Badge.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { getAdminProjects, deleteProject } from '../../services/projectService.js'
+import { openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/adminEditorWindow.js'
 
 export default function AdminProjects() {
   const addToast = useAdminToast()
+  const navigate = useNavigate()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [confirmId, setConfirmId] = useState(null)
@@ -25,6 +27,26 @@ export default function AdminProjects() {
   }
 
   useEffect(loadProjects, [])
+
+  useEffect(() => {
+    return subscribeAdminEditorRefresh((payload) => {
+      if (payload?.entity === 'projects' || payload?.entity === 'global') {
+        loadProjects()
+      }
+    })
+  }, [])
+
+  /**
+   * Ouvre l'editeur projet dans une fenetre dediee (fallback route locale).
+   * @param {string} path Route cible.
+   * @returns {void}
+   */
+  const openProjectEditor = (path) => {
+    const popup = openAdminEditorWindow(path, { windowName: 'portfolio-admin-project-editor' })
+    if (!popup) {
+      navigate(path)
+    }
+  }
 
   const handleDelete = async () => {
     if (!confirmId) return
@@ -56,12 +78,10 @@ export default function AdminProjects() {
           >
             Projets
           </h1>
-          <Link to="/admin/projets/nouveau">
-            <Button variant="primary">
-              <PlusIcon className="h-4 w-4" aria-hidden="true" />
-              Nouveau projet
-            </Button>
-          </Link>
+          <Button variant="primary" onClick={() => openProjectEditor('/admin/projets/nouveau')}>
+            <PlusIcon className="h-4 w-4" aria-hidden="true" />
+            Nouveau projet
+          </Button>
         </div>
 
         {loading ? (
@@ -136,17 +156,16 @@ export default function AdminProjects() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <Link to={`/admin/projets/${project.id}`}>
-                          <button
-                            className="p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                            aria-label={`Modifier ${project.title}`}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                          >
-                            <PencilSquareIcon className="h-4 w-4" />
-                          </button>
-                        </Link>
+                        <button
+                          onClick={() => openProjectEditor(`/admin/projets/${project.id}`)}
+                          className="p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          aria-label={`Modifier ${project.title}`}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+                        >
+                          <PencilSquareIcon className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => setConfirmId(project.id)}
                           className="p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"

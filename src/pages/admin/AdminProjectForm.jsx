@@ -13,6 +13,7 @@ import Spinner from '../../components/ui/Spinner.jsx'
 import { PROJECT_BLOCK_TEMPLATES } from '../../constants/blockTemplates.js'
 import useAdminBlockTemplates from '../../hooks/useAdminBlockTemplates.js'
 import useLocalDraftAutosave from '../../hooks/useLocalDraftAutosave.jsx'
+import { isAdminEditorPopup, notifyAdminEditorSaved } from '../../utils/adminEditorWindow.js'
 import {
   createProject,
   getAdminProjects,
@@ -170,6 +171,21 @@ export default function AdminProjectForm() {
     fallbackTemplates: PROJECT_BLOCK_TEMPLATES,
   })
 
+  /**
+   * Retourne a la liste projets ou ferme la popup d'edition.
+   * @returns {void}
+   */
+  const closeEditorOrBack = () => {
+    if (isAdminEditorPopup()) {
+      window.close()
+      if (!window.closed) {
+        navigate('/admin/projets')
+      }
+      return
+    }
+    navigate('/admin/projets')
+  }
+
   useEffect(() => {
     if (!isEdit) return
 
@@ -271,7 +287,8 @@ export default function AdminProjectForm() {
       }
 
       clearDraft()
-      navigate('/admin/projets')
+      notifyAdminEditorSaved('projects')
+      closeEditorOrBack()
     } catch (error) {
       addToast(error.message || 'Erreur lors de la sauvegarde.', 'error')
     } finally {
@@ -459,7 +476,7 @@ export default function AdminProjectForm() {
                 <Button type="submit" variant="primary" disabled={saving}>
                   {saving ? <Spinner size="sm" /> : isEdit ? 'Enregistrer' : 'Creer le projet'}
                 </Button>
-                <Button type="button" variant="ghost" onClick={() => navigate('/admin/projets')}>
+                <Button type="button" variant="ghost" onClick={closeEditorOrBack}>
                   Annuler
                 </Button>
               </div>

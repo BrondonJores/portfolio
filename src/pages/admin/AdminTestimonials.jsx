@@ -1,12 +1,19 @@
 /* Page de gestion des temoignages admin */
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
+import {
+  isAdminEditorPopup,
+  notifyAdminEditorSaved,
+  openAdminEditorWindow,
+  subscribeAdminEditorRefresh,
+} from '../../utils/adminEditorWindow.js'
 import {
   getAdminTestimonials,
   createTestimonial,
@@ -131,11 +138,14 @@ function TestimonialModal({ isOpen, initial, onSave, onClose }) {
 
 export default function AdminTestimonials() {
   const addToast = useAdminToast()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [testimonials, setTestimonials] = useState([])
   const [loading, setLoading] = useState(true)
   const [editItem, setEditItem] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [confirmId, setConfirmId] = useState(null)
+  const editorParam = searchParams.get('editor')
 
   const loadTestimonials = () => {
     setLoading(true)
@@ -147,6 +157,81 @@ export default function AdminTestimonials() {
 
   useEffect(loadTestimonials, [])
 
+  useEffect(() => {
+    return subscribeAdminEditorRefresh((payload) => {
+      if (payload?.entity === 'testimonials' || payload?.entity === 'global') {
+        loadTestimonials()
+      }
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!editorParam) return
+
+    if (editorParam === 'new') {
+      setEditItem(null)
+      setShowModal(true)
+      return
+    }
+
+    const parsedId = Number.parseInt(editorParam, 10)
+    if (!Number.isInteger(parsedId) || parsedId <= 0) return
+
+    const target = testimonials.find((item) => Number(item.id) === parsedId)
+    if (target) {
+      setEditItem(target)
+      setShowModal(true)
+    }
+  }, [editorParam, testimonials])
+
+  /**
+   * Ferme l'editeur popup ou revient a l'etat liste.
+   * @returns {void}
+   */
+  const closeEditorOrBack = () => {
+    if (isAdminEditorPopup()) {
+      window.close()
+      if (!window.closed) {
+        navigate('/admin/temoignages')
+      }
+      return
+    }
+
+    if (editorParam) {
+      navigate('/admin/temoignages', { replace: true })
+    }
+    setShowModal(false)
+    setEditItem(null)
+  }
+
+  /**
+   * Ouvre l'editeur temoignage dans une popup dediee.
+   * @param {'new' | number} target Cible.
+   * @param {() => void} fallback Action locale si popup bloquee.
+   * @returns {void}
+   */
+  const openTestimonialEditor = (target, fallback) => {
+    if (isAdminEditorPopup()) {
+      fallback()
+      return
+    }
+
+    const path =
+      target === 'new'
+        ? '/admin/temoignages?editor=new'
+        : `/admin/temoignages?editor=${target}`
+
+    const popup = openAdminEditorWindow(path, {
+      windowName: 'portfolio-admin-testimonial-editor',
+      width: 1180,
+      height: 860,
+    })
+
+    if (!popup) {
+      fallback()
+    }
+  }
+
   const handleSave = async (form) => {
     try {
       if (editItem) {
@@ -156,8 +241,12 @@ export default function AdminTestimonials() {
         await createTestimonial(form)
         addToast('Temoignage cree.', 'success')
       }
-      setShowModal(false)
-      setEditItem(null)
+      notifyAdminEditorSaved('testimonials')
+      if (isAdminEditorPopup()) {
+        closeEditorOrBack()
+        return
+      }
+      closeEditorOrBack()
       loadTestimonials()
     } catch (err) {
       addToast(err.message || 'Erreur.', 'error')
@@ -169,6 +258,7 @@ export default function AdminTestimonials() {
     try {
       await deleteTestimonial(confirmId)
       addToast('Temoignage supprime.', 'success')
+      notifyAdminEditorSaved('testimonials')
       loadTestimonials()
     } catch {
       addToast('Erreur lors de la suppression.', 'error')
@@ -178,13 +268,17 @@ export default function AdminTestimonials() {
   }
 
   const openEdit = (item) => {
-    setEditItem(item)
-    setShowModal(true)
+    openTestimonialEditor(item.id, () => {
+      setEditItem(item)
+      setShowModal(true)
+    })
   }
 
   const openNew = () => {
-    setEditItem(null)
-    setShowModal(true)
+    openTestimonialEditor('new', () => {
+      setEditItem(null)
+      setShowModal(true)
+    })
   }
 
   return (
@@ -302,7 +396,7 @@ export default function AdminTestimonials() {
         isOpen={showModal}
         initial={editItem}
         onSave={handleSave}
-        onClose={() => { setShowModal(false); setEditItem(null) }}
+        onClose={closeEditorOrBack}
       />
 
       <ConfirmModal

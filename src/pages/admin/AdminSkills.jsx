@@ -1,12 +1,19 @@
 /* Page de gestion des competences admin */
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PencilSquareIcon, TrashIcon, PlusIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { getAdminSkills, createSkill, updateSkill, deleteSkill } from '../../services/skillService.js'
+import {
+  isAdminEditorPopup,
+  notifyAdminEditorSaved,
+  openAdminEditorWindow,
+  subscribeAdminEditorRefresh,
+} from '../../utils/adminEditorWindow.js'
 
 /* Formulaire inline pour une competence */
 function SkillForm({ initial, onSave, onCancel }) {
@@ -94,11 +101,14 @@ function SkillForm({ initial, onSave, onCancel }) {
 
 export default function AdminSkills() {
   const addToast = useAdminToast()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [grouped, setGrouped] = useState({})
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState(null)
   const [confirmId, setConfirmId] = useState(null)
   const [showAdd, setShowAdd] = useState(false)
+  const editorParam = searchParams.get('editor')
 
   const loadSkills = () => {
     setLoading(true)
@@ -110,11 +120,88 @@ export default function AdminSkills() {
 
   useEffect(loadSkills, [])
 
+  useEffect(() => {
+    return subscribeAdminEditorRefresh((payload) => {
+      if (payload?.entity === 'skills' || payload?.entity === 'global') {
+        loadSkills()
+      }
+    })
+  }, [])
+
+  /**
+   * Ferme l'editeur popup ou revient a l'etat liste.
+   * @returns {void}
+   */
+  const closeEditorOrBack = () => {
+    if (isAdminEditorPopup()) {
+      window.close()
+      if (!window.closed) {
+        navigate('/admin/competences')
+      }
+      return
+    }
+
+    if (editorParam) {
+      navigate('/admin/competences', { replace: true })
+    }
+    setShowAdd(false)
+    setEditingId(null)
+  }
+
+  /**
+   * Ouvre l'editeur de competences dans une popup dediee.
+   * @param {'new' | number} target Cible a editer.
+   * @param {() => void} fallback Action locale si popup bloquee.
+   * @returns {void}
+   */
+  const openSkillEditor = (target, fallback) => {
+    if (isAdminEditorPopup()) {
+      fallback()
+      return
+    }
+
+    const path =
+      target === 'new'
+        ? '/admin/competences?editor=new'
+        : `/admin/competences?editor=${target}`
+
+    const popup = openAdminEditorWindow(path, {
+      windowName: 'portfolio-admin-skill-editor',
+      width: 1200,
+      height: 880,
+    })
+
+    if (!popup) {
+      fallback()
+    }
+  }
+
+  useEffect(() => {
+    if (!editorParam) return
+
+    if (editorParam === 'new') {
+      setEditingId(null)
+      setShowAdd(true)
+      return
+    }
+
+    const parsedId = Number.parseInt(editorParam, 10)
+    if (Number.isInteger(parsedId) && parsedId > 0) {
+      setShowAdd(false)
+      setEditingId(parsedId)
+    }
+  }, [editorParam])
+
   const handleAdd = async (form) => {
     try {
       await createSkill(form)
       addToast('Competence ajoutee.', 'success')
-      setShowAdd(false)
+      notifyAdminEditorSaved('skills')
+      if (isAdminEditorPopup()) {
+        closeEditorOrBack()
+        return
+      }
+      closeEditorOrBack()
       loadSkills()
     } catch (err) {
       addToast(err.message || 'Erreur.', 'error')
@@ -125,7 +212,12 @@ export default function AdminSkills() {
     try {
       await updateSkill(id, form)
       addToast('Competence mise a jour.', 'success')
-      setEditingId(null)
+      notifyAdminEditorSaved('skills')
+      if (isAdminEditorPopup()) {
+        closeEditorOrBack()
+        return
+      }
+      closeEditorOrBack()
       loadSkills()
     } catch (err) {
       addToast(err.message || 'Erreur.', 'error')
@@ -137,6 +229,7 @@ export default function AdminSkills() {
     try {
       await deleteSkill(confirmId)
       addToast('Competence supprimee.', 'success')
+      notifyAdminEditorSaved('skills')
       loadSkills()
     } catch {
       addToast('Erreur lors de la suppression.', 'error')
@@ -161,7 +254,15 @@ export default function AdminSkills() {
           >
             Competences
           </h1>
-          <Button variant="primary" onClick={() => setShowAdd(true)}>
+          <Button
+            variant="primary"
+            onClick={() =>
+              openSkillEditor('new', () => {
+                setEditingId(null)
+                setShowAdd(true)
+              })
+            }
+          >
             <PlusIcon className="h-4 w-4" aria-hidden="true" />
             Ajouter
           </Button>
@@ -194,7 +295,7 @@ export default function AdminSkills() {
                 {showAdd && (
                   <SkillForm
                     onSave={handleAdd}
-                    onCancel={() => setShowAdd(false)}
+                    onCancel={closeEditorOrBack}
                   />
                 )}
                 {allSkills.map((skill, i) =>
@@ -203,7 +304,7 @@ export default function AdminSkills() {
                       key={skill.id}
                       initial={skill}
                       onSave={(form) => handleUpdate(skill.id, form)}
-                      onCancel={() => setEditingId(null)}
+                      onCancel={closeEditorOrBack}
                     />
                   ) : (
                     <tr
@@ -251,7 +352,12 @@ export default function AdminSkills() {
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => setEditingId(skill.id)}
+                            onClick={() =>
+                              openSkillEditor(skill.id, () => {
+                                setShowAdd(false)
+                                setEditingId(skill.id)
+                              })
+                            }
                             className="p-1.5 rounded-lg transition-colors focus:outline-none"
                             style={{ color: 'var(--color-text-secondary)' }}
                             aria-label={`Modifier ${skill.name}`}

@@ -1,16 +1,18 @@
 /* Page de gestion des articles admin */
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { getAdminArticles, deleteArticle } from '../../services/articleService.js'
+import { openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/adminEditorWindow.js'
 
 export default function AdminArticles() {
   const addToast = useAdminToast()
+  const navigate = useNavigate()
   const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(true)
   const [confirmId, setConfirmId] = useState(null)
@@ -24,6 +26,26 @@ export default function AdminArticles() {
   }
 
   useEffect(loadArticles, [])
+
+  useEffect(() => {
+    return subscribeAdminEditorRefresh((payload) => {
+      if (payload?.entity === 'articles' || payload?.entity === 'global') {
+        loadArticles()
+      }
+    })
+  }, [])
+
+  /**
+   * Ouvre l'editeur article dans une fenetre dediee (fallback route locale).
+   * @param {string} path Route cible.
+   * @returns {void}
+   */
+  const openArticleEditor = (path) => {
+    const popup = openAdminEditorWindow(path, { windowName: 'portfolio-admin-article-editor' })
+    if (!popup) {
+      navigate(path)
+    }
+  }
 
   const handleDelete = async () => {
     if (!confirmId) return
@@ -53,12 +75,10 @@ export default function AdminArticles() {
           >
             Articles
           </h1>
-          <Link to="/admin/articles/nouveau">
-            <Button variant="primary">
-              <PlusIcon className="h-4 w-4" aria-hidden="true" />
-              Nouvel article
-            </Button>
-          </Link>
+          <Button variant="primary" onClick={() => openArticleEditor('/admin/articles/nouveau')}>
+            <PlusIcon className="h-4 w-4" aria-hidden="true" />
+            Nouvel article
+          </Button>
         </div>
 
         {loading ? (
@@ -123,17 +143,16 @@ export default function AdminArticles() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        <Link to={`/admin/articles/${article.id}`}>
-                          <button
-                            className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                            aria-label={`Modifier ${article.title}`}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                          >
-                            <PencilSquareIcon className="h-4 w-4" />
-                          </button>
-                        </Link>
+                        <button
+                          onClick={() => openArticleEditor(`/admin/articles/${article.id}`)}
+                          className="p-1.5 rounded-lg transition-colors focus:outline-none"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          aria-label={`Modifier ${article.title}`}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+                        >
+                          <PencilSquareIcon className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => setConfirmId(article.id)}
                           className="p-1.5 rounded-lg transition-colors focus:outline-none"

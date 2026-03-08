@@ -13,6 +13,7 @@ import Spinner from '../../components/ui/Spinner.jsx'
 import { ARTICLE_BLOCK_TEMPLATES } from '../../constants/blockTemplates.js'
 import useAdminBlockTemplates from '../../hooks/useAdminBlockTemplates.js'
 import useLocalDraftAutosave from '../../hooks/useLocalDraftAutosave.jsx'
+import { isAdminEditorPopup, notifyAdminEditorSaved } from '../../utils/adminEditorWindow.js'
 import {
   createArticle,
   getAdminArticles,
@@ -149,6 +150,21 @@ export default function AdminArticleForm() {
     fallbackTemplates: ARTICLE_BLOCK_TEMPLATES,
   })
 
+  /**
+   * Retourne a la liste articles ou ferme la popup d'edition.
+   * @returns {void}
+   */
+  const closeEditorOrBack = () => {
+    if (isAdminEditorPopup()) {
+      window.close()
+      if (!window.closed) {
+        navigate('/admin/articles')
+      }
+      return
+    }
+    navigate('/admin/articles')
+  }
+
   useEffect(() => {
     if (!isEdit) return
 
@@ -248,7 +264,8 @@ export default function AdminArticleForm() {
       }
 
       clearDraft()
-      navigate('/admin/articles')
+      notifyAdminEditorSaved('articles')
+      closeEditorOrBack()
     } catch (error) {
       addToast(error.message || 'Erreur lors de la sauvegarde.', 'error')
     } finally {
@@ -389,7 +406,7 @@ export default function AdminArticleForm() {
                 <Button type="submit" variant="primary" disabled={saving}>
                   {saving ? <Spinner size="sm" /> : isEdit ? 'Enregistrer' : "Creer l'article"}
                 </Button>
-                <Button type="button" variant="ghost" onClick={() => navigate('/admin/articles')}>
+                <Button type="button" variant="ghost" onClick={closeEditorOrBack}>
                   Annuler
                 </Button>
               </div>

@@ -11,6 +11,7 @@ import {
   deleteCampaign,
   sendCampaign,
 } from '../../services/newsletterService.js'
+import { openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/adminEditorWindow.js'
 
 export default function AdminNewsletter() {
   const addToast = useAdminToast()
@@ -31,6 +32,26 @@ export default function AdminNewsletter() {
   useEffect(() => {
     loadCampaigns()
   }, [])
+
+  useEffect(() => {
+    return subscribeAdminEditorRefresh((payload) => {
+      if (payload?.entity === 'newsletter' || payload?.entity === 'global') {
+        loadCampaigns()
+      }
+    })
+  }, [])
+
+  /**
+   * Ouvre l'editeur newsletter dans une fenetre dediee (fallback route locale).
+   * @param {string} path Route cible.
+   * @returns {void}
+   */
+  const openNewsletterEditor = (path) => {
+    const popup = openAdminEditorWindow(path, { windowName: 'portfolio-admin-newsletter-editor' })
+    if (!popup) {
+      navigate(path)
+    }
+  }
 
   const handleDelete = async (id) => {
     try {
@@ -80,7 +101,7 @@ export default function AdminNewsletter() {
 
           <Button
             variant="primary"
-            onClick={() => navigate('/admin/newsletter/new')}
+            onClick={() => openNewsletterEditor('/admin/newsletter/new')}
           >
             <PlusIcon className="h-4 w-4" aria-hidden="true" />
             Nouvelle campagne
@@ -191,7 +212,7 @@ export default function AdminNewsletter() {
                           <>
                             <button
                               onClick={() =>
-                                navigate(`/admin/newsletter/${c.id}/edit`)
+                                openNewsletterEditor(`/admin/newsletter/${c.id}/edit`)
                               }
                               className="p-1.5 rounded-lg text-xs transition-colors focus:outline-none"
                               style={{

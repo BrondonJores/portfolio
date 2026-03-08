@@ -10,6 +10,7 @@ import Spinner from '../../components/ui/Spinner.jsx'
 import { NEWSLETTER_BLOCK_TEMPLATES } from '../../constants/blockTemplates.js'
 import useAdminBlockTemplates from '../../hooks/useAdminBlockTemplates.js'
 import useLocalDraftAutosave from '../../hooks/useLocalDraftAutosave.jsx'
+import { isAdminEditorPopup, notifyAdminEditorSaved } from '../../utils/adminEditorWindow.js'
 import { getArticles } from '../../services/articleService.js'
 import {
   createCampaign,
@@ -381,6 +382,21 @@ export default function AdminCampaignForm() {
     fallbackTemplates: NEWSLETTER_BLOCK_TEMPLATES,
   })
 
+  /**
+   * Retourne a la liste newsletter ou ferme la popup d'edition.
+   * @returns {void}
+   */
+  const closeEditorOrBack = () => {
+    if (isAdminEditorPopup()) {
+      window.close()
+      if (!window.closed) {
+        navigate('/admin/newsletter')
+      }
+      return
+    }
+    navigate('/admin/newsletter')
+  }
+
   useEffect(() => {
     getArticles().then((res) => {
       setAvailableArticles(res?.data || [])
@@ -484,7 +500,8 @@ export default function AdminCampaignForm() {
       }
 
       clearDraft()
-      navigate('/admin/newsletter')
+      notifyAdminEditorSaved('newsletter')
+      closeEditorOrBack()
     } catch (error) {
       addToast(error.message || 'Erreur lors de la sauvegarde.', 'error')
     } finally {
@@ -504,8 +521,9 @@ export default function AdminCampaignForm() {
       await updateCampaign(id, { ...form, body_html: blocksToHtml(blocks) })
       await sendCampaign(id)
       clearDraft()
+      notifyAdminEditorSaved('newsletter')
       addToast('Campagne envoyee avec succes.', 'success')
-      navigate('/admin/newsletter')
+      closeEditorOrBack()
     } catch (error) {
       addToast(error.message || "Erreur lors de l'envoi.", 'error')
     } finally {
@@ -620,7 +638,7 @@ export default function AdminCampaignForm() {
                   </Button>
                 )}
 
-                <Button type="button" variant="ghost" onClick={() => navigate('/admin/newsletter')}>
+                <Button type="button" variant="ghost" onClick={closeEditorOrBack}>
                   Retour
                 </Button>
               </div>

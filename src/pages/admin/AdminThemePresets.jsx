@@ -1,6 +1,7 @@
 /* Page admin pour gerer les presets de theme (CRUD + apply + import/export + affectations). */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
@@ -17,6 +18,12 @@ import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
+import {
+  isAdminEditorPopup,
+  notifyAdminEditorSaved,
+  openAdminEditorWindow,
+  subscribeAdminEditorRefresh,
+} from '../../utils/adminEditorWindow.js'
 import { getAdminSettings, updateSettings } from '../../services/settingService.js'
 import {
   applyThemePreset,
@@ -278,6 +285,8 @@ function buildThemeReleaseComparison(currentPreset, release) {
 
 export default function AdminThemePresets() {
   const addToast = useAdminToast()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { refreshSettings, refreshThemePresets, updateLocalSettings } = useSettings()
 
   const [presets, setPresets] = useState([])
@@ -306,6 +315,7 @@ export default function AdminThemePresets() {
   const [rollingBackReleaseId, setRollingBackReleaseId] = useState(null)
   const [comparingReleaseId, setComparingReleaseId] = useState(null)
   const [form, setForm] = useState(() => createEmptyForm())
+  const editorParam = searchParams.get('editor')
 
   const importInputRef = useRef(null)
   const previewBaseRef = useRef(null)
@@ -428,6 +438,14 @@ export default function AdminThemePresets() {
   }, [])
 
   useEffect(() => {
+    return subscribeAdminEditorRefresh((payload) => {
+      if (payload?.entity === 'themes' || payload?.entity === 'global') {
+        loadData()
+      }
+    })
+  }, [])
+
+  useEffect(() => {
     loadMarketplace()
   }, [])
 
@@ -497,6 +515,71 @@ export default function AdminThemePresets() {
     loadPresetReleases(preset.id)
   }
 
+  useEffect(() => {
+    if (!editorParam) return
+
+    if (editorParam === 'new') {
+      startCreate()
+      return
+    }
+
+    const parsedId = Number.parseInt(editorParam, 10)
+    if (!Number.isInteger(parsedId) || parsedId <= 0) return
+
+    const target = presets.find((preset) => Number(preset.id) === parsedId)
+    if (target && editingId !== target.id) {
+      startEdit(target)
+    }
+  }, [editorParam, presets, editingId])
+
+  /**
+   * Ferme la fenetre popup ou revient a la vue liste.
+   * @returns {void}
+   */
+  const closeEditorOrBack = () => {
+    if (isAdminEditorPopup()) {
+      window.close()
+      if (!window.closed) {
+        navigate('/admin/themes')
+      }
+      return
+    }
+
+    if (editorParam) {
+      navigate('/admin/themes', { replace: true })
+    } else {
+      startCreate()
+    }
+  }
+
+  /**
+   * Ouvre l'editeur preset dans une fenetre dediee.
+   * @param {'new' | number} target Cible d'edition.
+   * @param {() => void} fallback Action locale si popup bloquee.
+   * @returns {void}
+   */
+  const openThemePresetEditor = (target, fallback) => {
+    if (isAdminEditorPopup()) {
+      fallback()
+      return
+    }
+
+    const path =
+      target === 'new'
+        ? '/admin/themes?editor=new'
+        : `/admin/themes?editor=${target}`
+
+    const popup = openAdminEditorWindow(path, {
+      windowName: 'portfolio-admin-theme-editor',
+      width: 1480,
+      height: 920,
+    })
+
+    if (!popup) {
+      fallback()
+    }
+  }
+
   /**
    * Cree ou met a jour les metadonnees du preset.
    * En creation, capture automatiquement le theme actuel.
@@ -528,9 +611,14 @@ export default function AdminThemePresets() {
 
       await loadData()
       await refreshThemePresets()
+      notifyAdminEditorSaved('themes')
 
       if (response?.data) {
         startEdit(response.data)
+      }
+
+      if (isAdminEditorPopup()) {
+        closeEditorOrBack()
       }
     } catch (error) {
       addToast(error.message || 'Erreur lors de la sauvegarde.', 'error')
@@ -555,6 +643,7 @@ export default function AdminThemePresets() {
       addToast('Preset synchronise avec le theme actuel.', 'success')
       await loadData()
       await refreshThemePresets()
+      notifyAdminEditorSaved('themes')
     } catch (error) {
       addToast(error.message || 'Erreur lors de la synchronisation.', 'error')
     } finally {
@@ -657,6 +746,7 @@ export default function AdminThemePresets() {
 
       await loadData()
       await refreshThemePresets()
+      notifyAdminEditorSaved('themes')
       await loadPresetReleases(presetId, { force: true })
 
       if (rolledPreset?.id) {
@@ -666,6 +756,7 @@ export default function AdminThemePresets() {
           description: rolledPreset.description || '',
         })
       }
+      setComparingReleaseId(null)
 
       addToast('Rollback du preset effectue.', 'success')
     } catch (error) {
@@ -687,6 +778,7 @@ export default function AdminThemePresets() {
       addToast('Preset supprime.', 'success')
       await loadData()
       await refreshThemePresets()
+      notifyAdminEditorSaved('themes')
       setPresetReleasesById((prev) => {
         const next = { ...prev }
         delete next[confirmId]
@@ -698,6 +790,9 @@ export default function AdminThemePresets() {
       }
       if (previewingId === toPresetPreviewId(confirmId)) {
         stopPreview()
+      }
+      if (comparingReleaseId) {
+        setComparingReleaseId(null)
       }
     } catch (error) {
       addToast(error.message || 'Erreur lors de la suppression.', 'error')
@@ -780,6 +875,7 @@ export default function AdminThemePresets() {
         const action = response?.data?.action || 'created'
         await loadData()
         await refreshThemePresets()
+        notifyAdminEditorSaved('themes')
         addToast(`Package preset importe (${action}).`, 'success')
         return
       }
@@ -828,6 +924,7 @@ export default function AdminThemePresets() {
 
       await loadData()
       await refreshThemePresets()
+      notifyAdminEditorSaved('themes')
 
       addToast(
         `Import termine: ${created} cree(s), ${updated} mis a jour, ${skipped} ignore(s).`,
@@ -862,6 +959,7 @@ export default function AdminThemePresets() {
 
       const result = response?.data || {}
       await Promise.all([loadData(), refreshThemePresets()])
+      notifyAdminEditorSaved('themes')
 
       if (applyAfterImport) {
         await refreshSettings()
@@ -1047,7 +1145,14 @@ export default function AdminThemePresets() {
               <ArrowUpTrayIcon className="h-4 w-4" aria-hidden="true" />
               {importing ? 'Import en cours...' : 'Importer JSON'}
             </Button>
-            <Button variant="primary" onClick={startCreate}>
+            <Button
+              variant="primary"
+              onClick={() =>
+                openThemePresetEditor('new', () => {
+                  startCreate()
+                })
+              }
+            >
               <PlusIcon className="h-4 w-4" aria-hidden="true" />
               Nouveau preset
             </Button>
@@ -1127,7 +1232,11 @@ export default function AdminThemePresets() {
                           <div className="flex items-center gap-1">
                             <button
                               type="button"
-                              onClick={() => startEdit(preset)}
+                              onClick={() =>
+                                openThemePresetEditor(preset.id, () => {
+                                  startEdit(preset)
+                                })
+                              }
                               className="p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                               style={{ color: 'var(--color-text-secondary)' }}
                               aria-label={`Modifier ${preset.name}`}
@@ -1254,6 +1363,11 @@ export default function AdminThemePresets() {
                   <Button type="button" variant="ghost" onClick={startCreate}>
                     Reinitialiser
                   </Button>
+                  {isAdminEditorPopup() && (
+                    <Button type="button" variant="ghost" onClick={closeEditorOrBack}>
+                      Fermer
+                    </Button>
+                  )}
                 </div>
 
                 {activePreset && (
@@ -1294,6 +1408,7 @@ export default function AdminThemePresets() {
                         {activePresetReleases.map((release) => {
                           const releaseId = Number.parseInt(String(release?.id ?? ''), 10)
                           const versionNumber = Number.parseInt(String(release?.version_number ?? ''), 10)
+                          const isComparing = comparingReleaseId === releaseId
                           const isRollingBack = rollingBackReleaseId === releaseId
 
                           return (
@@ -1317,13 +1432,66 @@ export default function AdminThemePresets() {
 
                               <Button
                                 type="button"
-                                variant="secondary"
-                                onClick={() => handleRollbackPreset(releaseId)}
+                                variant={isComparing ? 'primary' : 'secondary'}
+                                onClick={() =>
+                                  setComparingReleaseId((prev) =>
+                                    prev === releaseId ? null : releaseId
+                                  )
+                                }
                                 disabled={!Number.isInteger(releaseId) || Boolean(rollingBackReleaseId)}
                                 className="w-full justify-center"
                               >
-                                {isRollingBack ? 'Rollback...' : `Rollback vers v${Number.isInteger(versionNumber) ? versionNumber : '?'}`}
+                                {isComparing ? 'Masquer comparaison' : `Comparer avec v${Number.isInteger(versionNumber) ? versionNumber : '?'}`}
                               </Button>
+
+                              {isComparing && activeReleaseComparison && (
+                                <div
+                                  className="rounded-lg border p-2 space-y-2"
+                                  style={{
+                                    borderColor: 'var(--color-border)',
+                                    backgroundColor: 'var(--color-bg-primary)',
+                                  }}
+                                >
+                                  <p className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                    Comparaison avant rollback
+                                  </p>
+                                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                    Nom: {activeReleaseComparison.nameChanged ? 'modifie' : 'identique'} | Description: {activeReleaseComparison.descriptionChanged ? 'modifiee' : 'identique'}
+                                  </p>
+                                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                    Settings: {activeReleaseComparison.currentSettingsCount}{' -> '}{activeReleaseComparison.targetSettingsCount} (changes: {activeReleaseComparison.changedSettings.length})
+                                  </p>
+
+                                  {activeReleaseComparison.changedSettings.length > 0 && (
+                                    <div className="space-y-1">
+                                      {activeReleaseComparison.changedSettings.slice(0, 8).map((item) => (
+                                        <p
+                                          key={`${releaseId}-${item.key}`}
+                                          className="text-[11px]"
+                                          style={{ color: 'var(--color-text-secondary)' }}
+                                        >
+                                          {item.key}: {String(item.currentValue)}{' -> '}{String(item.targetValue)}
+                                        </p>
+                                      ))}
+                                      {activeReleaseComparison.changedSettings.length > 8 && (
+                                        <p className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                                          +{activeReleaseComparison.changedSettings.length - 8} autre(s) changement(s)
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  <Button
+                                    type="button"
+                                    variant="primary"
+                                    onClick={() => handleRollbackPreset(releaseId)}
+                                    disabled={!Number.isInteger(releaseId) || Boolean(rollingBackReleaseId)}
+                                    className="w-full justify-center"
+                                  >
+                                    {isRollingBack ? 'Rollback...' : `Confirmer rollback vers v${Number.isInteger(versionNumber) ? versionNumber : '?'}`}
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           )
                         })}

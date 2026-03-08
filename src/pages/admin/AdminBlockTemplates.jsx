@@ -1,12 +1,19 @@
 /* Page de gestion des templates de blocs personnalisables dans l'admin. */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowDownTrayIcon, PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
+import {
+  isAdminEditorPopup,
+  notifyAdminEditorSaved,
+  openAdminEditorWindow,
+  subscribeAdminEditorRefresh,
+} from '../../utils/adminEditorWindow.js'
 import {
   createBlockTemplate,
   deleteBlockTemplate,
@@ -182,8 +189,70 @@ function formatReleaseDate(value) {
   return date.toLocaleString('fr-FR')
 }
 
+/**
+ * Nettoie un bloc avant comparaison structurelle.
+ * @param {unknown} block Bloc source.
+ * @returns {unknown} Bloc normalise.
+ */
+function normalizeBlockForComparison(block) {
+  if (!block || typeof block !== 'object') {
+    return block ?? null
+  }
+
+  const cloned = JSON.parse(JSON.stringify(block))
+  if (cloned && typeof cloned === 'object' && !Array.isArray(cloned)) {
+    delete cloned.id
+  }
+  return cloned
+}
+
+/**
+ * Construit un resume des ecarts entre le template courant et une release cible.
+ * @param {object | null} currentTemplate Template selectionne.
+ * @param {object | null} release Release cible.
+ * @returns {object | null} Resume de comparaison.
+ */
+function buildTemplateReleaseComparison(currentTemplate, release) {
+  if (!currentTemplate || !release) return null
+
+  const snapshot = release?.snapshot && typeof release.snapshot === 'object'
+    ? release.snapshot
+    : {}
+
+  const currentName = String(currentTemplate?.name || '')
+  const targetName = String(snapshot?.name || '')
+  const currentContext = String(currentTemplate?.context || '')
+  const targetContext = String(snapshot?.context || '')
+  const currentDescription = String(currentTemplate?.description || '')
+  const targetDescription = String(snapshot?.description || '')
+
+  const currentBlocks = Array.isArray(currentTemplate?.blocks) ? currentTemplate.blocks : []
+  const targetBlocks = Array.isArray(snapshot?.blocks) ? snapshot.blocks : []
+  const maxLength = Math.max(currentBlocks.length, targetBlocks.length)
+  const changedBlockIndexes = []
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const currentBlock = normalizeBlockForComparison(currentBlocks[index])
+    const targetBlock = normalizeBlockForComparison(targetBlocks[index])
+    if (JSON.stringify(currentBlock) !== JSON.stringify(targetBlock)) {
+      changedBlockIndexes.push(index + 1)
+    }
+  }
+
+  return {
+    nameChanged: currentName !== targetName,
+    contextChanged: currentContext !== targetContext,
+    descriptionChanged: currentDescription !== targetDescription,
+    currentBlocksCount: currentBlocks.length,
+    targetBlocksCount: targetBlocks.length,
+    changedBlockIndexes,
+  }
+}
+
 export default function AdminBlockTemplates() {
   const addToast = useAdminToast()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const fileInputRef = useRef(null)
 
   const [templates, setTemplates] = useState([])
@@ -196,7 +265,9 @@ export default function AdminBlockTemplates() {
   const [templateReleasesById, setTemplateReleasesById] = useState({})
   const [loadingReleasesId, setLoadingReleasesId] = useState(null)
   const [rollingBackReleaseId, setRollingBackReleaseId] = useState(null)
+  const [comparingReleaseId, setComparingReleaseId] = useState(null)
   const [form, setForm] = useState(() => createEmptyForm())
+  const editorParam = searchParams.get('editor')
 
   const selectedTemplate = useMemo(
     () => templates.find((template) => template.id === editingId) || null,
@@ -205,6 +276,17 @@ export default function AdminBlockTemplates() {
   const selectedTemplateReleases = useMemo(
     () => (selectedTemplate ? (templateReleasesById[selectedTemplate.id] || []) : []),
     [selectedTemplate, templateReleasesById]
+  )
+  const selectedComparedRelease = useMemo(
+    () =>
+      selectedTemplateReleases.find(
+        (release) => Number.parseInt(String(release?.id ?? ''), 10) === comparingReleaseId
+      ) || null,
+    [selectedTemplateReleases, comparingReleaseId]
+  )
+  const selectedReleaseComparison = useMemo(
+    () => buildTemplateReleaseComparison(selectedTemplate, selectedComparedRelease),
+    [selectedTemplate, selectedComparedRelease]
   )
 
   const loadTemplates = async () => {
@@ -221,6 +303,14 @@ export default function AdminBlockTemplates() {
 
   useEffect(() => {
     loadTemplates()
+  }, [])
+
+  useEffect(() => {
+    return subscribeAdminEditorRefresh((payload) => {
+      if (payload?.entity === 'templates' || payload?.entity === 'global') {
+        loadTemplates()
+      }
+    })
   }, [])
 
   /**
@@ -262,6 +352,7 @@ export default function AdminBlockTemplates() {
     setEditingId(null)
     setForm(createEmptyForm())
     setRollingBackReleaseId(null)
+    setComparingReleaseId(null)
   }
 
   /**
@@ -277,7 +368,73 @@ export default function AdminBlockTemplates() {
       description: template.description || '',
       blocks: toEditableBlocks(template.blocks),
     })
+    setComparingReleaseId(null)
     loadTemplateReleases(template.id)
+  }
+
+  useEffect(() => {
+    if (!editorParam) return
+
+    if (editorParam === 'new') {
+      startCreate()
+      return
+    }
+
+    const parsedId = Number.parseInt(editorParam, 10)
+    if (!Number.isInteger(parsedId) || parsedId <= 0) return
+
+    const target = templates.find((template) => Number(template.id) === parsedId)
+    if (target && editingId !== target.id) {
+      startEdit(target)
+    }
+  }, [editorParam, templates, editingId])
+
+  /**
+   * Ferme la fenetre popup ou revient a la vue liste.
+   * @returns {void}
+   */
+  const closeEditorOrBack = () => {
+    if (isAdminEditorPopup()) {
+      window.close()
+      if (!window.closed) {
+        navigate('/admin/templates')
+      }
+      return
+    }
+
+    if (editorParam) {
+      navigate('/admin/templates', { replace: true })
+    } else {
+      startCreate()
+    }
+  }
+
+  /**
+   * Ouvre l'editeur template dans une fenetre dediee.
+   * @param {'new' | number} target Cible d'edition.
+   * @param {() => void} fallback Action locale si popup bloquee.
+   * @returns {void}
+   */
+  const openTemplateEditor = (target, fallback) => {
+    if (isAdminEditorPopup()) {
+      fallback()
+      return
+    }
+
+    const path =
+      target === 'new'
+        ? '/admin/templates?editor=new'
+        : `/admin/templates?editor=${target}`
+
+    const popup = openAdminEditorWindow(path, {
+      windowName: 'portfolio-admin-template-editor',
+      width: 1480,
+      height: 920,
+    })
+
+    if (!popup) {
+      fallback()
+    }
   }
 
   /**
@@ -326,11 +483,16 @@ export default function AdminBlockTemplates() {
       }
 
       await loadTemplates()
+      notifyAdminEditorSaved('templates')
 
       if (response?.data) {
         startEdit(response.data)
       } else {
         startCreate()
+      }
+
+      if (isAdminEditorPopup()) {
+        closeEditorOrBack()
       }
     } catch (error) {
       addToast(error.message || 'Erreur lors de la sauvegarde.', 'error')
@@ -349,6 +511,7 @@ export default function AdminBlockTemplates() {
     try {
       await deleteBlockTemplate(confirmId)
       addToast('Template supprime.', 'success')
+      notifyAdminEditorSaved('templates')
       await loadTemplates()
       setTemplateReleasesById((prev) => {
         const next = { ...prev }
@@ -358,6 +521,9 @@ export default function AdminBlockTemplates() {
 
       if (editingId === confirmId) {
         startCreate()
+      }
+      if (comparingReleaseId) {
+        setComparingReleaseId(null)
       }
     } catch (error) {
       addToast(error.message || 'Erreur lors de la suppression.', 'error')
@@ -390,6 +556,7 @@ export default function AdminBlockTemplates() {
       const rolledTemplate = response?.data?.template || null
 
       await loadTemplates()
+      notifyAdminEditorSaved('templates')
       await loadTemplateReleases(templateId, { force: true })
 
       if (rolledTemplate?.id) {
@@ -401,6 +568,7 @@ export default function AdminBlockTemplates() {
           blocks: toEditableBlocks(rolledTemplate.blocks),
         })
       }
+      setComparingReleaseId(null)
 
       addToast('Rollback du template effectue.', 'success')
     } catch (error) {
@@ -440,6 +608,7 @@ export default function AdminBlockTemplates() {
         })
         const action = response?.data?.action || 'created'
         await loadTemplates()
+        notifyAdminEditorSaved('templates')
         addToast(`Package template importe (${action}).`, 'success')
         return
       }
@@ -458,6 +627,7 @@ export default function AdminBlockTemplates() {
 
       const summary = response?.data || {}
       await loadTemplates()
+      notifyAdminEditorSaved('templates')
 
       addToast(
         `Import termine: ${summary.created || 0} cree(s), ${summary.updated || 0} mis a jour, ${summary.skippedCount || 0} ignore(s).`,
@@ -524,7 +694,14 @@ export default function AdminBlockTemplates() {
               Importer JSON
             </Button>
 
-            <Button variant="primary" onClick={startCreate}>
+            <Button
+              variant="primary"
+              onClick={() =>
+                openTemplateEditor('new', () => {
+                  startCreate()
+                })
+              }
+            >
               <PlusIcon className="h-4 w-4" aria-hidden="true" />
               Nouveau template
             </Button>
@@ -582,7 +759,11 @@ export default function AdminBlockTemplates() {
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={() => startEdit(template)}
+                            onClick={() =>
+                              openTemplateEditor(template.id, () => {
+                                startEdit(template)
+                              })
+                            }
                             className="p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                             style={{ color: 'var(--color-text-secondary)' }}
                             aria-label={`Modifier ${template.name}`}
@@ -692,6 +873,11 @@ export default function AdminBlockTemplates() {
                 <Button type="button" variant="ghost" onClick={resetCurrentForm}>
                   Reinitialiser
                 </Button>
+                {isAdminEditorPopup() && (
+                  <Button type="button" variant="ghost" onClick={closeEditorOrBack}>
+                    Fermer
+                  </Button>
+                )}
               </div>
 
               {selectedTemplate && (
@@ -726,6 +912,7 @@ export default function AdminBlockTemplates() {
                       {selectedTemplateReleases.map((release) => {
                         const releaseId = Number.parseInt(String(release?.id ?? ''), 10)
                         const versionNumber = Number.parseInt(String(release?.version_number ?? ''), 10)
+                        const isComparing = comparingReleaseId === releaseId
                         const isRollingBack = rollingBackReleaseId === releaseId
 
                         return (
@@ -749,13 +936,59 @@ export default function AdminBlockTemplates() {
 
                             <Button
                               type="button"
-                              variant="secondary"
-                              onClick={() => handleRollbackTemplate(releaseId)}
+                              variant={isComparing ? 'primary' : 'secondary'}
+                              onClick={() =>
+                                setComparingReleaseId((prev) =>
+                                  prev === releaseId ? null : releaseId
+                                )
+                              }
                               disabled={!Number.isInteger(releaseId) || Boolean(rollingBackReleaseId)}
                               className="w-full justify-center"
                             >
-                              {isRollingBack ? 'Rollback...' : `Rollback vers v${Number.isInteger(versionNumber) ? versionNumber : '?'}`}
+                              {isComparing ? 'Masquer comparaison' : `Comparer avec v${Number.isInteger(versionNumber) ? versionNumber : '?'}`}
                             </Button>
+
+                            {isComparing && selectedReleaseComparison && (
+                              <div
+                                className="rounded-lg border p-2 space-y-2"
+                                style={{
+                                  borderColor: 'var(--color-border)',
+                                  backgroundColor: 'var(--color-bg-primary)',
+                                }}
+                              >
+                                <p className="text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                  Comparaison avant rollback
+                                </p>
+                                <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                  Nom: {selectedReleaseComparison.nameChanged ? 'modifie' : 'identique'} | Contexte: {selectedReleaseComparison.contextChanged ? 'modifie' : 'identique'}
+                                </p>
+                                <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                  Description: {selectedReleaseComparison.descriptionChanged ? 'modifiee' : 'identique'}
+                                </p>
+                                <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                  Blocs: {selectedReleaseComparison.currentBlocksCount}{' -> '}{selectedReleaseComparison.targetBlocksCount} (changes: {selectedReleaseComparison.changedBlockIndexes.length})
+                                </p>
+
+                                {selectedReleaseComparison.changedBlockIndexes.length > 0 && (
+                                  <p className="text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                                    Positions impactees: {selectedReleaseComparison.changedBlockIndexes.slice(0, 10).join(', ')}
+                                    {selectedReleaseComparison.changedBlockIndexes.length > 10
+                                      ? ` (+${selectedReleaseComparison.changedBlockIndexes.length - 10} autres)`
+                                      : ''}
+                                  </p>
+                                )}
+
+                                <Button
+                                  type="button"
+                                  variant="primary"
+                                  onClick={() => handleRollbackTemplate(releaseId)}
+                                  disabled={!Number.isInteger(releaseId) || Boolean(rollingBackReleaseId)}
+                                  className="w-full justify-center"
+                                >
+                                  {isRollingBack ? 'Rollback...' : `Confirmer rollback vers v${Number.isInteger(versionNumber) ? versionNumber : '?'}`}
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         )
                       })}
