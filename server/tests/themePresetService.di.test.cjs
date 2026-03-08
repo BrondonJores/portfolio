@@ -52,6 +52,35 @@ async function main() {
     assert.equal(capturedPayload.settings.invalid, undefined)
   })
 
+  await runCase('createThemePreset ignores legacy animation keys', async () => {
+    let capturedPayload = null
+
+    const fakeThemePresetModel = {
+      create: async (payload) => {
+        capturedPayload = payload
+        return { id: 2, ...payload }
+      },
+    }
+
+    const service = createThemePresetService({
+      themePresetModel: fakeThemePresetModel,
+    })
+
+    await service.createThemePreset({
+      name: 'Preset Anim Core',
+      description: 'Desc',
+      settings: {
+        anim_enabled: 'true',
+        anim_duration_scale: '1',
+        anim_profile: 'balanced',
+      },
+    })
+
+    assert.equal(capturedPayload.settings.anim_enabled, 'true')
+    assert.equal(capturedPayload.settings.anim_duration_scale, '1')
+    assert.equal(capturedPayload.settings.anim_profile, undefined)
+  })
+
   await runCase('applyThemePreset writes every setting using injected model', async () => {
     const upsertCalls = []
 

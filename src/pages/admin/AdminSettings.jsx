@@ -20,19 +20,9 @@ import {
   mergeWithThemeDefaults,
 } from '../../utils/themeSettings.js'
 import {
-  ANIMATION_EASE_OPTIONS,
-  ANIMATION_PROFILE_OPTIONS,
-  CINEMATIC_PRESET_OPTIONS,
-  REDUCE_MOTION_OPTIONS,
-  SECTION_SCENE_OPTIONS,
-  SECTION_SCENE_TARGETS,
+  ANIMATION_CORE_SETTING_KEYS,
   extractAnimationSettings,
-  getCinematicPresetSettings,
   sanitizeImportedAnimationSettings,
-  SPRITE_PATH_OPTIONS,
-  SPRITE_SIDE_PATTERN_OPTIONS,
-  SPRITE_STYLE_OPTIONS,
-  SECTION_REVEAL_OPTIONS,
 } from '../../utils/animationSettings.js'
 import {
   ArrowPathIcon,
@@ -142,44 +132,8 @@ const inputStyle = {
 }
 
 const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
-const DEFAULT_CINEMATIC_PRESET = 'cine-portfolio'
 const MAX_ANIMATION_PRESET_FILE_BYTES = 512 * 1024
-const ANIMATION_ASSET_MAPPING_KEYS = [
-  'anim_scene_assets_enabled',
-  'anim_scene_asset_show_hero',
-  'anim_scene_asset_mobile_enabled',
-  'anim_scene_asset_size',
-  'anim_scene_asset_opacity',
-  'anim_scene_asset_speed',
-  'anim_scene_asset_fit',
-  'anim_scene_asset_default_url',
-  'anim_scene_asset_hero_url',
-  'anim_scene_asset_about_url',
-  'anim_scene_asset_skills_url',
-  'anim_scene_asset_projects_url',
-  'anim_scene_asset_blog_url',
-  'anim_scene_asset_contact_url',
-  'anim_mascots_enabled',
-  'anim_mascot_show_hero',
-  'anim_mascot_size',
-  'anim_mascot_opacity',
-  'anim_mascot_speed',
-  'anim_mascot_asset_fit',
-  'anim_mascot_asset_default_url',
-  'anim_mascot_asset_about_url',
-  'anim_mascot_asset_skills_url',
-  'anim_mascot_asset_projects_url',
-  'anim_mascot_asset_blog_url',
-  'anim_mascot_asset_contact_url',
-  'anim_sprite_wander_enabled',
-  'anim_sprite_side_enabled',
-  'anim_sprite_style',
-  'anim_sprite_asset_fit',
-  'anim_sprite_asset_default_url',
-  'anim_sprite_asset_wander_url',
-  'anim_sprite_asset_side_left_url',
-  'anim_sprite_asset_side_right_url',
-]
+const ANIMATION_ASSET_MAPPING_KEYS = ANIMATION_CORE_SETTING_KEYS
 
 const DARK_COLOR_FIELDS = [
   { key: 'theme_dark_bg_primary', label: 'Fond principal (sombre)' },
@@ -641,7 +595,6 @@ export default function AdminSettings() {
   const [freshRecoveryCodes, setFreshRecoveryCodes] = useState([])
   const [twoFactorQrCodeUrl, setTwoFactorQrCodeUrl] = useState('')
   const [twoFactorQrLoading, setTwoFactorQrLoading] = useState(false)
-  const [selectedCinematicPreset, setSelectedCinematicPreset] = useState(DEFAULT_CINEMATIC_PRESET)
   const [animationPresetJson, setAnimationPresetJson] = useState('')
   const animationPresetFileInputRef = useRef(null)
 
@@ -862,30 +815,6 @@ export default function AdminSettings() {
     setSettings(nextSettings)
     updateLocalSettings(nextSettings)
     addToast('Animations reinitialisees.', 'success')
-  }
-
-  const handleApplyCinematicPreset = () => {
-    const presetPatch = getCinematicPresetSettings(selectedCinematicPreset)
-    if (!presetPatch) {
-      addToast('Preset cinematique introuvable.', 'error')
-      return
-    }
-
-    const nextSettings = mergeWithThemeDefaults({ ...settings, ...presetPatch })
-    setSettings(nextSettings)
-    updateLocalSettings(nextSettings)
-    addToast('Preset cinematique applique.', 'success')
-  }
-
-  const handleResetSectionScenes = () => {
-    const patch = {}
-    SECTION_SCENE_TARGETS.forEach((target) => {
-      patch[`anim_scene_${target.key}`] = 'inherit'
-    })
-    const nextSettings = mergeWithThemeDefaults({ ...settings, ...patch })
-    setSettings(nextSettings)
-    updateLocalSettings(nextSettings)
-    addToast('Scenes de section reinitialisees.', 'success')
   }
 
   const createAnimationPresetPayload = () => ({
@@ -1725,45 +1654,19 @@ export default function AdminSettings() {
           {activeTab === 'animations' && (
             <>
               <CardSection>
-                <SectionTitle>Presets Cinematiques</SectionTitle>
+                <SectionTitle>Import / Export Lottie-Rive</SectionTitle>
                 <InlineTip>
-                  Applique une direction complete (entrees/sorties par section + style de sprites humains), puis ajuste finement.
+                  Les anciens presets cinematics ont ete retires. Cette section ne gere plus que le pack animations assets-only.
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                      Preset global
-                    </label>
-                    <select
-                      value={selectedCinematicPreset}
-                      onChange={(e) => setSelectedCinematicPreset(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                      style={inputStyle}
-                    >
-                      {CINEMATIC_PRESET_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 items-end">
-                    <button
-                      type="button"
-                      onClick={handleApplyCinematicPreset}
-                      className="px-4 py-2.5 rounded-lg text-sm font-medium"
-                      style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
-                    >
-                      Appliquer preset
-                    </button>
+                  <div className="md:col-span-2 flex flex-wrap gap-2 items-end">
                     <button
                       type="button"
                       onClick={handleFillAnimationPresetJson}
                       className="px-4 py-2.5 rounded-lg text-sm font-medium border"
                       style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
                     >
-                      Generer JSON (zone)
+                      Generer JSON (core)
                     </button>
                     <button
                       type="button"
@@ -1819,7 +1722,7 @@ export default function AdminSettings() {
                       JSON de preset animation
                     </label>
                     <InlineTip>
-                      Option rapide recommandee: utilise le bouton "Importer fichier .json". Cette zone reste utile pour debug/coller un preset.
+                      Seules les cles Lottie/Rive essentielles sont acceptees a l&apos;import.
                     </InlineTip>
                     <textarea
                       value={animationPresetJson}
@@ -1827,74 +1730,19 @@ export default function AdminSettings() {
                       rows={8}
                       className="w-full px-4 py-2.5 rounded-lg border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-y"
                       style={inputStyle}
-                      placeholder='{"type":"portfolio-animation-preset","settings":{"anim_profile":"cinematic"}}'
+                      placeholder='{"type":"portfolio-animation-preset","settings":{"anim_scene_asset_default_url":"https://..."}}'
                     />
                   </div>
                 </div>
               </CardSection>
 
               <CardSection>
-                <SectionTitle>Scenes Par Section</SectionTitle>
+                <SectionTitle>Moteur Global</SectionTitle>
                 <InlineTip>
-                  Choisis le comportement d&apos;entree/sortie pour chaque section. "Heriter du global" garde le moteur general.
+                  Reglages minimaux: activation globale + intensite + vitesse. Le reste est pilote en mode assets-only.
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {SECTION_SCENE_TARGETS.map((target) => (
-                    <FieldSelect
-                      key={target.key}
-                      label={`Scene ${target.label}`}
-                      fieldKey={`anim_scene_${target.key}`}
-                      settings={settings}
-                      onChange={handleChange}
-                      options={SECTION_SCENE_OPTIONS}
-                    />
-                  ))}
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleResetSectionScenes}
-                    className="px-4 py-2.5 rounded-lg text-sm font-medium border"
-                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
-                  >
-                    Reinitialiser les scenes
-                  </button>
-                </div>
-              </CardSection>
-
-              <CardSection>
-                <SectionTitle>Moteur Global</SectionTitle>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox label="Activer les animations" fieldKey="anim_enabled" settings={settings} onChange={handleChange} />
-                  <FieldCheckbox label="Reveler chaque section une seule fois" fieldKey="anim_section_once" settings={settings} onChange={handleChange} />
-                  <FieldSelect
-                    label="Profil"
-                    fieldKey="anim_profile"
-                    settings={settings}
-                    onChange={handleChange}
-                    options={ANIMATION_PROFILE_OPTIONS}
-                  />
-                  <FieldSelect
-                    label="Easing principal"
-                    fieldKey="anim_ease_preset"
-                    settings={settings}
-                    onChange={handleChange}
-                    options={ANIMATION_EASE_OPTIONS}
-                  />
-                  <FieldSelect
-                    label="Gestion reduce-motion"
-                    fieldKey="anim_reduce_motion_mode"
-                    settings={settings}
-                    onChange={handleChange}
-                    options={REDUCE_MOTION_OPTIONS}
-                  />
-                  <FieldSelect
-                    label="Reveal de section"
-                    fieldKey="anim_section_reveal_type"
-                    settings={settings}
-                    onChange={handleChange}
-                    options={SECTION_REVEAL_OPTIONS}
-                  />
                   <FieldRange
                     label="Echelle des durees"
                     fieldKey="anim_duration_scale"
@@ -1916,28 +1764,6 @@ export default function AdminSettings() {
                     step={0.05}
                     unit="x"
                     defaultValue={1}
-                  />
-                  <FieldRange
-                    label="Duree reveal section"
-                    fieldKey="anim_section_duration_ms"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={200}
-                    max={1600}
-                    step={25}
-                    unit="ms"
-                    defaultValue={650}
-                  />
-                  <FieldRange
-                    label="Distance reveal section"
-                    fieldKey="anim_section_distance_px"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={0}
-                    max={120}
-                    step={1}
-                    unit="px"
-                    defaultValue={36}
                   />
                 </div>
               </CardSection>
@@ -2069,7 +1895,6 @@ export default function AdminSettings() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox label="Activer les mascottes" fieldKey="anim_mascots_enabled" settings={settings} onChange={handleChange} />
                   <FieldCheckbox label="Afficher aussi dans le Hero" fieldKey="anim_mascot_show_hero" settings={settings} onChange={handleChange} />
-                  <FieldCheckbox label="Bulles de dialogue mascottes" fieldKey="anim_mascot_bubbles_enabled" settings={settings} onChange={handleChange} />
                   <FieldRange
                     label="Mascotte par section (0 ou 1)"
                     fieldKey="anim_mascot_count"
@@ -2122,27 +1947,6 @@ export default function AdminSettings() {
                       { value: 'cover', label: 'Cover' },
                     ]}
                   />
-                  <FieldRange
-                    label="Frequence des bulles"
-                    fieldKey="anim_mascot_bubble_interval_ms"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={1200}
-                    max={12000}
-                    step={100}
-                    unit="ms"
-                    defaultValue={4200}
-                  />
-                  <div className="md:col-span-2">
-                    <FieldInput
-                      label="Messages des bulles (une ligne = un message)"
-                      fieldKey="anim_mascot_bubble_messages"
-                      settings={settings}
-                      onChange={handleChange}
-                      textarea
-                      placeholder={"Salut !\\nBienvenue sur mon portfolio."}
-                    />
-                  </div>
                   <div className="md:col-span-2">
                     <MascotAssetUploader
                       label="Mascotte par defaut (fallback global)"
@@ -2197,13 +2001,6 @@ export default function AdminSettings() {
                   <FieldCheckbox label="Sprite principal baladeur" fieldKey="anim_sprite_wander_enabled" settings={settings} onChange={handleChange} />
                   <FieldCheckbox label="Sprites lateraux apparition/disparition" fieldKey="anim_sprite_side_enabled" settings={settings} onChange={handleChange} />
                   <FieldSelect
-                    label="Mode de rendu sprite"
-                    fieldKey="anim_sprite_style"
-                    settings={settings}
-                    onChange={handleChange}
-                    options={SPRITE_STYLE_OPTIONS}
-                  />
-                  <FieldSelect
                     label="Mode de cadrage asset sprite"
                     fieldKey="anim_sprite_asset_fit"
                     settings={settings}
@@ -2212,26 +2009,6 @@ export default function AdminSettings() {
                       { value: 'contain', label: 'Contain (recommande)' },
                       { value: 'cover', label: 'Cover' },
                     ]}
-                  />
-                  <FieldSelect
-                    label="Trajet du sprite principal"
-                    fieldKey="anim_sprite_path"
-                    settings={settings}
-                    onChange={handleChange}
-                    options={SPRITE_PATH_OPTIONS}
-                  />
-                  <FieldSelect
-                    label="Pattern des sprites lateraux"
-                    fieldKey="anim_sprite_side_pattern"
-                    settings={settings}
-                    onChange={handleChange}
-                    options={SPRITE_SIDE_PATTERN_OPTIONS}
-                  />
-                  <FieldCheckbox
-                    label="Orientation automatique gauche/droite"
-                    fieldKey="anim_sprite_flip_enabled"
-                    settings={settings}
-                    onChange={handleChange}
                   />
                   <FieldRange
                     label="Taille sprite principal"
@@ -2264,28 +2041,6 @@ export default function AdminSettings() {
                     max={1}
                     step={0.05}
                     defaultValue={0.88}
-                  />
-                  <FieldRange
-                    label="Amplitude de rebond"
-                    fieldKey="anim_sprite_bounce_px"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={0}
-                    max={24}
-                    step={1}
-                    unit="px"
-                    defaultValue={8}
-                  />
-                  <FieldRange
-                    label="Inclinaison max du sprite"
-                    fieldKey="anim_sprite_wander_rotation_deg"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={0}
-                    max={24}
-                    step={1}
-                    unit="deg"
-                    defaultValue={8}
                   />
                   <FieldRange
                     label="Nombre de sprites lateraux"
@@ -2358,70 +2113,6 @@ export default function AdminSettings() {
                       onUpload={(url) => handleChange('anim_sprite_asset_side_right_url', url)}
                     />
                   </div>
-                </div>
-              </CardSection>
-
-              <CardSection>
-                <SectionTitle>Interactions et Effets</SectionTitle>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FieldCheckbox label="Hover anime sur les cartes" fieldKey="anim_card_hover" settings={settings} onChange={handleChange} />
-                  <FieldCheckbox label="Pulse sur les CTA primaires" fieldKey="anim_cta_pulse" settings={settings} onChange={handleChange} />
-                  <FieldCheckbox label="Barre de progression du scroll" fieldKey="anim_scroll_progress_enabled" settings={settings} onChange={handleChange} />
-                  <FieldRange
-                    label="Lift des cartes"
-                    fieldKey="anim_card_lift_px"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={0}
-                    max={24}
-                    step={1}
-                    unit="px"
-                    defaultValue={8}
-                  />
-                  <FieldRange
-                    label="Scale hover cartes"
-                    fieldKey="anim_card_scale"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={1}
-                    max={1.1}
-                    step={0.005}
-                    unit="x"
-                    defaultValue={1.02}
-                  />
-                  <FieldRange
-                    label="Tilt hover cartes"
-                    fieldKey="anim_card_tilt_deg"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={0}
-                    max={6}
-                    step={0.1}
-                    unit="deg"
-                    defaultValue={1.5}
-                  />
-                  <FieldRange
-                    label="Intervalle pulse CTA"
-                    fieldKey="anim_cta_pulse_interval_ms"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={900}
-                    max={4000}
-                    step={50}
-                    unit="ms"
-                    defaultValue={1800}
-                  />
-                  <FieldRange
-                    label="Epaisseur barre scroll"
-                    fieldKey="anim_scroll_progress_thickness"
-                    settings={settings}
-                    onChange={handleChange}
-                    min={2}
-                    max={10}
-                    step={1}
-                    unit="px"
-                    defaultValue={4}
-                  />
                 </div>
               </CardSection>
 

@@ -1,7 +1,7 @@
 # Presets Animation JSON
 
 Ces fichiers sont compatibles avec l'import JSON de:
-`Admin > Parametres > Animations > Presets Cinematiques > Importer fichier .json`.
+`Admin > Parametres > Animations > Import / Export Lottie-Rive > Importer fichier .json`.
 
 ## Comment importer
 

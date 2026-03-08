@@ -83,6 +83,8 @@ async function main() {
         theme_light_bg_primary: '#f7ffff',
         theme_dark_accent: '#00ffaa',
         theme_dark_accent_light: '#66ffcc',
+        anim_intensity: '1.1',
+        anim_profile: 'balanced',
       },
     },
     {
@@ -141,6 +143,8 @@ async function main() {
     assert.equal(result.applied, false)
     assert.equal(createdPayloads.length, 1)
     assert.equal(createdPayloads[0].settings.marketplace_slug, 'ocean-bloom')
+    assert.equal(createdPayloads[0].settings.anim_intensity, '1.1')
+    assert.equal(createdPayloads[0].settings.anim_profile, undefined)
   })
 
   await runCase('importMarketplaceTheme updates existing preset when replaceExisting=true', async () => {

@@ -2,6 +2,7 @@
 const { ThemePreset, Setting, MarketplaceItem } = require('../models')
 const { createHttpError } = require('../utils/httpError')
 const { THEME_MARKETPLACE_CATALOG } = require('../constants/themeMarketplaceCatalog')
+const { ANIMATION_CORE_SETTING_KEY_SET } = require('../constants/animationSettingKeys')
 
 const MARKETPLACE_SLUG_PATTERN = /^[a-z0-9-]{2,80}$/
 
@@ -46,6 +47,7 @@ function sanitizeSettingsMap(value) {
   for (const [rawKey, rawVal] of entries) {
     const key = sanitizeText(rawKey, 120)
     if (!key) continue
+    if (key.startsWith('anim_') && !ANIMATION_CORE_SETTING_KEY_SET.has(key)) continue
 
     const valueType = typeof rawVal
     if (rawVal === null || valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
