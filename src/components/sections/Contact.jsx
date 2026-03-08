@@ -48,8 +48,8 @@ export default function Contact() {
       sectionKey="contact"
       className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
     >
-      <AnimatedMascots scope="section" sceneKey="contact" />
-      <div className="max-w-6xl mx-auto">
+      <AnimatedMascots scope="contact" sceneKey="contact" />
+      <div className="max-w-6xl mx-auto relative z-20">
         <SectionTitle
           title={sectionTitle}
           subtitle={sectionSubtitle}

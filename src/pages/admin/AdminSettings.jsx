@@ -1869,6 +1869,7 @@ export default function AdminSettings() {
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox label="Activer les mascottes" fieldKey="anim_mascots_enabled" settings={settings} onChange={handleChange} />
+                  <FieldCheckbox label="Bulles de dialogue mascottes" fieldKey="anim_mascot_bubbles_enabled" settings={settings} onChange={handleChange} />
                   <FieldSelect
                     label="Style de mascotte"
                     fieldKey="anim_mascot_style"
@@ -1918,6 +1919,37 @@ export default function AdminSettings() {
                     step={0.05}
                     defaultValue={0.85}
                   />
+                  <FieldRange
+                    label="Frequence des bulles"
+                    fieldKey="anim_mascot_bubble_interval_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={1200}
+                    max={12000}
+                    step={100}
+                    unit="ms"
+                    defaultValue={4200}
+                  />
+                  <FieldRange
+                    label="Bulles visibles en meme temps"
+                    fieldKey="anim_mascot_bubble_max_visible"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={1}
+                    max={3}
+                    step={1}
+                    defaultValue={1}
+                  />
+                  <div className="md:col-span-2">
+                    <FieldInput
+                      label="Messages des bulles (une ligne = un message)"
+                      fieldKey="anim_mascot_bubble_messages"
+                      settings={settings}
+                      onChange={handleChange}
+                      textarea
+                      placeholder={"Salut !\\nBienvenue sur mon portfolio."}
+                    />
+                  </div>
                 </div>
               </CardSection>
 

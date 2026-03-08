@@ -1,9 +1,9 @@
 /* Section Competences avec grille animee */
-import { useEffect, useState } from 'react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
+import AnimatedMascots from '../ui/AnimatedMascots.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Spinner from '../ui/Spinner.jsx'
@@ -46,14 +46,13 @@ export default function Skills() {
   useEffect(() => {
     getSkills()
       .then((res) => {
-        
         const skillsByCategory = res.data || {}
 
         // Transformation en tableau pour mapper dans JSX
         const grouped = Object.entries(skillsByCategory).map(
           ([category, skills]) => ({
             category,
-            items: skills.map((skill) => skill.name), // récupère uniquement le nom
+            items: skills.map((skill) => skill.name),
           })
         )
 
@@ -68,7 +67,7 @@ export default function Skills() {
 
   if (loading) {
     return (
-      <AnimatedSection id="skills" sectionKey="skills" className="py-24 px-4 sm:px-6 lg:px-8">
+      <AnimatedSection id="skills" sectionKey="skills" className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="max-w-6xl mx-auto flex justify-center">
           <Spinner size="lg" />
         </div>
@@ -80,9 +79,11 @@ export default function Skills() {
     <AnimatedSection
       id="skills"
       sectionKey="skills"
-      className="py-24 px-4 sm:px-6 lg:px-8"
+      className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
     >
-      <div className="max-w-6xl mx-auto">
+      <AnimatedMascots scope="skills" sceneKey="skills" />
+
+      <div className="max-w-6xl mx-auto relative z-20">
         <div className="flex items-center gap-3 mb-2">
           <WrenchScrewdriverIcon
             className="h-7 w-7"

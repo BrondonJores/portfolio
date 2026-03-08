@@ -1,10 +1,10 @@
 /* Section Blog avec apercu des derniers articles */
-import { useEffect, useState } from 'react'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { DocumentTextIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
+import AnimatedMascots from '../ui/AnimatedMascots.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Badge from '../ui/Badge.jsx'
@@ -38,9 +38,11 @@ export default function Blog() {
     <AnimatedSection
       id="blog"
       sectionKey="blog"
-      className="py-24 px-4 sm:px-6 lg:px-8"
+      className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
     >
-      <div className="max-w-6xl mx-auto">
+      <AnimatedMascots scope="blog" sceneKey="blog" />
+
+      <div className="max-w-6xl mx-auto relative z-20">
         <SectionTitle
           title={blogTitle}
           subtitle={blogSubtitle}

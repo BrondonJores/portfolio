@@ -28,6 +28,7 @@ export const MASCOT_STYLE_OPTIONS = [
   { value: 'mixed', label: 'Mixte' },
   { value: 'robot', label: 'Robot' },
   { value: 'blob', label: 'Blob' },
+  { value: 'human', label: 'Humain' },
 ]
 
 export const SPRITE_STYLE_OPTIONS = [
@@ -76,6 +77,7 @@ export const CINEMATIC_PRESET_OPTIONS = [
   { value: 'cine-portfolio', label: 'Cinematic Portfolio' },
   { value: 'story-soft', label: 'Story Soft' },
   { value: 'arcade-energy', label: 'Arcade Energy' },
+  { value: 'friendly-host', label: 'Friendly Host' },
 ]
 
 const SECTION_SCENE_SET = new Set(SECTION_SCENE_OPTIONS.map((option) => option.value))
@@ -189,6 +191,28 @@ const CINEMATIC_PRESET_MAP = {
     anim_scene_blog: 'cinematic',
     anim_scene_contact: 'spotlight',
   },
+  'friendly-host': {
+    anim_profile: 'balanced',
+    anim_ease_preset: 'easeOut',
+    anim_intensity: '1',
+    anim_duration_scale: '1',
+    anim_section_once: 'true',
+    anim_mascot_style: 'human',
+    anim_mascot_count: '5',
+    anim_mascot_bubbles_enabled: 'true',
+    anim_mascot_bubble_interval_ms: '3600',
+    anim_mascot_bubble_max_visible: '2',
+    anim_mascot_bubble_messages: 'Bienvenue !\nParcourons le portfolio ensemble.\nUn projet en tete ? Parlons-en.',
+    anim_sprite_style: 'mixed-human',
+    anim_sprite_path: 'orbit',
+    anim_sprite_side_pattern: 'peek',
+    anim_scene_hero: 'soft',
+    anim_scene_about: 'soft',
+    anim_scene_skills: 'spotlight',
+    anim_scene_projects: 'cinematic',
+    anim_scene_blog: 'soft',
+    anim_scene_contact: 'spotlight',
+  },
 }
 
 const IMPORTABLE_ANIMATION_KEY_PATTERN = /^anim_[a-z0-9_]{1,80}$/i
@@ -211,6 +235,21 @@ export function parseBooleanSetting(value, fallback = false) {
     if (value.toLowerCase() === 'false') return false
   }
   return fallback
+}
+
+function parseBubbleMessages(rawValue) {
+  const fallback = ['Salut !', 'Bienvenue sur mon portfolio.', 'Discutons de ton projet.']
+  if (typeof rawValue !== 'string') {
+    return fallback
+  }
+
+  const messages = rawValue
+    .split(/\r?\n|\|/)
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .slice(0, 12)
+
+  return messages.length > 0 ? messages : fallback
 }
 
 function normalizeSectionSceneToken(rawValue) {
@@ -352,6 +391,10 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     mascotSpeed: clampNumber(settings.anim_mascot_speed, 0.5, 2.5, 1) * Math.max(0.75, intensity),
     mascotOpacity: clampNumber(settings.anim_mascot_opacity, 0.2, 1, 0.85),
     mascotStyle: settings.anim_mascot_style || 'mixed',
+    mascotBubblesEnabled: parseBooleanSetting(settings.anim_mascot_bubbles_enabled, true),
+    mascotBubbleIntervalMs: clampNumber(settings.anim_mascot_bubble_interval_ms, 1200, 12000, 4200),
+    mascotBubbleMaxVisible: Math.round(clampNumber(settings.anim_mascot_bubble_max_visible, 1, 3, 1)),
+    mascotBubbleMessages: parseBubbleMessages(settings.anim_mascot_bubble_messages),
     spriteWanderEnabled: parseBooleanSetting(settings.anim_sprite_wander_enabled, true),
     spriteWanderSizePx: clampNumber(settings.anim_sprite_wander_size, 36, 140, 74) * Math.max(0.8, intensity),
     spriteWanderSpeed: clampNumber(settings.anim_sprite_wander_speed, 0.4, 2.6, 1) * Math.max(0.75, intensity),

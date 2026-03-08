@@ -1,6 +1,7 @@
 /* Section A propos avec mise en page deux colonnes */
 import { UserIcon, BriefcaseIcon, CodeBracketIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
+import AnimatedMascots from '../ui/AnimatedMascots.jsx'
 import Card from '../ui/Card.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 
@@ -24,14 +25,17 @@ export default function About() {
   const aboutPhotoCaption = settings.about_photo_caption || 'De la conception au deploiement, je prends en charge le cycle complet.'
   const aboutTitle = settings.ui_about_title || 'A propos de moi'
   const initials = heroName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+
   return (
     <AnimatedSection
       id="about"
       sectionKey="about"
-      className="py-24 px-4 sm:px-6 lg:px-8"
+      className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
       style={{ backgroundColor: 'var(--color-bg-secondary)' }}
     >
-      <div className="max-w-6xl mx-auto">
+      <AnimatedMascots scope="about" sceneKey="about" />
+
+      <div className="max-w-6xl mx-auto relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Colonne gauche : photo hero retravaillee */}
           <div className="flex flex-col items-center lg:items-start">
