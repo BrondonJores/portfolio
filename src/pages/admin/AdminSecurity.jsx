@@ -92,7 +92,7 @@ export default function AdminSecurity() {
       try {
         const [summaryResponse, eventsResponse] = await Promise.all([
           getSecuritySummary({ windowHours }),
-          getSecurityEvents({ limit: 50, offset: resetList ? 0 : events.length, severity }),
+          getSecurityEvents({ limit: 50, offset: resetList ? 0 : events.length, severity, windowHours }),
         ])
 
         setSummary(summaryResponse?.data || null)
@@ -124,7 +124,11 @@ export default function AdminSecurity() {
       { label: 'Alertes', value: summary?.warningEvents || 0 },
       { label: 'Echecs auth', value: summary?.authFailures || 0 },
       { label: 'Origines bloquees', value: summary?.blockedOrigins || 0 },
-      { label: 'Rate limit hits', value: summary?.rateLimitHits || 0 },
+      { label: 'Rate limit total', value: summary?.rateLimitHits || 0 },
+      { label: 'Rate limit public', value: summary?.rateLimitPublicHits || 0 },
+      { label: 'Rate limit admin', value: summary?.rateLimitAdminHits || 0 },
+      { label: 'Rate limit auth', value: summary?.rateLimitAuthHits || 0 },
+      { label: 'IPs uniques', value: summary?.uniqueIpCount || 0 },
     ],
     [summary]
   )
@@ -201,10 +205,70 @@ export default function AdminSecurity() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
               {summaryCards.map((card) => (
                 <StatCard key={card.label} label={card.label} value={card.value} />
               ))}
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+              <div
+                className="rounded-xl border p-4"
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+              >
+                <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                  Top types d&apos;evenements
+                </h2>
+                {Array.isArray(summary?.topEventTypes) && summary.topEventTypes.length > 0 ? (
+                  <div className="space-y-2">
+                    {summary.topEventTypes.map((entry) => (
+                      <div
+                        key={entry.eventType}
+                        className="flex items-center justify-between text-sm"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        <span>{entry.eventType}</span>
+                        <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {entry.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    Aucun evenement sur cette fenetre.
+                  </p>
+                )}
+              </div>
+
+              <div
+                className="rounded-xl border p-4"
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+              >
+                <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                  Top adresses IP
+                </h2>
+                {Array.isArray(summary?.topIps) && summary.topIps.length > 0 ? (
+                  <div className="space-y-2">
+                    {summary.topIps.map((entry) => (
+                      <div
+                        key={entry.ip}
+                        className="flex items-center justify-between text-sm"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        <span>{entry.ip || '-'}</span>
+                        <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {entry.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    Aucune IP significative sur cette fenetre.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div

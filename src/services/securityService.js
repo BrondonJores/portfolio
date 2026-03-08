@@ -14,7 +14,7 @@ export const getSecuritySummary = (params = {}) => {
 
 /**
  * Retourne la liste paginee des evenements securite.
- * @param {{limit?:number,offset?:number,severity?:string,eventType?:string}} [params] Filtres.
+ * @param {{limit?:number,offset?:number,severity?:string,eventType?:string,windowHours?:number}} [params] Filtres.
  * @returns {Promise<object>} Page d'evenements.
  */
 export const getSecurityEvents = (params = {}) => {
@@ -30,6 +30,9 @@ export const getSecurityEvents = (params = {}) => {
   }
   if (params.eventType) {
     query.set('event_type', String(params.eventType))
+  }
+  if (Number.isInteger(Number(params.windowHours)) && Number(params.windowHours) > 0) {
+    query.set('window_hours', String(Number(params.windowHours)))
   }
 
   const suffix = query.toString() ? `?${query.toString()}` : ''

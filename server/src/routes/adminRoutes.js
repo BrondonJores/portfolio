@@ -73,6 +73,10 @@ const {
 } = require('../validators/themePresetValidator')
 const { marketplaceListValidator, importThemeMarketplaceValidator } = require('../validators/themeMarketplaceValidator')
 const {
+  listSecurityEventsValidator,
+  securitySummaryValidator,
+} = require('../validators/securityValidator')
+const {
   currentVisualBuilderDraftQueryValidator,
   upsertVisualBuilderDraftValidator,
 } = require('../validators/visualBuilderDraftValidator')
@@ -131,8 +135,8 @@ router.get('/settings', getSettings)
 router.put('/settings', upsertSettings)
 
 /* Routes securite admin */
-router.get('/security/events', listSecurityEvents)
-router.get('/security/summary', securitySummary)
+router.get('/security/events', validate(listSecurityEventsValidator), listSecurityEvents)
+router.get('/security/summary', validate(securitySummaryValidator), securitySummary)
 
 /* Routes persistance visual builder admin */
 router.get(

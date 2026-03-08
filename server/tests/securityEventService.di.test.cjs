@@ -70,17 +70,22 @@ async function main() {
     assert.equal(result, null)
   })
 
-  await runCase('getSecurityEvents returns paginated payload', async () => {
+  await runCase('getSecurityEvents returns paginated payload and applies window filter', async () => {
+    let capturedWhere = null
     const service = createSecurityEventService({
       securityEventModel: {
-        findAndCountAll: async ({ limit, offset, where }) => ({
-          rows: [{ id: 1, event_type: where.event_type || 'auth.login_failed' }],
-          count: 42,
-          limit,
-          offset,
-        }),
+        findAndCountAll: async ({ limit, offset, where }) => {
+          capturedWhere = where
+          return {
+            rows: [{ id: 1, event_type: where.event_type || 'auth.login_failed' }],
+            count: 42,
+            limit,
+            offset,
+          }
+        },
       },
-      sequelizeFns: { Op: {}, fn: () => {}, col: () => {}, literal: () => {} },
+      sequelizeFns: { Op: { gte: 'gte' }, fn: () => {}, col: () => {}, literal: () => {} },
+      now: () => new Date('2026-03-08T12:00:00.000Z'),
     })
 
     const page = await service.getSecurityEvents({
@@ -88,31 +93,76 @@ async function main() {
       offset: 5,
       eventType: 'auth.login_failed',
       severity: 'warning',
+      windowHours: 6,
     })
 
     assert.equal(page.total, 42)
     assert.equal(page.limit, 10)
     assert.equal(page.offset, 5)
     assert.equal(page.items.length, 1)
+    assert.equal(capturedWhere.event_type, 'auth.login_failed')
+    assert.equal(capturedWhere.severity, 'warning')
+    assert.equal(capturedWhere.created_at.gte.toISOString(), '2026-03-08T06:00:00.000Z')
   })
 
   await runCase('getSecuritySummary aggregates values', async () => {
-    const countCalls = []
+    const Op = { gte: 'gte', in: 'in', ne: 'ne' }
     const service = createSecurityEventService({
       securityEventModel: {
-        count: async (options) => {
-          countCalls.push(options)
-          return countCalls.length
+        count: async (options = {}) => {
+          if (options.distinct && options.col === 'ip_address') {
+            return 12
+          }
+
+          const where = options.where || {}
+          if (where.severity === 'critical') return 2
+          if (where.severity === 'warning') return 3
+
+          const eventType = where.event_type
+          if (!eventType) return 1
+          if (eventType === 'request.untrusted_origin') return 5
+
+          const inValues = Array.isArray(eventType?.[Op.in]) ? eventType[Op.in] : []
+          if (inValues.length > 0) {
+            if (
+              inValues.length === 3 &&
+              inValues.includes('auth.login_failed') &&
+              inValues.includes('auth.2fa_failed') &&
+              inValues.includes('auth.invalid_token')
+            ) {
+              return 4
+            }
+
+            if (
+              inValues.length === 4 &&
+              inValues.includes('request.rate_limited') &&
+              inValues.includes('request.rate_limited.public') &&
+              inValues.includes('request.rate_limited.admin') &&
+              inValues.includes('request.rate_limited.auth')
+            ) {
+              return 6
+            }
+
+            if (inValues.length === 1 && inValues[0] === 'request.rate_limited.public') return 7
+            if (inValues.length === 1 && inValues[0] === 'request.rate_limited.admin') return 8
+            if (inValues.length === 1 && inValues[0] === 'request.rate_limited.auth') return 9
+            if (inValues.length === 1 && inValues[0] === 'request.rate_limited') return 10
+          }
+
+          return 0
         },
         findAll: async (options) => {
-          if (options.raw) {
+          if (options.raw && Array.isArray(options.group) && options.group[0] === 'ip_address') {
             return [{ ip_address: '1.1.1.1', count: '4' }]
+          }
+          if (options.raw && Array.isArray(options.group) && options.group[0] === 'event_type') {
+            return [{ event_type: 'auth.login_failed', count: '9' }]
           }
           return [{ id: 99, event_type: 'request.rate_limited' }]
         },
       },
       sequelizeFns: {
-        Op: { gte: 'gte', in: 'in', ne: 'ne' },
+        Op,
         fn: (_name, _arg) => 'fn',
         col: (value) => value,
         literal: (value) => value,
@@ -129,8 +179,15 @@ async function main() {
     assert.equal(summary.authFailures, 4)
     assert.equal(summary.blockedOrigins, 5)
     assert.equal(summary.rateLimitHits, 6)
+    assert.equal(summary.rateLimitPublicHits, 7)
+    assert.equal(summary.rateLimitAdminHits, 8)
+    assert.equal(summary.rateLimitAuthHits, 9)
+    assert.equal(summary.rateLimitLegacyHits, 10)
+    assert.equal(summary.uniqueIpCount, 12)
     assert.equal(summary.topIps[0].ip, '1.1.1.1')
     assert.equal(summary.topIps[0].count, 4)
+    assert.equal(summary.topEventTypes[0].eventType, 'auth.login_failed')
+    assert.equal(summary.topEventTypes[0].count, 9)
     assert.equal(summary.recentEvents.length, 1)
   })
 

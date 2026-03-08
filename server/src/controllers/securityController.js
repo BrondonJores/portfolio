@@ -15,6 +15,7 @@ async function listSecurityEvents(req, res, next) {
       offset: req.query.offset,
       eventType: req.query.event_type || req.query.eventType,
       severity: req.query.severity,
+      windowHours: req.query.window_hours || req.query.windowHours,
     })
     return res.json({ data })
   } catch (err) {

@@ -3,6 +3,14 @@ const sequelizeLib = require('sequelize')
 const { SecurityEvent } = require('../models')
 
 const ALLOWED_SEVERITIES = new Set(['info', 'warning', 'critical'])
+const AUTH_FAILURE_EVENT_TYPES = Object.freeze(['auth.login_failed', 'auth.2fa_failed', 'auth.invalid_token'])
+const RATE_LIMIT_EVENT_TYPES = Object.freeze([
+  'request.rate_limited',
+  'request.rate_limited.public',
+  'request.rate_limited.admin',
+  'request.rate_limited.auth',
+])
+const MAX_WINDOW_HOURS = 24 * 30
 
 /**
  * Tronque une chaine a une longueur maximale.
@@ -41,6 +49,30 @@ function parsePositiveInteger(value, fallback) {
 }
 
 /**
+ * Normalise une fenetre horaire en bornant la valeur maximale.
+ * @param {unknown} value Valeur brute.
+ * @param {number|null} fallback Valeur de repli.
+ * @returns {number|null} Fenetre horaire valide ou fallback.
+ */
+function resolveWindowHours(value, fallback) {
+  const parsed = parsePositiveInteger(value, fallback)
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return fallback
+  }
+  return Math.min(parsed, MAX_WINDOW_HOURS)
+}
+
+/**
+ * Retourne la date de debut de fenetre glissante.
+ * @param {Function} now Fabrique de date courante.
+ * @param {number} windowHours Taille de fenetre en heures.
+ * @returns {Date} Date de debut.
+ */
+function computeSinceDate(now, windowHours) {
+  return new Date(now().getTime() - windowHours * 60 * 60 * 1000)
+}
+
+/**
  * Extrait la meilleure IP disponible depuis une requete HTTP.
  * @param {import('express').Request} req Requete HTTP.
  * @returns {string} Adresse IP normalisee.
@@ -70,6 +102,9 @@ function createSecurityEventService(deps = {}) {
   const sequelizeFns = deps.sequelizeFns || sequelizeLib
   const now = deps.now || (() => new Date())
   const { Op, fn, col, literal } = sequelizeFns
+  const gteOperator = Op?.gte || 'gte'
+  const inOperator = Op?.in || 'in'
+  const notEqualOperator = Op?.ne || 'ne'
 
   /**
    * Journalise un evenement de securite (operation safe: ne jette jamais).
@@ -141,9 +176,14 @@ function createSecurityEventService(deps = {}) {
       where.event_type = eventType
     }
 
-    const severity = normalizeSeverity(options.severity)
-    if (toTrimmedString(options.severity, 16)) {
-      where.severity = severity
+    const rawSeverity = toTrimmedString(options.severity, 16).toLowerCase()
+    if (rawSeverity && ALLOWED_SEVERITIES.has(rawSeverity)) {
+      where.severity = rawSeverity
+    }
+
+    const windowHours = resolveWindowHours(options.windowHours, null)
+    if (windowHours) {
+      where.created_at = { [gteOperator]: computeSinceDate(now, windowHours) }
     }
 
     const result = await securityEventModel.findAndCountAll({
@@ -168,37 +208,85 @@ function createSecurityEventService(deps = {}) {
    * @returns {Promise<object>} KPIs securite + top IPs.
    */
   async function getSecuritySummary(options = {}) {
-    const windowHours = Math.min(parsePositiveInteger(options.windowHours, 24), 24 * 30)
-    const since = new Date(now().getTime() - windowHours * 60 * 60 * 1000)
+    const windowHours = resolveWindowHours(options.windowHours, 24)
+    const since = computeSinceDate(now, windowHours)
+    const whereSince = { created_at: { [gteOperator]: since } }
 
-    const [total, critical, warning, authFailures, blockedOrigins, rateLimitHits, topIpsRaw, recentEvents] =
+    const [
+      total,
+      critical,
+      warning,
+      authFailures,
+      blockedOrigins,
+      rateLimitHits,
+      rateLimitPublicHits,
+      rateLimitAdminHits,
+      rateLimitAuthHits,
+      rateLimitLegacyHits,
+      uniqueIpCount,
+      topIpsRaw,
+      topEventTypesRaw,
+      recentEvents,
+    ] =
       await Promise.all([
-        securityEventModel.count({ where: { created_at: { [Op.gte]: since } } }),
-        securityEventModel.count({ where: { created_at: { [Op.gte]: since }, severity: 'critical' } }),
-        securityEventModel.count({ where: { created_at: { [Op.gte]: since }, severity: 'warning' } }),
+        securityEventModel.count({ where: whereSince }),
+        securityEventModel.count({ where: { ...whereSince, severity: 'critical' } }),
+        securityEventModel.count({ where: { ...whereSince, severity: 'warning' } }),
         securityEventModel.count({
           where: {
-            created_at: { [Op.gte]: since },
-            event_type: { [Op.in]: ['auth.login_failed', 'auth.2fa_failed', 'auth.invalid_token'] },
+            ...whereSince,
+            event_type: { [inOperator]: AUTH_FAILURE_EVENT_TYPES },
           },
         }),
         securityEventModel.count({
           where: {
-            created_at: { [Op.gte]: since },
+            ...whereSince,
             event_type: 'request.untrusted_origin',
           },
         }),
         securityEventModel.count({
           where: {
-            created_at: { [Op.gte]: since },
-            event_type: 'request.rate_limited',
+            ...whereSince,
+            event_type: { [inOperator]: RATE_LIMIT_EVENT_TYPES },
+          },
+        }),
+        securityEventModel.count({
+          where: {
+            ...whereSince,
+            event_type: { [inOperator]: ['request.rate_limited.public'] },
+          },
+        }),
+        securityEventModel.count({
+          where: {
+            ...whereSince,
+            event_type: { [inOperator]: ['request.rate_limited.admin'] },
+          },
+        }),
+        securityEventModel.count({
+          where: {
+            ...whereSince,
+            event_type: { [inOperator]: ['request.rate_limited.auth'] },
+          },
+        }),
+        securityEventModel.count({
+          where: {
+            ...whereSince,
+            event_type: { [inOperator]: ['request.rate_limited'] },
+          },
+        }),
+        securityEventModel.count({
+          distinct: true,
+          col: 'ip_address',
+          where: {
+            ...whereSince,
+            ip_address: { [notEqualOperator]: null },
           },
         }),
         securityEventModel.findAll({
           attributes: ['ip_address', [fn('COUNT', col('id')), 'count']],
           where: {
-            created_at: { [Op.gte]: since },
-            ip_address: { [Op.ne]: null },
+            ...whereSince,
+            ip_address: { [notEqualOperator]: null },
           },
           group: ['ip_address'],
           order: [[literal('count'), 'DESC']],
@@ -206,7 +294,15 @@ function createSecurityEventService(deps = {}) {
           raw: true,
         }),
         securityEventModel.findAll({
-          where: { created_at: { [Op.gte]: since } },
+          attributes: ['event_type', [fn('COUNT', col('id')), 'count']],
+          where: whereSince,
+          group: ['event_type'],
+          order: [[literal('count'), 'DESC']],
+          limit: 6,
+          raw: true,
+        }),
+        securityEventModel.findAll({
+          where: whereSince,
           order: [['created_at', 'DESC']],
           limit: 8,
         }),
@@ -220,8 +316,17 @@ function createSecurityEventService(deps = {}) {
       authFailures: Number(authFailures || 0),
       blockedOrigins: Number(blockedOrigins || 0),
       rateLimitHits: Number(rateLimitHits || 0),
+      rateLimitPublicHits: Number(rateLimitPublicHits || 0),
+      rateLimitAdminHits: Number(rateLimitAdminHits || 0),
+      rateLimitAuthHits: Number(rateLimitAuthHits || 0),
+      rateLimitLegacyHits: Number(rateLimitLegacyHits || 0),
+      uniqueIpCount: Number(uniqueIpCount || 0),
       topIps: (topIpsRaw || []).map((entry) => ({
         ip: entry.ip_address,
+        count: Number(entry.count || 0),
+      })),
+      topEventTypes: (topEventTypesRaw || []).map((entry) => ({
+        eventType: toTrimmedString(entry.event_type, 120),
         count: Number(entry.count || 0),
       })),
       recentEvents: recentEvents || [],
