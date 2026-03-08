@@ -1,10 +1,12 @@
 /* Service de gestion des articles */
 import { api } from './api.js'
 
+const ARTICLE_CACHE_TTL_MS = 30_000
+
 /* Fonctions publiques */
 export const getArticles = (params) => {
   const query = params ? '?' + new URLSearchParams(params).toString() : ''
-  return api.get(`/articles${query}`)
+  return api.get(`/articles${query}`, { cacheTtlMs: ARTICLE_CACHE_TTL_MS })
 }
 export const getArticleBySlug = (slug) => api.get(`/articles/${slug}`)
 export const likeArticle = (slug) => api.post(`/articles/${slug}/likes`)

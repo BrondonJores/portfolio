@@ -1,6 +1,8 @@
 /* Service des statistiques du tableau de bord */
 import { api } from './api.js'
 
+const ADMIN_STATS_CACHE_TTL_MS = 15_000
+
 /* Recupere le snapshot stats complet (KPI, tendances, series, recents). */
 export function getAdminStats(options = {}) {
   const params = new URLSearchParams()
@@ -12,5 +14,5 @@ export function getAdminStats(options = {}) {
   const query = params.toString()
   const suffix = query ? `?${query}` : ''
 
-  return api.get(`/admin/stats${suffix}`)
+  return api.get(`/admin/stats${suffix}`, { cacheTtlMs: ADMIN_STATS_CACHE_TTL_MS })
 }

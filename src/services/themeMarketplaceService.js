@@ -1,6 +1,8 @@
 /* Service API du marketplace de themes. */
 import { api } from './api.js'
 
+const THEME_MARKETPLACE_CACHE_TTL_MS = 30_000
+
 /**
  * Recupere la liste des themes marketplace cote admin.
  * @param {{q?: string, category?: string}} [params] Filtres optionnels.
@@ -8,7 +10,9 @@ import { api } from './api.js'
  */
 export const getThemeMarketplace = (params) => {
   const query = params ? '?' + new URLSearchParams(params).toString() : ''
-  return api.get(`/admin/theme-marketplace${query}`)
+  return api.get(`/admin/theme-marketplace${query}`, {
+    cacheTtlMs: THEME_MARKETPLACE_CACHE_TTL_MS,
+  })
 }
 
 /**

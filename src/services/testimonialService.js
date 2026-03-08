@@ -1,8 +1,10 @@
 /* Service de gestion des temoignages */
 import { api } from './api.js'
 
+const TESTIMONIAL_CACHE_TTL_MS = 60_000
+
 /* Fonction publique */
-export const getTestimonials = () => api.get('/testimonials')
+export const getTestimonials = () => api.get('/testimonials', { cacheTtlMs: TESTIMONIAL_CACHE_TTL_MS })
 
 /* Fonctions admin */
 export const getAdminTestimonials = (params) => {

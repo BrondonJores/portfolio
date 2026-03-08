@@ -1,17 +1,21 @@
 /* Service API des presets de theme admin. */
 import { api } from './api.js'
 
+const THEME_PRESET_CACHE_TTL_MS = 30_000
+
 /**
  * Recupere la liste des presets de theme.
  * @returns {Promise<{data: Array<object>}>} Reponse API.
  */
-export const getThemePresets = () => api.get('/admin/theme-presets')
+export const getThemePresets = () =>
+  api.get('/admin/theme-presets', { cacheTtlMs: THEME_PRESET_CACHE_TTL_MS })
 
 /**
  * Recupere la liste publique des presets de theme.
  * @returns {Promise<{data: Array<object>}>} Reponse API.
  */
-export const getPublicThemePresets = () => api.get('/theme-presets')
+export const getPublicThemePresets = () =>
+  api.get('/theme-presets', { cacheTtlMs: THEME_PRESET_CACHE_TTL_MS })
 
 /**
  * Cree un preset de theme.

@@ -8,6 +8,96 @@ let _accessToken = null
 let _refreshTokenFn = null
 let _logoutFn = null
 let _refreshInFlight = null
+let _pendingGetRequests = new Map()
+let _cachedGetResponses = new Map()
+let _cacheGeneration = 0
+let _isAuthenticatedScope = false
+
+/**
+ * Invalide toutes les optimisations GET (dedup + cache TTL).
+ * @returns {void}
+ */
+function invalidateGetOptimizations() {
+  _cacheGeneration += 1
+  _pendingGetRequests.clear()
+  _cachedGetResponses.clear()
+}
+
+/**
+ * Normalise une TTL de cache en millisecondes.
+ * @param {unknown} cacheTtlMs Valeur candidate.
+ * @returns {number} TTL valide (>= 0).
+ */
+function sanitizeCacheTtl(cacheTtlMs) {
+  const ttl = Number(cacheTtlMs)
+  if (!Number.isFinite(ttl) || ttl <= 0) {
+    return 0
+  }
+  return Math.floor(ttl)
+}
+
+/**
+ * Realise un clone defensif d'un payload JSON.
+ * @param {unknown} payload Donnee a cloner.
+ * @returns {unknown} Copie du payload.
+ */
+function clonePayload(payload) {
+  if (payload === null || payload === undefined) {
+    return payload
+  }
+
+  if (typeof payload !== 'object') {
+    return payload
+  }
+
+  try {
+    return structuredClone(payload)
+  } catch {
+    try {
+      return JSON.parse(JSON.stringify(payload))
+    } catch {
+      return payload
+    }
+  }
+}
+
+/**
+ * Lit le cache GET et nettoie les entrees expirees.
+ * @param {string} cacheKey Cle de cache.
+ * @returns {{hit:boolean,payload:unknown}} Resultat de lecture.
+ */
+function readCachedGetPayload(cacheKey) {
+  const entry = _cachedGetResponses.get(cacheKey)
+  if (!entry) {
+    return { hit: false, payload: null }
+  }
+
+  if (entry.expiresAt <= Date.now()) {
+    _cachedGetResponses.delete(cacheKey)
+    return { hit: false, payload: null }
+  }
+
+  return { hit: true, payload: clonePayload(entry.payload) }
+}
+
+/**
+ * Ecrit une reponse GET dans le cache TTL si la generation est toujours courante.
+ * @param {string} cacheKey Cle de cache.
+ * @param {unknown} payload Reponse API.
+ * @param {number} ttlMs TTL en millisecondes.
+ * @param {number} generationAtStart Generation capturee au lancement.
+ * @returns {void}
+ */
+function writeCachedGetPayload(cacheKey, payload, ttlMs, generationAtStart) {
+  if (ttlMs <= 0 || generationAtStart !== _cacheGeneration) {
+    return
+  }
+
+  _cachedGetResponses.set(cacheKey, {
+    expiresAt: Date.now() + ttlMs,
+    payload: clonePayload(payload),
+  })
+}
 
 /**
  * Extrait les messages de validation d'un payload API.
@@ -55,6 +145,12 @@ function buildApiError(status, payload) {
 
 /* Injection des dependances d'authentification depuis le contexte */
 export function configureApi({ accessToken, refreshToken, logout }) {
+  const nextAuthScope = Boolean(accessToken)
+  if (nextAuthScope !== _isAuthenticatedScope) {
+    invalidateGetOptimizations()
+  }
+  _isAuthenticatedScope = nextAuthScope
+
   _accessToken = accessToken
   _refreshTokenFn = refreshToken
   _logoutFn = logout
@@ -89,8 +185,8 @@ function buildHeaders(extra = {}) {
   return headers
 }
 
-/* Effectue une requete avec gestion du rafraichissement automatique en cas de 401 */
-async function request(method, path, body, retried = false) {
+/* Execute une requete HTTP brute avec gestion du rafraichissement automatique en cas de 401. */
+async function executeRequest(method, path, body, retried = false) {
   const options = {
     method,
     headers: buildHeaders(),
@@ -107,7 +203,7 @@ async function request(method, path, body, retried = false) {
   if (response.status === 401 && !retried && _refreshTokenFn) {
     try {
       await getFreshAccessToken()
-      return request(method, path, body, true)
+      return executeRequest(method, path, body, true)
     } catch {
       /* Rafraichissement echoue : deconnexion et redirection */
       if (_logoutFn) _logoutFn()
@@ -132,8 +228,59 @@ async function request(method, path, body, retried = false) {
   return response.json()
 }
 
+/*
+ * Point d'entree des appels API.
+ * Optimisation non-cassante:
+ * - deduplication des GET concurrents sur la meme route.
+ *   => si deux composants demandent simultanement le meme endpoint,
+ *      un seul aller-retour reseau est effectue.
+ */
+function request(method, path, body, options = {}) {
+  const normalizedOptions = options && typeof options === 'object' ? options : {}
+  const cacheTtlMs = sanitizeCacheTtl(normalizedOptions.cacheTtlMs)
+  const isGet = method === 'GET' && body === undefined
+
+  if (!isGet) {
+    return executeRequest(method, path, body).then((payload) => {
+      invalidateGetOptimizations()
+      return payload
+    })
+  }
+
+  const cacheKey = path
+  if (cacheTtlMs > 0) {
+    const cached = readCachedGetPayload(cacheKey)
+    if (cached.hit) {
+      return Promise.resolve(cached.payload)
+    }
+  }
+
+  const pending = _pendingGetRequests.get(cacheKey)
+  if (pending) {
+    return cacheTtlMs > 0 ? pending.then((payload) => clonePayload(payload)) : pending
+  }
+
+  const generationAtStart = _cacheGeneration
+  const requestPromise = executeRequest(method, path, body)
+    .then((payload) => {
+      if (cacheTtlMs > 0) {
+        writeCachedGetPayload(cacheKey, payload, cacheTtlMs, generationAtStart)
+      }
+      return payload
+    })
+    .finally(() => {
+      const current = _pendingGetRequests.get(cacheKey)
+      if (current === requestPromise) {
+        _pendingGetRequests.delete(cacheKey)
+      }
+    })
+
+  _pendingGetRequests.set(cacheKey, requestPromise)
+  return cacheTtlMs > 0 ? requestPromise.then((payload) => clonePayload(payload)) : requestPromise
+}
+
 export const api = {
-  get: (path) => request('GET', path),
+  get: (path, options) => request('GET', path, undefined, options),
   post: (path, body) => request('POST', path, body),
   put: (path, body) => request('PUT', path, body),
   del: (path) => request('DELETE', path),

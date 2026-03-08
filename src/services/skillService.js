@@ -1,10 +1,12 @@
 /* Service de gestion des competences */
 import { api } from './api.js'
 
+const SKILL_CACHE_TTL_MS = 30_000
+
 /* Fonction publique */
 export const getSkills = async () => {
-  const res = await api.get('/skills')
-  return res 
+  const res = await api.get('/skills', { cacheTtlMs: SKILL_CACHE_TTL_MS })
+  return res
 }
 
 /* Fonctions admin */
