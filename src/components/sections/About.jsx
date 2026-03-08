@@ -26,6 +26,7 @@ export default function About() {
   return (
     <AnimatedSection
       id="about"
+      sectionKey="about"
       className="py-24 px-4 sm:px-6 lg:px-8"
       style={{ backgroundColor: 'var(--color-bg-secondary)' }}
     >

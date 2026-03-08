@@ -82,6 +82,12 @@ export const DEFAULT_THEME_SETTINGS = {
   anim_sprite_flip_enabled: 'true',
   anim_sprite_bounce_px: '8',
   anim_sprite_wander_rotation_deg: '8',
+  anim_scene_hero: 'inherit',
+  anim_scene_about: 'inherit',
+  anim_scene_skills: 'inherit',
+  anim_scene_projects: 'inherit',
+  anim_scene_blog: 'inherit',
+  anim_scene_contact: 'inherit',
   anim_scroll_progress_enabled: 'true',
   anim_scroll_progress_thickness: '4',
 }

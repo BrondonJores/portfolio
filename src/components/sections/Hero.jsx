@@ -5,7 +5,7 @@ import { ArrowDownIcon, BoltIcon, MapPinIcon } from '@heroicons/react/24/outline
 import Button from '../ui/Button.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
-import { getAnimationConfig } from '../../utils/animationSettings.js'
+import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -45,7 +45,7 @@ export default function Hero() {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
-    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
+    () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), 'hero'),
     [settings, prefersReducedMotion]
   )
 
@@ -94,7 +94,7 @@ export default function Hero() {
       id="hero"
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
     >
-      <AnimatedMascots scope="hero" />
+      <AnimatedMascots scope="hero" sceneKey="hero" />
 
       <motion.div
         className="absolute inset-0 -z-10"

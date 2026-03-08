@@ -16,7 +16,7 @@ import Button from '../ui/Button.jsx'
 import Spinner from '../ui/Spinner.jsx'
 import { getProjects } from '../../services/projectService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
-import { getAnimationConfig } from '../../utils/animationSettings.js'
+import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
 /* Variants pour l'animation staggeree des cartes */
 const containerVariants = {
@@ -42,7 +42,7 @@ export default function Projects() {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
-    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
+    () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), 'projects'),
     [settings, prefersReducedMotion]
   )
   const canAnimate = animationConfig.canAnimate
@@ -61,6 +61,7 @@ export default function Projects() {
     return (
       <AnimatedSection
         id="projects"
+        sectionKey="projects"
         className="py-24 px-4 sm:px-6 lg:px-8"
         style={{ backgroundColor: 'var(--color-bg-secondary)' }}
       >
@@ -78,6 +79,7 @@ export default function Projects() {
   return (
     <AnimatedSection
       id="projects"
+      sectionKey="projects"
       className="py-24 px-4 sm:px-6 lg:px-8"
       style={{ backgroundColor: 'var(--color-bg-secondary)' }}
     >

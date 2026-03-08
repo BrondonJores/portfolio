@@ -10,14 +10,14 @@ import Card from '../ui/Card.jsx'
 import Badge from '../ui/Badge.jsx'
 import { getArticles } from '../../services/articleService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
-import { getAnimationConfig } from '../../utils/animationSettings.js'
+import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
 export default function Blog() {
   const [articles, setArticles] = useState([])
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
-    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
+    () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), 'blog'),
     [settings, prefersReducedMotion]
   )
   const canAnimate = animationConfig.canAnimate
@@ -34,6 +34,7 @@ export default function Blog() {
   return (
     <AnimatedSection
       id="blog"
+      sectionKey="blog"
       className="py-24 px-4 sm:px-6 lg:px-8"
     >
       <div className="max-w-6xl mx-auto">

@@ -9,7 +9,7 @@ import Card from '../ui/Card.jsx'
 import Spinner from '../ui/Spinner.jsx'
 import { getSkills } from '../../services/skillService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
-import { getAnimationConfig } from '../../utils/animationSettings.js'
+import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
 /* Variants pour l'animation staggeree des elements */
 const containerVariants = {
@@ -35,7 +35,7 @@ export default function Skills() {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
-    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
+    () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), 'skills'),
     [settings, prefersReducedMotion]
   )
   const canAnimate = animationConfig.canAnimate
@@ -65,7 +65,7 @@ export default function Skills() {
 
   if (loading) {
     return (
-      <AnimatedSection id="skills" className="py-24 px-4 sm:px-6 lg:px-8">
+      <AnimatedSection id="skills" sectionKey="skills" className="py-24 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto flex justify-center">
           <Spinner size="lg" />
         </div>
@@ -76,6 +76,7 @@ export default function Skills() {
   return (
     <AnimatedSection
       id="skills"
+      sectionKey="skills"
       className="py-24 px-4 sm:px-6 lg:px-8"
     >
       <div className="max-w-6xl mx-auto">

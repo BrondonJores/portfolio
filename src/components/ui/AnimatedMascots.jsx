@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { useMemo } from 'react'
 import { useSettings } from '../../context/SettingsContext.jsx'
-import { getAnimationConfig } from '../../utils/animationSettings.js'
+import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
 const HERO_POSITIONS = [
   { top: '14%', left: '8%' },
@@ -58,12 +58,13 @@ function BlobMascot({ accent, accentLight, textColor }) {
   )
 }
 
-export default function AnimatedMascots({ scope = 'hero' }) {
+export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
+  const resolvedSceneKey = sceneKey || (scope === 'hero' ? 'hero' : 'contact')
   const animationConfig = useMemo(
-    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
-    [settings, prefersReducedMotion]
+    () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), resolvedSceneKey),
+    [settings, prefersReducedMotion, resolvedSceneKey]
   )
 
   if (!animationConfig.canAnimate || !animationConfig.mascotsEnabled || animationConfig.mascotCount <= 0) {

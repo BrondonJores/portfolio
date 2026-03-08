@@ -2,7 +2,7 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import { useMemo } from 'react'
 import { useSettings } from '../../context/SettingsContext.jsx'
-import { getAnimationConfig } from '../../utils/animationSettings.js'
+import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
 function getInitialAnimation(revealType, distance) {
   switch (revealType) {
@@ -39,18 +39,24 @@ function getTargetAnimation(revealType) {
 export default function AnimatedSection({ className = '', children, ...props }) {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
+  const { sectionKey = '' } = props
   const animationConfig = useMemo(
-    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
-    [settings, prefersReducedMotion]
+    () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), sectionKey),
+    [settings, prefersReducedMotion, sectionKey]
   )
 
   if (!animationConfig.canAnimate) {
+    const sectionProps = { ...props }
+    delete sectionProps.sectionKey
     return (
-      <section className={className} {...props}>
+      <section className={className} {...sectionProps}>
         {children}
       </section>
     )
   }
+
+  const motionProps = { ...props }
+  delete motionProps.sectionKey
 
   return (
     <motion.section
@@ -62,7 +68,7 @@ export default function AnimatedSection({ className = '', children, ...props }) 
         duration: animationConfig.sectionDurationMs / 1000,
         ease: animationConfig.easePreset,
       }}
-      {...props}
+      {...motionProps}
     >
       {children}
     </motion.section>

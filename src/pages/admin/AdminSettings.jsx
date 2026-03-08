@@ -21,8 +21,14 @@ import {
 import {
   ANIMATION_EASE_OPTIONS,
   ANIMATION_PROFILE_OPTIONS,
+  CINEMATIC_PRESET_OPTIONS,
   MASCOT_STYLE_OPTIONS,
   REDUCE_MOTION_OPTIONS,
+  SECTION_SCENE_OPTIONS,
+  SECTION_SCENE_TARGETS,
+  extractAnimationSettings,
+  getCinematicPresetSettings,
+  sanitizeImportedAnimationSettings,
   SPRITE_PATH_OPTIONS,
   SPRITE_SIDE_PATTERN_OPTIONS,
   SPRITE_STYLE_OPTIONS,
@@ -47,6 +53,7 @@ const inputStyle = {
 }
 
 const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+const DEFAULT_CINEMATIC_PRESET = 'cine-portfolio'
 
 const DARK_COLOR_FIELDS = [
   { key: 'theme_dark_bg_primary', label: 'Fond principal (sombre)' },
@@ -285,6 +292,8 @@ export default function AdminSettings() {
   const [freshRecoveryCodes, setFreshRecoveryCodes] = useState([])
   const [twoFactorQrCodeUrl, setTwoFactorQrCodeUrl] = useState('')
   const [twoFactorQrLoading, setTwoFactorQrLoading] = useState(false)
+  const [selectedCinematicPreset, setSelectedCinematicPreset] = useState(DEFAULT_CINEMATIC_PRESET)
+  const [animationPresetJson, setAnimationPresetJson] = useState('')
 
   const styleKeys = useMemo(() => Object.keys(DEFAULT_THEME_SETTINGS), [])
 
@@ -365,6 +374,78 @@ export default function AdminSettings() {
     })
     setSettings(next)
     updateLocalSettings(next)
+  }
+
+  const handleApplyCinematicPreset = () => {
+    const presetPatch = getCinematicPresetSettings(selectedCinematicPreset)
+    if (!presetPatch) {
+      addToast('Preset cinematique introuvable.', 'error')
+      return
+    }
+
+    const nextSettings = mergeWithThemeDefaults({ ...settings, ...presetPatch })
+    setSettings(nextSettings)
+    updateLocalSettings(nextSettings)
+    addToast('Preset cinematique applique.', 'success')
+  }
+
+  const handleResetSectionScenes = () => {
+    const patch = {}
+    SECTION_SCENE_TARGETS.forEach((target) => {
+      patch[`anim_scene_${target.key}`] = 'inherit'
+    })
+    const nextSettings = mergeWithThemeDefaults({ ...settings, ...patch })
+    setSettings(nextSettings)
+    updateLocalSettings(nextSettings)
+    addToast('Scenes de section reinitialisees.', 'success')
+  }
+
+  const handleFillAnimationPresetJson = () => {
+    const payload = {
+      version: 1,
+      type: 'portfolio-animation-preset',
+      generated_at: new Date().toISOString(),
+      settings: extractAnimationSettings(settings),
+    }
+    setAnimationPresetJson(JSON.stringify(payload, null, 2))
+    addToast('JSON du preset charge dans le champ.', 'success')
+  }
+
+  const handleImportAnimationPreset = () => {
+    const source = String(animationPresetJson || '').trim()
+    if (!source) {
+      addToast('Colle un JSON de preset avant import.', 'error')
+      return
+    }
+
+    let parsed = null
+    try {
+      parsed = JSON.parse(source)
+    } catch {
+      addToast('JSON invalide.', 'error')
+      return
+    }
+
+    const rawSettings =
+      parsed &&
+      typeof parsed === 'object' &&
+      !Array.isArray(parsed) &&
+      parsed.settings &&
+      typeof parsed.settings === 'object' &&
+      !Array.isArray(parsed.settings)
+        ? parsed.settings
+        : parsed
+
+    const patch = sanitizeImportedAnimationSettings(rawSettings)
+    if (Object.keys(patch).length === 0) {
+      addToast('Aucun parametre animation valide detecte.', 'error')
+      return
+    }
+
+    const nextSettings = mergeWithThemeDefaults({ ...settings, ...patch })
+    setSettings(nextSettings)
+    updateLocalSettings(nextSettings)
+    addToast('Preset animation importe.', 'success')
   }
 
   const handleSave = async () => {
@@ -795,6 +876,110 @@ export default function AdminSettings() {
 
           {activeTab === 'animations' && (
             <>
+              <CardSection>
+                <SectionTitle>Presets Cinematiques</SectionTitle>
+                <InlineTip>
+                  Applique une direction complete (entrees/sorties par section + style de sprites humains), puis ajuste finement.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                      Preset global
+                    </label>
+                    <select
+                      value={selectedCinematicPreset}
+                      onChange={(e) => setSelectedCinematicPreset(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                      style={inputStyle}
+                    >
+                      {CINEMATIC_PRESET_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 items-end">
+                    <button
+                      type="button"
+                      onClick={handleApplyCinematicPreset}
+                      className="px-4 py-2.5 rounded-lg text-sm font-medium"
+                      style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+                    >
+                      Appliquer preset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleFillAnimationPresetJson}
+                      className="px-4 py-2.5 rounded-lg text-sm font-medium border"
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                    >
+                      Generer JSON
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(animationPresetJson, 'Preset JSON copie.')}
+                      className="px-4 py-2.5 rounded-lg text-sm font-medium border"
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                    >
+                      Copier JSON
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleImportAnimationPreset}
+                      className="px-4 py-2.5 rounded-lg text-sm font-medium border"
+                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                    >
+                      Importer JSON
+                    </button>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                      JSON de preset animation
+                    </label>
+                    <textarea
+                      value={animationPresetJson}
+                      onChange={(e) => setAnimationPresetJson(e.target.value)}
+                      rows={8}
+                      className="w-full px-4 py-2.5 rounded-lg border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-y"
+                      style={inputStyle}
+                      placeholder='{"type":"portfolio-animation-preset","settings":{"anim_profile":"cinematic"}}'
+                    />
+                  </div>
+                </div>
+              </CardSection>
+
+              <CardSection>
+                <SectionTitle>Scenes Par Section</SectionTitle>
+                <InlineTip>
+                  Choisis le comportement d&apos;entree/sortie pour chaque section. "Heriter du global" garde le moteur general.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {SECTION_SCENE_TARGETS.map((target) => (
+                    <FieldSelect
+                      key={target.key}
+                      label={`Scene ${target.label}`}
+                      fieldKey={`anim_scene_${target.key}`}
+                      settings={settings}
+                      onChange={handleChange}
+                      options={SECTION_SCENE_OPTIONS}
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleResetSectionScenes}
+                    className="px-4 py-2.5 rounded-lg text-sm font-medium border"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+                  >
+                    Reinitialiser les scenes
+                  </button>
+                </div>
+              </CardSection>
+
               <CardSection>
                 <SectionTitle>Moteur Global</SectionTitle>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
