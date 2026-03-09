@@ -3,9 +3,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
   AcademicCapIcon,
+  BeakerIcon,
   CalendarDaysIcon,
+  ChartBarIcon,
+  CloudIcon,
+  CodeBracketIcon,
+  CommandLineIcon,
+  CpuChipIcon,
   CheckBadgeIcon,
   LinkIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  ServerStackIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
@@ -54,6 +63,53 @@ function formatDate(value) {
 }
 
 /**
+ * Retourne une icone adaptee a un badge texte.
+ * @param {string} badge Label badge.
+ * @returns {import('react').ComponentType<{className?: string}>} Composant icone.
+ */
+function resolveBadgeIcon(badge) {
+  const normalized = String(badge || '').toLowerCase()
+
+  if (/(aws|azure|gcp|cloud)/.test(normalized)) return CloudIcon
+  if (/(security|securite|iso|audit|soc)/.test(normalized)) return ShieldCheckIcon
+  if (/(devops|docker|kubernetes|k8s|cicd|ci\/cd)/.test(normalized)) return ServerStackIcon
+  if (/(react|vue|angular|frontend|ui|css|javascript|js|typescript|ts)/.test(normalized)) return CodeBracketIcon
+  if (/(node|backend|api|java|spring|dotnet|c#|php|go|python)/.test(normalized)) return CpuChipIcon
+  if (/(sql|data|analytics|bi|power ?bi|tableau)/.test(normalized)) return ChartBarIcon
+  if (/(test|qa|quality)/.test(normalized)) return BeakerIcon
+  if (/(linux|bash|shell|terminal)/.test(normalized)) return CommandLineIcon
+
+  return SparklesIcon
+}
+
+/**
+ * Decoupe une liste en pages.
+ * @template T
+ * @param {T[]} items Liste source.
+ * @param {number} size Taille de page.
+ * @returns {T[][]} Pages.
+ */
+function chunkItems(items, size) {
+  const safeSize = Math.max(1, Number(size) || 1)
+  const pages = []
+  for (let index = 0; index < items.length; index += safeSize) {
+    pages.push(items.slice(index, index + safeSize))
+  }
+  return pages
+}
+
+/**
+ * Calcule le nombre d'elements visibles selon la largeur ecran.
+ * @param {number} width Largeur viewport.
+ * @returns {number} Nombre de badges par page.
+ */
+function getItemsPerPage(width) {
+  if (width >= 1280) return 3
+  if (width >= 768) return 2
+  return 1
+}
+
+/**
  * Carrousel horizontal infini de badges.
  * @param {{badges: string[], canAnimate: boolean}} props Props carrousel.
  * @returns {JSX.Element | null} Bloc badges.
@@ -62,10 +118,64 @@ function BadgeCarousel({ badges, canAnimate }) {
   if (badges.length === 0) {
     return null
   }
+  const [isHovered, setIsHovered] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [activePage, setActivePage] = useState(0)
+  const [itemsPerPage, setItemsPerPage] = useState(() => {
+    if (typeof window === 'undefined') {
+      return 2
+    }
+    return getItemsPerPage(window.innerWidth)
+  })
 
-  const shouldAnimate = canAnimate && badges.length > 1
-  const loopBadges = shouldAnimate ? [...badges, ...badges] : badges
-  const duration = Math.max(8, badges.length * 2.1)
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined
+    }
+
+    const handleResize = () => setItemsPerPage(getItemsPerPage(window.innerWidth))
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const pages = useMemo(() => chunkItems(badges, itemsPerPage), [badges, itemsPerPage])
+  const pageCount = pages.length
+
+  useEffect(() => {
+    setActivePage((previous) => Math.min(previous, Math.max(0, pageCount - 1)))
+  }, [pageCount])
+
+  const shouldAutoplay = canAnimate && pageCount > 1 && !isHovered && !isDragging
+
+  useEffect(() => {
+    if (!shouldAutoplay) {
+      return undefined
+    }
+
+    const timer = window.setInterval(() => {
+      setActivePage((previous) => (previous + 1) % pageCount)
+    }, 2600)
+
+    return () => window.clearInterval(timer)
+  }, [shouldAutoplay, pageCount])
+
+  /**
+   * Passe a la page suivante.
+   * @returns {void}
+   */
+  const goNext = () => {
+    if (pageCount <= 1) return
+    setActivePage((previous) => (previous + 1) % pageCount)
+  }
+
+  /**
+   * Passe a la page precedente.
+   * @returns {void}
+   */
+  const goPrevious = () => {
+    if (pageCount <= 1) return
+    setActivePage((previous) => (previous - 1 + pageCount) % pageCount)
+  }
 
   return (
     <div
@@ -74,6 +184,8 @@ function BadgeCarousel({ badges, canAnimate }) {
         borderColor: 'var(--color-border)',
         backgroundColor: 'color-mix(in srgb, var(--color-accent) 6%, var(--color-bg-primary))',
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <p className="text-[11px] uppercase tracking-[0.16em] mb-2" style={{ color: 'var(--color-text-secondary)' }}>
         Badges
@@ -81,30 +193,64 @@ function BadgeCarousel({ badges, canAnimate }) {
 
       <div className="relative overflow-hidden rounded-lg">
         <motion.div
-          className="flex items-center gap-2 w-max pr-2"
-          animate={shouldAnimate ? { x: ['0%', '-50%'] } : { x: '0%' }}
+          className="flex"
+          animate={{ x: `-${activePage * 100}%` }}
           transition={
-            shouldAnimate
-              ? {
-                duration,
-                ease: 'linear',
-                repeat: Infinity,
-              }
-              : undefined
+            isDragging
+              ? { duration: 0 }
+              : { type: 'spring', stiffness: 280, damping: 24, mass: 0.85 }
           }
+          drag={pageCount > 1 ? 'x' : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.09}
+          dragTransition={{ bounceStiffness: 420, bounceDamping: 26 }}
+          whileDrag={pageCount > 1 ? { scale: 0.992 } : undefined}
+          onDragStart={() => setIsDragging(true)}
+          onDragEnd={(_event, info) => {
+            const swipeThreshold = 55
+            if (info.offset.x <= -swipeThreshold) {
+              goNext()
+            } else if (info.offset.x >= swipeThreshold) {
+              goPrevious()
+            }
+            setIsDragging(false)
+          }}
+          style={{ cursor: pageCount > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
         >
-          {loopBadges.map((badge, index) => (
-            <span
-              key={`${badge}-${index}`}
-              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border whitespace-nowrap"
-              style={{
-                borderColor: 'var(--color-accent)',
-                color: 'var(--color-accent-light)',
-                backgroundColor: 'color-mix(in srgb, var(--color-accent) 14%, transparent)',
-              }}
+          {pages.map((pageBadges, pageIndex) => (
+            <div
+              key={`badge-page-${pageIndex}`}
+              className="w-full shrink-0"
             >
-              {badge}
-            </span>
+              <div
+                className="grid gap-2"
+                style={{ gridTemplateColumns: `repeat(${Math.max(1, pageBadges.length)}, minmax(0, 1fr))` }}
+              >
+                {pageBadges.map((badge) => {
+                  const Icon = resolveBadgeIcon(badge)
+                  return (
+                    <span
+                      key={`${badge}-${pageIndex}`}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border min-w-0"
+                      style={{
+                        borderColor: 'var(--color-accent)',
+                        color: 'var(--color-accent-light)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-accent) 14%, transparent)',
+                      }}
+                      title={badge}
+                    >
+                      <span
+                        className="inline-flex items-center justify-center w-5 h-5 rounded-md flex-shrink-0"
+                        style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 24%, transparent)' }}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="truncate">{badge}</span>
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
           ))}
         </motion.div>
         <div
@@ -122,6 +268,24 @@ function BadgeCarousel({ badges, canAnimate }) {
           }}
         />
       </div>
+
+      {pageCount > 1 && (
+        <div className="mt-2 flex items-center justify-center gap-1.5">
+          {pages.map((_page, pageIndex) => (
+            <button
+              key={`badge-dot-${pageIndex}`}
+              type="button"
+              onClick={() => setActivePage(pageIndex)}
+              className="h-1.5 rounded-full transition-all"
+              style={{
+                width: pageIndex === activePage ? 18 : 8,
+                backgroundColor: pageIndex === activePage ? 'var(--color-accent)' : 'var(--color-border)',
+              }}
+              aria-label={`Afficher la page badges ${pageIndex + 1}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
