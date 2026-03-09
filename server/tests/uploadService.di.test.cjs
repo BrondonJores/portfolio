@@ -155,6 +155,42 @@ async function main() {
     assert.equal(result.format, 'pdf')
   })
 
+  await runCase('uploadDocument uploads with Cloudinary resource_type=image', async () => {
+    let capturedOptions = null
+    const cloudinary = {
+      uploader: {
+        upload_stream: (options, callback) => {
+          capturedOptions = options
+          return {
+            end: () =>
+              callback(null, {
+                secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/portfolio/documents/certificat.pdf',
+                resource_type: 'image',
+                format: 'pdf',
+              }),
+          }
+        },
+        upload: async () => ({
+          secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/portfolio/documents/certificat.pdf',
+          resource_type: 'image',
+          format: 'pdf',
+        }),
+      },
+    }
+
+    const service = createUploadService({
+      cloudinary,
+      logger: { error: () => {} },
+    })
+
+    await service.uploadDocument({
+      buffer: Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d]),
+      originalname: 'certificat.pdf',
+    })
+
+    assert.equal(capturedOptions.resource_type, 'image')
+  })
+
   if (failures > 0) {
     console.error(`\nDI unit tests failed: ${failures}`)
     process.exit(1)

@@ -196,7 +196,7 @@ function createUploadService(deps = {}) {
   }
 
   /**
-   * Upload un document PDF vers Cloudinary (resource raw).
+   * Upload un document PDF vers Cloudinary (resource image) pour une URL ouvrable directement.
    * @param {{buffer?:Buffer,path?:string,originalname?:string}|undefined} file Fichier Multer.
    * @returns {Promise<{url:string,resourceType:string,format:string}>} Meta upload utile au front.
    */
@@ -212,7 +212,7 @@ function createUploadService(deps = {}) {
 
     const uploadOptions = {
       folder: 'portfolio/documents',
-      resource_type: 'raw',
+      resource_type: 'image',
       use_filename: true,
       unique_filename: true,
       overwrite: false,
