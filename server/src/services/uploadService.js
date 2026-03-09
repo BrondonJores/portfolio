@@ -44,6 +44,39 @@ function createUploadService(deps = {}) {
   }
 
   /**
+   * Ajoute une extension manquante a une URL Cloudinary.
+   * Cloudinary peut retourner des URLs `raw/upload/.../file` sans suffixe.
+   * @param {string} rawUrl URL source.
+   * @param {string} extension Extension cible (sans point).
+   * @returns {string} URL avec extension explicite si necessaire.
+   */
+  function ensureUrlExtension(rawUrl, extension) {
+    const url = String(rawUrl || '').trim()
+    const ext = String(extension || '').trim().toLowerCase()
+    if (!url || !ext) {
+      return url
+    }
+
+    const hashIndex = url.indexOf('#')
+    const queryIndex = url.indexOf('?')
+    let splitIndex = -1
+    if (hashIndex >= 0 && queryIndex >= 0) {
+      splitIndex = Math.min(hashIndex, queryIndex)
+    } else {
+      splitIndex = Math.max(hashIndex, queryIndex)
+    }
+
+    const base = splitIndex >= 0 ? url.slice(0, splitIndex) : url
+    const suffix = splitIndex >= 0 ? url.slice(splitIndex) : ''
+
+    if (/\.[a-z0-9]{2,8}$/i.test(base)) {
+      return url
+    }
+
+    return `${base}.${ext}${suffix}`
+  }
+
+  /**
    * Upload un buffer image vers Cloudinary via upload stream.
    * @param {Buffer} buffer Buffer image en memoire.
    * @param {object} [options={}] Options Cloudinary.
@@ -141,10 +174,15 @@ function createUploadService(deps = {}) {
         throw createHttpError(400, 'Fichier invalide.')
       }
 
+      const resolvedFormat = String(result.format || extension || '').toLowerCase()
+      const resolvedUrl = RAW_MASCOT_FORMATS.has(extension)
+        ? ensureUrlExtension(result.secure_url, resolvedFormat || extension)
+        : result.secure_url
+
       return {
-        url: result.secure_url,
+        url: resolvedUrl,
         resourceType: result.resource_type || '',
-        format: result.format || extension,
+        format: resolvedFormat || extension,
       }
     } catch (err) {
       if (err?.statusCode) {

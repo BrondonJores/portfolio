@@ -1,6 +1,6 @@
 import lottie from 'lottie-web/build/player/lottie_light'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { sanitizeAnimationAssetUrl } from '../../utils/animationAsset.js'
+import { isCloudinaryRawAssetUrl, sanitizeAnimationAssetUrl } from '../../utils/animationAsset.js'
 
 const LOTTIE_JSON_CACHE = new Map()
 const LOTTIE_JSON_IN_FLIGHT = new Map()
@@ -89,8 +89,9 @@ export default function MascotLottiePlayer({ url, fit = 'contain', onError }) {
     const normalizedUrl = safeUrl.split('?')[0].split('#')[0].toLowerCase()
     const isBlobUrl = safeUrl.startsWith('blob:')
     const isJsonAsset = normalizedUrl.endsWith('.json')
+    const isCloudinaryRaw = isCloudinaryRawAssetUrl(safeUrl)
 
-    if (!isBlobUrl && !isJsonAsset) {
+    if (!isBlobUrl && !isJsonAsset && !isCloudinaryRaw) {
       onError?.()
       return undefined
     }

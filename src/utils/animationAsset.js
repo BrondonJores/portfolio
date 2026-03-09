@@ -1,4 +1,5 @@
 const ASSET_HTTP_PROTOCOL_REGEX = /^https?:\/\//i
+const CLOUDINARY_RAW_URL_PATTERN = /^https?:\/\/res\.cloudinary\.com\/[^/]+\/raw\/upload\//i
 
 /**
  * Nettoie une URL d'asset animation pour limiter les protocoles autorises.
@@ -50,6 +51,10 @@ export function detectAnimationAssetMode(rawUrl) {
     return 'rive'
   }
 
+  if (CLOUDINARY_RAW_URL_PATTERN.test(clean)) {
+    return 'lottie'
+  }
+
   if (/\.(webm|mp4|m4v|ogg|mov)$/.test(clean)) {
     return 'video'
   }
@@ -59,6 +64,19 @@ export function detectAnimationAssetMode(rawUrl) {
   }
 
   return 'unsupported'
+}
+
+/**
+ * Detecte une URL Cloudinary raw potentiellement sans extension.
+ * @param {string} rawUrl URL asset.
+ * @returns {boolean} Vrai si l'URL ressemble a un endpoint raw Cloudinary.
+ */
+export function isCloudinaryRawAssetUrl(rawUrl) {
+  const clean = String(rawUrl || '').split('?')[0].split('#')[0].toLowerCase()
+  if (!clean) {
+    return false
+  }
+  return CLOUDINARY_RAW_URL_PATTERN.test(clean)
 }
 
 /**
