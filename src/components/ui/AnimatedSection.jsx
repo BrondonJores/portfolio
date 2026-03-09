@@ -63,7 +63,7 @@ export default function AnimatedSection({ className = '', children, ...props }) 
       className={className}
       initial={getInitialAnimation(animationConfig.sectionRevealType, animationConfig.sectionDistancePx)}
       whileInView={getTargetAnimation(animationConfig.sectionRevealType)}
-      viewport={{ once: animationConfig.sectionOnce, amount: 0.2 }}
+      viewport={{ once: animationConfig.sectionOnce, amount: animationConfig.sectionViewportAmount }}
       transition={{
         duration: animationConfig.sectionDurationMs / 1000,
         ease: animationConfig.easePreset,

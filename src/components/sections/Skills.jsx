@@ -13,12 +13,14 @@ import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
 /* Variants pour l'animation staggeree des elements */
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
+function buildContainerVariants(staggerSeconds) {
+  return {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: staggerSeconds },
+    },
+  }
 }
 
 const itemVariants = {
@@ -40,6 +42,10 @@ export default function Skills() {
     [settings, prefersReducedMotion]
   )
   const canAnimate = animationConfig.canAnimate
+  const containerVariants = useMemo(
+    () => buildContainerVariants(animationConfig.sectionStaggerMs / 1000),
+    [animationConfig.sectionStaggerMs]
+  )
   const skillsTitle = settings.ui_section_skills_title || 'Competences'
   const skillsSubtitle = settings.ui_section_skills_subtitle || "Technologies et outils que j'utilise au quotidien"
   const skillsEmptyLabel = settings.ui_section_skills_empty || 'Aucune competence pour le moment.'

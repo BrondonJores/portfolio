@@ -4,6 +4,21 @@ export const ANIMATION_CORE_SETTING_KEYS = [
   'anim_enabled',
   'anim_duration_scale',
   'anim_intensity',
+  'anim_ui_button_micro_enabled',
+  'anim_ui_button_hover_lift_px',
+  'anim_ui_button_press_scale',
+  'anim_ui_button_glow_boost',
+  'anim_ui_button_ripple_enabled',
+  'anim_ui_button_pulse_enabled',
+  'anim_ui_button_pulse_interval_ms',
+  'anim_ui_scroll_reveal_type',
+  'anim_ui_scroll_reveal_duration_ms',
+  'anim_ui_scroll_reveal_distance_px',
+  'anim_ui_scroll_reveal_once',
+  'anim_ui_scroll_reveal_amount',
+  'anim_ui_scroll_stagger_ms',
+  'anim_ui_scroll_progress_enabled',
+  'anim_ui_scroll_progress_thickness',
   'anim_loader_spinner_asset_url',
   'anim_loader_page_asset_url',
   'anim_loader_site_asset_url',
@@ -74,6 +89,16 @@ export function parseBooleanSetting(value, fallback = false) {
 
 function toTrimmedString(value) {
   return String(value || '').trim()
+}
+
+const SECTION_REVEAL_TYPES = new Set(['fade-up', 'fade', 'scale', 'slide-right'])
+
+function normalizeRevealType(value) {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (SECTION_REVEAL_TYPES.has(normalized)) {
+    return normalized
+  }
+  return 'fade-up'
 }
 
 export function extractAnimationSettings(settings = {}) {
@@ -147,6 +172,17 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
   const canAnimate = enabled && !reducedMotion
   const intensity = clampNumber(settings.anim_intensity, 0.4, 2.5, 1)
   const durationScale = clampNumber(settings.anim_duration_scale, 0.6, 2, 1)
+  const sectionRevealType = normalizeRevealType(settings.anim_ui_scroll_reveal_type)
+  const sectionDurationMs = clampNumber(settings.anim_ui_scroll_reveal_duration_ms, 240, 1500, 650) * durationScale
+  const sectionDistancePx = clampNumber(settings.anim_ui_scroll_reveal_distance_px, 8, 120, 36) * intensity
+  const sectionOnce = parseBooleanSetting(settings.anim_ui_scroll_reveal_once, true)
+  const sectionViewportAmount = clampNumber(settings.anim_ui_scroll_reveal_amount, 0.05, 0.6, 0.2)
+  const sectionStaggerMs = clampNumber(settings.anim_ui_scroll_stagger_ms, 40, 320, 110)
+  const buttonHoverLiftPx = clampNumber(settings.anim_ui_button_hover_lift_px, 0, 14, 5) * Math.max(0.8, intensity)
+  const buttonPressScale = clampNumber(settings.anim_ui_button_press_scale, 0.9, 1, 0.97)
+  const buttonGlowBoost = clampNumber(settings.anim_ui_button_glow_boost, 0.4, 2.5, 1)
+  const buttonPulseIntervalMs = clampNumber(settings.anim_ui_button_pulse_interval_ms, 800, 5000, 1800)
+  const scrollProgressThickness = clampNumber(settings.anim_ui_scroll_progress_thickness, 2, 10, 4)
 
   return {
     enabled,
@@ -156,16 +192,23 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     easePreset: 'easeInOut',
     durationScale,
     intensity,
-    sectionRevealType: 'fade-up',
-    sectionDurationMs: 650 * durationScale,
-    sectionDistancePx: 36 * intensity,
-    sectionOnce: true,
+    sectionRevealType,
+    sectionDurationMs,
+    sectionDistancePx,
+    sectionOnce,
+    sectionViewportAmount,
+    sectionStaggerMs,
     cardHover: true,
     cardLiftPx: 8 * intensity,
     cardScale: 1.02,
     cardTiltDeg: 1.5 * intensity,
-    ctaPulse: true,
-    ctaPulseIntervalMs: 1800 / Math.max(0.7, intensity),
+    buttonMicroEnabled: parseBooleanSetting(settings.anim_ui_button_micro_enabled, true),
+    buttonHoverLiftPx,
+    buttonPressScale,
+    buttonGlowBoost,
+    buttonRippleEnabled: parseBooleanSetting(settings.anim_ui_button_ripple_enabled, true),
+    ctaPulse: parseBooleanSetting(settings.anim_ui_button_pulse_enabled, true),
+    ctaPulseIntervalMs: buttonPulseIntervalMs / Math.max(0.7, intensity),
     loaderSpinnerAssetUrl: toTrimmedString(settings.anim_loader_spinner_asset_url),
     loaderPageAssetUrl: toTrimmedString(settings.anim_loader_page_asset_url),
     loaderSiteAssetUrl: toTrimmedString(settings.anim_loader_site_asset_url),
@@ -221,7 +264,7 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     spriteAssetWanderUrl: toTrimmedString(settings.anim_sprite_asset_wander_url),
     spriteAssetSideLeftUrl: toTrimmedString(settings.anim_sprite_asset_side_left_url),
     spriteAssetSideRightUrl: toTrimmedString(settings.anim_sprite_asset_side_right_url),
-    scrollProgressEnabled: true,
-    scrollProgressThickness: 4,
+    scrollProgressEnabled: parseBooleanSetting(settings.anim_ui_scroll_progress_enabled, true),
+    scrollProgressThickness,
   }
 }

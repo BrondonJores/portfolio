@@ -8,15 +8,17 @@ import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.15,
-      delayChildren: 0.2,
+function buildContainerVariants(staggerSeconds) {
+  return {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: staggerSeconds,
+        delayChildren: Math.min(0.25, staggerSeconds * 1.6),
+      },
     },
-  },
+  }
 }
 
 const itemVariants = {
@@ -87,6 +89,10 @@ export default function Hero() {
   ]
   const canAnimate = animationConfig.canAnimate
   const revealDuration = Math.max(0.2, 0.6 * animationConfig.durationScale)
+  const containerVariants = useMemo(
+    () => buildContainerVariants(animationConfig.sectionStaggerMs / 1000),
+    [animationConfig.sectionStaggerMs]
+  )
 
   return (
     <section

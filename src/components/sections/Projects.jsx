@@ -20,12 +20,14 @@ import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
 /* Variants pour l'animation staggeree des cartes */
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
+function buildContainerVariants(staggerSeconds) {
+  return {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: staggerSeconds },
+    },
+  }
 }
 
 const cardVariants = {
@@ -47,6 +49,10 @@ export default function Projects() {
     [settings, prefersReducedMotion]
   )
   const canAnimate = animationConfig.canAnimate
+  const containerVariants = useMemo(
+    () => buildContainerVariants(animationConfig.sectionStaggerMs / 1000),
+    [animationConfig.sectionStaggerMs]
+  )
   const projectsTitle = settings.ui_section_projects_title || 'Projets'
   const projectsSubtitle = settings.ui_section_projects_subtitle || 'Quelques-uns de mes realisations recentes'
   const projectsBadgeFeatured = settings.ui_project_badge_featured || 'Mis en avant'

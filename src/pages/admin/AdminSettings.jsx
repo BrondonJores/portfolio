@@ -1799,6 +1799,164 @@ export default function AdminSettings() {
               </CardSection>
 
               <CardSection>
+                <SectionTitle>Micro-interactions Boutons</SectionTitle>
+                <InlineTip>
+                  Effets hover/click sur les CTA: lift, compression au clic, glow et ripple.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox
+                    label="Activer les micro-interactions boutons"
+                    fieldKey="anim_ui_button_micro_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldCheckbox
+                    label="Activer ripple au clic"
+                    fieldKey="anim_ui_button_ripple_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldCheckbox
+                    label="Activer pulse sur CTA principal"
+                    fieldKey="anim_ui_button_pulse_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldRange
+                    label="Lift hover bouton"
+                    fieldKey="anim_ui_button_hover_lift_px"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0}
+                    max={14}
+                    step={1}
+                    unit="px"
+                    defaultValue={5}
+                  />
+                  <FieldRange
+                    label="Compression au clic"
+                    fieldKey="anim_ui_button_press_scale"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.9}
+                    max={1}
+                    step={0.01}
+                    unit="x"
+                    defaultValue={0.97}
+                  />
+                  <FieldRange
+                    label="Intensite glow bouton"
+                    fieldKey="anim_ui_button_glow_boost"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.4}
+                    max={2.5}
+                    step={0.05}
+                    unit="x"
+                    defaultValue={1}
+                  />
+                  <FieldRange
+                    label="Intervalle pulse CTA"
+                    fieldKey="anim_ui_button_pulse_interval_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={800}
+                    max={5000}
+                    step={50}
+                    unit="ms"
+                    defaultValue={1800}
+                  />
+                </div>
+              </CardSection>
+
+              <CardSection>
+                <SectionTitle>Scroll et Reveal</SectionTitle>
+                <InlineTip>
+                  Controle fin des entrees de sections et de la barre de progression de scroll.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldSelect
+                    label="Type de reveal des sections"
+                    fieldKey="anim_ui_scroll_reveal_type"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={[
+                      { value: 'fade-up', label: 'Fade-up (recommande)' },
+                      { value: 'fade', label: 'Fade' },
+                      { value: 'scale', label: 'Scale' },
+                      { value: 'slide-right', label: 'Slide right' },
+                    ]}
+                  />
+                  <FieldCheckbox
+                    label="Animer chaque section une seule fois"
+                    fieldKey="anim_ui_scroll_reveal_once"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldRange
+                    label="Duree reveal section"
+                    fieldKey="anim_ui_scroll_reveal_duration_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={240}
+                    max={1500}
+                    step={10}
+                    unit="ms"
+                    defaultValue={650}
+                  />
+                  <FieldRange
+                    label="Distance reveal section"
+                    fieldKey="anim_ui_scroll_reveal_distance_px"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={8}
+                    max={120}
+                    step={1}
+                    unit="px"
+                    defaultValue={36}
+                  />
+                  <FieldRange
+                    label="Seuil d apparition viewport"
+                    fieldKey="anim_ui_scroll_reveal_amount"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.05}
+                    max={0.6}
+                    step={0.01}
+                    defaultValue={0.2}
+                  />
+                  <FieldRange
+                    label="Stagger scroll des elements"
+                    fieldKey="anim_ui_scroll_stagger_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={40}
+                    max={320}
+                    step={5}
+                    unit="ms"
+                    defaultValue={110}
+                  />
+                  <FieldCheckbox
+                    label="Activer la barre de progression scroll"
+                    fieldKey="anim_ui_scroll_progress_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldRange
+                    label="Epaisseur barre de progression"
+                    fieldKey="anim_ui_scroll_progress_thickness"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={2}
+                    max={10}
+                    step={1}
+                    unit="px"
+                    defaultValue={4}
+                  />
+                </div>
+              </CardSection>
+
+              <CardSection>
                 <SectionTitle>Assets DotLottie/Rive Par Section</SectionTitle>
                 <InlineTip>
                   Ajoute une grande animation par section (Hero/About/Skills/Projects/Blog/Contact). Ces assets remplacent les anciens effets decoratifs locaux.

@@ -69,6 +69,21 @@ module.exports = {
       { key: 'anim_enabled', value: 'true' },
       { key: 'anim_duration_scale', value: '1' },
       { key: 'anim_intensity', value: '1' },
+      { key: 'anim_ui_button_micro_enabled', value: 'true' },
+      { key: 'anim_ui_button_hover_lift_px', value: '5' },
+      { key: 'anim_ui_button_press_scale', value: '0.97' },
+      { key: 'anim_ui_button_glow_boost', value: '1' },
+      { key: 'anim_ui_button_ripple_enabled', value: 'true' },
+      { key: 'anim_ui_button_pulse_enabled', value: 'true' },
+      { key: 'anim_ui_button_pulse_interval_ms', value: '1800' },
+      { key: 'anim_ui_scroll_reveal_type', value: 'fade-up' },
+      { key: 'anim_ui_scroll_reveal_duration_ms', value: '650' },
+      { key: 'anim_ui_scroll_reveal_distance_px', value: '36' },
+      { key: 'anim_ui_scroll_reveal_once', value: 'true' },
+      { key: 'anim_ui_scroll_reveal_amount', value: '0.2' },
+      { key: 'anim_ui_scroll_stagger_ms', value: '110' },
+      { key: 'anim_ui_scroll_progress_enabled', value: 'true' },
+      { key: 'anim_ui_scroll_progress_thickness', value: '4' },
       { key: 'anim_loader_spinner_asset_url', value: '' },
       { key: 'anim_loader_page_asset_url', value: '' },
       { key: 'anim_loader_site_asset_url', value: '' },
@@ -122,3 +137,4 @@ module.exports = {
     await queryInterface.bulkDelete('settings', null, {})
   },
 }
+

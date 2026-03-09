@@ -22,6 +22,7 @@ export default function Blog() {
     [settings, prefersReducedMotion]
   )
   const canAnimate = animationConfig.canAnimate
+  const staggerDelaySeconds = animationConfig.sectionStaggerMs / 1000
   const blogTitle = settings.ui_section_blog_title || 'Blog'
   const blogSubtitle = settings.ui_section_blog_subtitle || 'Mes derniers articles et reflexions'
   const blogViewAllLabel = settings.ui_section_blog_view_all || 'Voir tous les articles'
@@ -59,7 +60,7 @@ export default function Blog() {
               viewport={{ once: animationConfig.sectionOnce }}
               transition={{
                 duration: 0.4 * animationConfig.durationScale,
-                delay: i * 0.1 * animationConfig.durationScale,
+                delay: i * staggerDelaySeconds * animationConfig.durationScale,
                 ease: animationConfig.easePreset,
               }}
             >
