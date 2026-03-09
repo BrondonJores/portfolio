@@ -6,6 +6,7 @@ import Skills from '../components/sections/Skills.jsx'
 import Certifications from '../components/sections/Certifications.jsx'
 import Projects from '../components/sections/Projects.jsx'
 import Blog from '../components/sections/Blog.jsx'
+import CertificationBadgesShowcase from '../components/sections/CertificationBadgesShowcase.jsx'
 import Contact from '../components/sections/Contact.jsx'
 import Footer from '../components/sections/Footer.jsx'
 
@@ -23,6 +24,7 @@ export default function Home() {
       <Certifications />
       <Projects />
       <Blog />
+      <CertificationBadgesShowcase />
       <Contact />
       <Footer />
     </>

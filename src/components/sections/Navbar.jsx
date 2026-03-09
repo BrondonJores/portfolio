@@ -47,6 +47,12 @@ export default function Navbar() {
       label: settings.ui_nav_label_skills || 'Competences',
     },
     {
+      id: 'certifications',
+      anchor: '#certifications',
+      to: '/certifications',
+      label: settings.ui_nav_label_certifications || 'Certifications',
+    },
+    {
       id: 'projects',
       anchor: '#projects',
       to: '/projets',

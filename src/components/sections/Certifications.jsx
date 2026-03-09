@@ -1,8 +1,10 @@
 /* Section publique certifications avec cards premium et slideshow de badges. */
 import { useEffect, useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import {
   AcademicCapIcon,
+  ArrowRightIcon,
   BeakerIcon,
   CalendarDaysIcon,
   ChartBarIcon,
@@ -313,8 +315,10 @@ export default function Certifications() {
   const subtitle =
     settings.ui_section_certifications_subtitle ||
     'Mes certifications, badges et preuves officielles.'
+  const viewAllLabel = settings.ui_section_certifications_view_all || 'Voir toutes les certifications'
   const viewCredentialLabel = settings.ui_certification_view_credential || 'Verifier'
   const viewPdfLabel = settings.ui_certification_view_pdf || 'Voir PDF'
+  const previewCertifications = certifications.slice(0, 3)
 
   useEffect(() => {
     getCertifications()
@@ -364,7 +368,7 @@ export default function Certifications() {
           whileInView={canAnimate ? 'visible' : false}
           viewport={{ once: animationConfig.sectionOnce }}
         >
-          {certifications.map((item) => (
+          {previewCertifications.map((item) => (
             <motion.div
               key={item.id}
               variants={itemVariants}
@@ -495,6 +499,17 @@ export default function Certifications() {
             </motion.div>
           ))}
         </motion.div>
+
+        <div className="mt-10 flex justify-center">
+          <Link
+            to="/certifications"
+            className="inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200"
+            style={{ color: 'var(--color-accent)' }}
+          >
+            {viewAllLabel}
+            <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
       </div>
     </AnimatedSection>
   )

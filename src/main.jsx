@@ -17,6 +17,7 @@ const Home = lazy(() => import('./pages/Home.jsx'))
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage.jsx'))
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail.jsx'))
 const SkillsPage = lazy(() => import('./pages/SkillsPage.jsx'))
+const CertificationsPage = lazy(() => import('./pages/CertificationsPage.jsx'))
 const BlogPage = lazy(() => import('./pages/BlogPage.jsx'))
 const ArticleDetail = lazy(() => import('./pages/ArticleDetail.jsx'))
 const ContactPage = lazy(() => import('./pages/ContactPage.jsx'))
@@ -71,6 +72,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Suspense fallback={<LoadingFallback />}><Home /></Suspense> },
       { path: 'competences', element: <Suspense fallback={<LoadingFallback />}><SkillsPage /></Suspense> },
+      { path: 'certifications', element: <Suspense fallback={<LoadingFallback />}><CertificationsPage /></Suspense> },
       { path: 'projets', element: <Suspense fallback={<LoadingFallback />}><ProjectsPage /></Suspense> },
       { path: 'projets/:slug', element: <Suspense fallback={<LoadingFallback />}><ProjectDetail /></Suspense> },
       { path: 'blog', element: <Suspense fallback={<LoadingFallback />}><BlogPage /></Suspense> },
