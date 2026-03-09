@@ -1,7 +1,9 @@
 /* Routes d'upload de medias admin (images, PDF et mascottes). */
 const { Router } = require('express')
 const multer = require('multer')
+const path = require('path')
 const { authenticate } = require('../middleware/authMiddleware')
+const { createHttpError } = require('../utils/httpError')
 const {
   ALLOWED_IMAGE_MIME_TYPES,
   ALLOWED_DOCUMENT_MIME_TYPES,
@@ -13,6 +15,17 @@ const {
   validateMascotUpload,
 } = require('../middleware/uploadValidationMiddleware')
 const { uploadImage, uploadMascot, uploadDocument } = require('../controllers/uploadController')
+const ALLOWED_MASCOT_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'webm', 'mp4', 'json', 'riv'])
+const ALLOWED_DOCUMENT_EXTENSIONS = new Set(['pdf'])
+
+/**
+ * Extrait l'extension normalisee d'un nom de fichier.
+ * @param {string} originalName Nom original.
+ * @returns {string} Extension sans point en minuscule.
+ */
+function getExtension(originalName) {
+  return path.extname(String(originalName || '')).replace('.', '').toLowerCase()
+}
 
 /**
  * Filtre rapide Multer sur le MIME annonce.
@@ -28,7 +41,7 @@ function fileFilter(_req, file, cb) {
     return
   }
 
-  cb(new Error('Type de fichier non autorise. Utilisez jpg, png, webp ou gif.'))
+  cb(createHttpError(400, 'Type de fichier non autorise. Utilisez jpg, png, webp ou gif.'))
 }
 
 /**
@@ -39,12 +52,13 @@ function fileFilter(_req, file, cb) {
  * @returns {void}
  */
 function mascotFileFilter(_req, file, cb) {
-  if (ALLOWED_MASCOT_MIME_TYPES.has(file.mimetype)) {
+  const extension = getExtension(file?.originalname)
+  if (ALLOWED_MASCOT_MIME_TYPES.has(file.mimetype) || ALLOWED_MASCOT_EXTENSIONS.has(extension)) {
     cb(null, true)
     return
   }
 
-  cb(new Error('Type de fichier non autorise pour une mascotte.'))
+  cb(createHttpError(400, 'Type de fichier non autorise pour une mascotte.'))
 }
 
 /**
@@ -55,12 +69,13 @@ function mascotFileFilter(_req, file, cb) {
  * @returns {void}
  */
 function documentFileFilter(_req, file, cb) {
-  if (ALLOWED_DOCUMENT_MIME_TYPES.has(file.mimetype)) {
+  const extension = getExtension(file?.originalname)
+  if (ALLOWED_DOCUMENT_MIME_TYPES.has(file.mimetype) || ALLOWED_DOCUMENT_EXTENSIONS.has(extension)) {
     cb(null, true)
     return
   }
 
-  cb(new Error('Type de document non autorise. Utilisez uniquement un PDF.'))
+  cb(createHttpError(400, 'Type de document non autorise. Utilisez uniquement un PDF.'))
 }
 
 const imageUpload = multer({

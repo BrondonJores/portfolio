@@ -9,7 +9,15 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/gif',
 ])
 
-const ALLOWED_DOCUMENT_MIME_TYPES = new Set(['application/pdf'])
+const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/x-pdf',
+  'application/acrobat',
+  'applications/vnd.pdf',
+  'text/pdf',
+  'application/octet-stream',
+  '',
+])
 const MAX_DOCUMENT_UPLOAD_BYTES = 15 * 1024 * 1024
 
 const ALLOWED_MASCOT_EXTENSIONS = new Set([
@@ -31,7 +39,7 @@ const MASCOT_EXTENSION_MIME_MAP = {
   webp: new Set(['image/webp']),
   gif: new Set(['image/gif']),
   webm: new Set(['video/webm', 'application/octet-stream']),
-  mp4: new Set(['video/mp4', 'application/mp4']),
+  mp4: new Set(['video/mp4', 'application/mp4', 'application/octet-stream']),
   json: new Set(['application/json', 'text/json', 'text/plain', 'application/octet-stream']),
   riv: new Set(['application/octet-stream', 'application/riv', 'application/x-riv', 'application/x-rive']),
 }
@@ -246,7 +254,14 @@ function validateDocumentUpload(req, res, next) {
     return
   }
 
-  if (!ALLOWED_DOCUMENT_MIME_TYPES.has(file.mimetype)) {
+  const extension = getExtension(file.originalname)
+  if (extension !== 'pdf') {
+    next(createHttpError(400, 'Extension non autorisee. Utilisez uniquement un PDF.'))
+    return
+  }
+
+  const normalizedMime = String(file.mimetype || '').toLowerCase()
+  if (!ALLOWED_DOCUMENT_MIME_TYPES.has(normalizedMime)) {
     next(createHttpError(400, 'Type de document non autorise. Utilisez uniquement PDF.'))
     return
   }
@@ -254,11 +269,6 @@ function validateDocumentUpload(req, res, next) {
   const detectedMime = detectPdfMimeFromMagicBytes(file.buffer)
   if (!detectedMime) {
     next(createHttpError(400, 'Le fichier envoye n est pas un PDF valide.'))
-    return
-  }
-
-  if (detectedMime !== file.mimetype) {
-    next(createHttpError(400, 'Le type MIME annonce ne correspond pas au contenu du document.'))
     return
   }
 
@@ -296,13 +306,21 @@ function validateMascotUpload(req, res, next) {
   }
 
   const normalizedMime = String(file.mimetype || '').toLowerCase()
-  if (!ALLOWED_MASCOT_MIME_TYPES.has(normalizedMime)) {
+  const hasMime = normalizedMime.length > 0
+  const isMediaExtension = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'webm', 'mp4'].includes(extension)
+  const isRawAnimationExtension = extension === 'json' || extension === 'riv'
+  const allowedMimesForExtension = MASCOT_EXTENSION_MIME_MAP[extension]
+  if (isMediaExtension && hasMime && !ALLOWED_MASCOT_MIME_TYPES.has(normalizedMime)) {
     next(createHttpError(400, 'Type MIME non autorise pour ce type de fichier.'))
     return
   }
 
-  const allowedMimesForExtension = MASCOT_EXTENSION_MIME_MAP[extension]
-  if (!allowedMimesForExtension.has(normalizedMime)) {
+  if (isMediaExtension && hasMime && !allowedMimesForExtension.has(normalizedMime)) {
+    next(createHttpError(400, 'Le type MIME ne correspond pas a l extension du fichier.'))
+    return
+  }
+
+  if (isRawAnimationExtension && hasMime && (normalizedMime.startsWith('image/') || normalizedMime.startsWith('video/'))) {
     next(createHttpError(400, 'Le type MIME ne correspond pas a l extension du fichier.'))
     return
   }

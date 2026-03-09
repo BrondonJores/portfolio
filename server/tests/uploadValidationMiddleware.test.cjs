@@ -123,6 +123,35 @@ runCase('validateDocumentUpload accepts valid pdf', () => {
   const err = runDocumentUploadValidation({
     file: {
       mimetype: 'application/pdf',
+      originalname: 'document.pdf',
+      size: pdfBuffer.length,
+      buffer: pdfBuffer,
+    },
+  })
+
+  assert.equal(err, null)
+})
+
+runCase('validateDocumentUpload accepts octet-stream mime when extension and signature are valid', () => {
+  const pdfBuffer = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 0x25, 0xe2, 0xe3, 0xcf, 0xd3])
+  const err = runDocumentUploadValidation({
+    file: {
+      mimetype: 'application/octet-stream',
+      originalname: 'document.pdf',
+      size: pdfBuffer.length,
+      buffer: pdfBuffer,
+    },
+  })
+
+  assert.equal(err, null)
+})
+
+runCase('validateDocumentUpload accepts empty mime when extension and signature are valid', () => {
+  const pdfBuffer = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 0x25, 0xe2, 0xe3, 0xcf, 0xd3])
+  const err = runDocumentUploadValidation({
+    file: {
+      mimetype: '',
+      originalname: 'document.pdf',
       size: pdfBuffer.length,
       buffer: pdfBuffer,
     },
@@ -136,8 +165,24 @@ runCase('validateDocumentUpload rejects invalid pdf payload', () => {
   const err = runDocumentUploadValidation({
     file: {
       mimetype: 'application/pdf',
+      originalname: 'document.pdf',
       size: fakeBuffer.length,
       buffer: fakeBuffer,
+    },
+  })
+
+  assert.ok(err)
+  assert.equal(err.statusCode, 400)
+})
+
+runCase('validateDocumentUpload rejects non-pdf extension even with pdf mime', () => {
+  const pdfBuffer = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a])
+  const err = runDocumentUploadValidation({
+    file: {
+      mimetype: 'application/pdf',
+      originalname: 'document.txt',
+      size: pdfBuffer.length,
+      buffer: pdfBuffer,
     },
   })
 
@@ -180,6 +225,27 @@ runCase('validateMascotUpload rejects invalid lottie json structure', () => {
 
   assert.ok(err)
   assert.equal(err.statusCode, 400)
+})
+
+runCase('validateMascotUpload accepts lottie json with empty mime', () => {
+  const lottieJson = Buffer.from(JSON.stringify({
+    v: '5.7.4',
+    fr: 30,
+    ip: 0,
+    op: 60,
+    layers: [],
+  }), 'utf8')
+
+  const err = runMascotUploadValidation({
+    file: {
+      mimetype: '',
+      originalname: 'hero.json',
+      size: lottieJson.length,
+      buffer: lottieJson,
+    },
+  })
+
+  assert.equal(err, null)
 })
 
 runCase('validateMascotUpload rejects dotlottie extension', () => {
