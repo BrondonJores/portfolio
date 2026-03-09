@@ -43,6 +43,24 @@ function createCloudinaryMock(result) {
  * @returns {Promise<void>} Promise resolue si tous les tests passent.
  */
 async function main() {
+  await runCase('uploadImage appends extension when Cloudinary URL has no suffix', async () => {
+    const service = createUploadService({
+      cloudinary: createCloudinaryMock({
+        secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/portfolio/cover-no-ext',
+        resource_type: 'image',
+        format: 'webp',
+      }),
+      logger: { error: () => {} },
+    })
+
+    const result = await service.uploadImage({
+      buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+      originalname: 'cover.png',
+    })
+
+    assert.equal(result.url.endsWith('.webp'), true)
+  })
+
   await runCase('uploadMascotAsset appends .json when Cloudinary raw URL has no extension', async () => {
     const service = createUploadService({
       cloudinary: createCloudinaryMock({
@@ -116,6 +134,25 @@ async function main() {
 
     assert.equal(result.url, 'https://res.cloudinary.com/demo/video/upload/v1/portfolio/mascots/loop.webm')
     assert.equal(result.format, 'webm')
+  })
+
+  await runCase('uploadDocument appends .pdf when Cloudinary raw URL has no extension', async () => {
+    const service = createUploadService({
+      cloudinary: createCloudinaryMock({
+        secure_url: 'https://res.cloudinary.com/demo/raw/upload/v1/portfolio/documents/certificat',
+        resource_type: 'raw',
+        format: 'pdf',
+      }),
+      logger: { error: () => {} },
+    })
+
+    const result = await service.uploadDocument({
+      buffer: Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d]),
+      originalname: 'certificat.pdf',
+    })
+
+    assert.equal(result.url.endsWith('.pdf'), true)
+    assert.equal(result.format, 'pdf')
   })
 
   if (failures > 0) {

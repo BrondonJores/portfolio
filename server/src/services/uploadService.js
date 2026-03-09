@@ -128,7 +128,11 @@ function createUploadService(deps = {}) {
         throw createHttpError(400, 'Fichier invalide.')
       }
 
-      return { url: result.secure_url }
+      const fallbackExtension = extractExtension(file.originalname)
+      const resolvedFormat = String(result.format || fallbackExtension || '').toLowerCase()
+      const resolvedUrl = ensureUrlExtension(result.secure_url, resolvedFormat)
+
+      return { url: resolvedUrl }
     } catch (err) {
       if (err?.statusCode) {
         throw err
@@ -175,9 +179,7 @@ function createUploadService(deps = {}) {
       }
 
       const resolvedFormat = String(result.format || extension || '').toLowerCase()
-      const resolvedUrl = RAW_MASCOT_FORMATS.has(extension)
-        ? ensureUrlExtension(result.secure_url, resolvedFormat || extension)
-        : result.secure_url
+      const resolvedUrl = ensureUrlExtension(result.secure_url, resolvedFormat || extension)
 
       return {
         url: resolvedUrl,
@@ -228,10 +230,13 @@ function createUploadService(deps = {}) {
         throw createHttpError(400, 'Fichier invalide.')
       }
 
+      const resolvedFormat = String(result.format || extension || '').toLowerCase()
+      const resolvedUrl = ensureUrlExtension(result.secure_url, resolvedFormat || extension)
+
       return {
-        url: result.secure_url,
+        url: resolvedUrl,
         resourceType: result.resource_type || 'raw',
-        format: result.format || extension,
+        format: resolvedFormat || extension,
       }
     } catch (err) {
       if (err?.statusCode) {
