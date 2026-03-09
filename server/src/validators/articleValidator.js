@@ -35,4 +35,14 @@ const updateArticleValidator = [
     .withMessage('Les tags doivent etre un tableau.'),
 ]
 
-module.exports = { createArticleValidator, updateArticleValidator }
+const importArticlesValidator = [
+  body('articles')
+    .isArray({ min: 1, max: 200 })
+    .withMessage("L'import doit contenir entre 1 et 200 articles."),
+  body('replaceExisting')
+    .optional()
+    .isBoolean()
+    .withMessage('replaceExisting doit etre un booleen.'),
+]
+
+module.exports = { createArticleValidator, updateArticleValidator, importArticlesValidator }

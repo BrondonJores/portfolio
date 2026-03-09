@@ -1,22 +1,63 @@
 /* Page de gestion des articles admin */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate } from 'react-router-dom'
-import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { getAdminArticles, deleteArticle } from '../../services/articleService.js'
+import { getAdminArticles, deleteArticle, importAdminArticles } from '../../services/articleService.js'
 import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPagination.js'
-import { openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/adminEditorWindow.js'
+import { notifyAdminEditorSaved, openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/adminEditorWindow.js'
 
 const PAGE_LIMIT = 12
+
+/**
+ * Lit un fichier texte JSON cote navigateur.
+ * @param {File} file Fichier selectionne.
+ * @returns {Promise<string>} Contenu brut.
+ */
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error('Impossible de lire le fichier JSON.'))
+    reader.readAsText(file)
+  })
+}
+
+/**
+ * Normalise un payload d'import articles vers { articles: [...] }.
+ * Accepte: tableau, objet { articles }, ou article unique.
+ * @param {unknown} parsed JSON parse.
+ * @returns {{articles:Array<object>} | null} Payload normalise.
+ */
+function normalizeArticleImportPayload(parsed) {
+  if (Array.isArray(parsed)) {
+    return { articles: parsed }
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    return null
+  }
+
+  if (Array.isArray(parsed.articles)) {
+    return { articles: parsed.articles }
+  }
+
+  if (parsed.title !== undefined || parsed.slug !== undefined) {
+    return { articles: [parsed] }
+  }
+
+  return null
+}
 
 export default function AdminArticles() {
   const addToast = useAdminToast()
   const navigate = useNavigate()
+  const fileInputRef = useRef(null)
   const [articles, setArticles] = useState([])
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({
@@ -26,6 +67,8 @@ export default function AdminArticles() {
   })
   const [loading, setLoading] = useState(true)
   const [confirmId, setConfirmId] = useState(null)
+  const [importing, setImporting] = useState(false)
+  const [replaceExistingImport, setReplaceExistingImport] = useState(false)
 
   const loadArticles = (targetPage = page) => {
     const offset = toOffsetFromPage(targetPage, PAGE_LIMIT)
@@ -89,6 +132,54 @@ export default function AdminArticles() {
     }
   }
 
+  /**
+   * Ouvre le selecteur de fichier pour import JSON.
+   * @returns {void}
+   */
+  const openImportPicker = () => {
+    fileInputRef.current?.click()
+  }
+
+  /**
+   * Importe des articles depuis un fichier JSON.
+   * @param {import('react').ChangeEvent<HTMLInputElement>} event Evenement de selection.
+   * @returns {Promise<void>} Promise resolue apres import.
+   */
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    setImporting(true)
+    try {
+      const rawText = await readFileAsText(file)
+      const parsed = JSON.parse(rawText)
+      const normalized = normalizeArticleImportPayload(parsed)
+
+      if (!normalized || !Array.isArray(normalized.articles) || normalized.articles.length === 0) {
+        addToast('Format JSON invalide. Utilise { "articles": [...] } ou un tableau.', 'error')
+        return
+      }
+
+      const response = await importAdminArticles({
+        articles: normalized.articles,
+        replaceExisting: replaceExistingImport,
+      })
+
+      const summary = response?.data || {}
+      await loadArticles(page)
+      notifyAdminEditorSaved('articles')
+      addToast(
+        `Import termine: ${summary.created || 0} cree(s), ${summary.updated || 0} mis a jour, ${summary.skippedCount || 0} ignore(s).`,
+        'success'
+      )
+    } catch (error) {
+      addToast(error.message || "Erreur pendant l'import des articles.", 'error')
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const fmt = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '-')
 
   return (
@@ -104,10 +195,32 @@ export default function AdminArticles() {
           >
             Articles
           </h1>
-          <Button variant="primary" onClick={() => openArticleEditor('/admin/articles/nouveau')}>
-            <PlusIcon className="h-4 w-4" aria-hidden="true" />
-            Nouvel article
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <label className="inline-flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={replaceExistingImport}
+                onChange={(event) => setReplaceExistingImport(event.target.checked)}
+                style={{ accentColor: 'var(--color-accent)' }}
+              />
+              Remplacer les doublons
+            </label>
+            <Button variant="secondary" onClick={openImportPicker} disabled={importing}>
+              {importing ? <Spinner size="sm" /> : <ArrowUpTrayIcon className="h-4 w-4" aria-hidden="true" />}
+              Importer JSON
+            </Button>
+            <Button variant="primary" onClick={() => openArticleEditor('/admin/articles/nouveau')}>
+              <PlusIcon className="h-4 w-4" aria-hidden="true" />
+              Nouvel article
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+          </div>
         </div>
 
         {loading ? (

@@ -9,6 +9,7 @@ const {
   createArticle,
   updateArticle,
   deleteArticle,
+  importArticles,
 } = require('../services/articleService')
 
 /**
@@ -164,6 +165,22 @@ async function remove(req, res, next) {
   }
 }
 
+/**
+ * Importe un lot d'articles JSON.
+ * @param {import('express').Request} req Requete avec `body.articles`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres import.
+ */
+async function importMany(req, res, next) {
+  try {
+    const result = await importArticles(req.body)
+    return res.status(200).json({ data: result })
+  } catch (err) {
+    next(err)
+  }
+}
+
 module.exports = {
   getAllPublic,
   getBySlug,
@@ -174,4 +191,5 @@ module.exports = {
   create,
   update,
   remove,
+  importMany,
 }

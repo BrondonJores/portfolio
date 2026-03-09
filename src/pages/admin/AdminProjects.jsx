@@ -1,23 +1,64 @@
 /* Page de gestion des projets admin */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate } from 'react-router-dom'
-import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { getAdminProjects, deleteProject } from '../../services/projectService.js'
+import { getAdminProjects, deleteProject, importAdminProjects } from '../../services/projectService.js'
 import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPagination.js'
-import { openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/adminEditorWindow.js'
+import { notifyAdminEditorSaved, openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/adminEditorWindow.js'
 
 const PAGE_LIMIT = 12
+
+/**
+ * Lit un fichier texte JSON cote navigateur.
+ * @param {File} file Fichier selectionne.
+ * @returns {Promise<string>} Contenu brut.
+ */
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error('Impossible de lire le fichier JSON.'))
+    reader.readAsText(file)
+  })
+}
+
+/**
+ * Normalise un payload d'import projets vers { projects: [...] }.
+ * Accepte: tableau, objet { projects }, ou projet unique.
+ * @param {unknown} parsed JSON parse.
+ * @returns {{projects:Array<object>} | null} Payload normalise.
+ */
+function normalizeProjectImportPayload(parsed) {
+  if (Array.isArray(parsed)) {
+    return { projects: parsed }
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    return null
+  }
+
+  if (Array.isArray(parsed.projects)) {
+    return { projects: parsed.projects }
+  }
+
+  if (parsed.title !== undefined || parsed.slug !== undefined) {
+    return { projects: [parsed] }
+  }
+
+  return null
+}
 
 export default function AdminProjects() {
   const addToast = useAdminToast()
   const navigate = useNavigate()
+  const fileInputRef = useRef(null)
   const [projects, setProjects] = useState([])
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({
@@ -27,6 +68,8 @@ export default function AdminProjects() {
   })
   const [loading, setLoading] = useState(true)
   const [confirmId, setConfirmId] = useState(null)
+  const [importing, setImporting] = useState(false)
+  const [replaceExistingImport, setReplaceExistingImport] = useState(false)
 
   const loadProjects = (targetPage = page) => {
     const offset = toOffsetFromPage(targetPage, PAGE_LIMIT)
@@ -90,6 +133,54 @@ export default function AdminProjects() {
     }
   }
 
+  /**
+   * Ouvre le selecteur de fichier pour import JSON.
+   * @returns {void}
+   */
+  const openImportPicker = () => {
+    fileInputRef.current?.click()
+  }
+
+  /**
+   * Importe des projets depuis un fichier JSON.
+   * @param {import('react').ChangeEvent<HTMLInputElement>} event Evenement de selection.
+   * @returns {Promise<void>} Promise resolue apres import.
+   */
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    setImporting(true)
+    try {
+      const rawText = await readFileAsText(file)
+      const parsed = JSON.parse(rawText)
+      const normalized = normalizeProjectImportPayload(parsed)
+
+      if (!normalized || !Array.isArray(normalized.projects) || normalized.projects.length === 0) {
+        addToast('Format JSON invalide. Utilise { "projects": [...] } ou un tableau.', 'error')
+        return
+      }
+
+      const response = await importAdminProjects({
+        projects: normalized.projects,
+        replaceExisting: replaceExistingImport,
+      })
+
+      const summary = response?.data || {}
+      await loadProjects(page)
+      notifyAdminEditorSaved('projects')
+      addToast(
+        `Import termine: ${summary.created || 0} cree(s), ${summary.updated || 0} mis a jour, ${summary.skippedCount || 0} ignore(s).`,
+        'success'
+      )
+    } catch (error) {
+      addToast(error.message || "Erreur pendant l'import des projets.", 'error')
+    } finally {
+      setImporting(false)
+    }
+  }
+
   /* Formatage de la date */
   const fmt = (d) =>
     d ? new Date(d).toLocaleDateString('fr-FR') : '-'
@@ -107,10 +198,32 @@ export default function AdminProjects() {
           >
             Projets
           </h1>
-          <Button variant="primary" onClick={() => openProjectEditor('/admin/projets/nouveau')}>
-            <PlusIcon className="h-4 w-4" aria-hidden="true" />
-            Nouveau projet
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <label className="inline-flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              <input
+                type="checkbox"
+                checked={replaceExistingImport}
+                onChange={(event) => setReplaceExistingImport(event.target.checked)}
+                style={{ accentColor: 'var(--color-accent)' }}
+              />
+              Remplacer les doublons
+            </label>
+            <Button variant="secondary" onClick={openImportPicker} disabled={importing}>
+              {importing ? <Spinner size="sm" /> : <ArrowUpTrayIcon className="h-4 w-4" aria-hidden="true" />}
+              Importer JSON
+            </Button>
+            <Button variant="primary" onClick={() => openProjectEditor('/admin/projets/nouveau')}>
+              <PlusIcon className="h-4 w-4" aria-hidden="true" />
+              Nouveau projet
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+          </div>
         </div>
 
         {loading ? (

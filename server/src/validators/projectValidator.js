@@ -47,4 +47,14 @@ const updateProjectValidator = [
     .withMessage('URL de demo invalide.'),
 ]
 
-module.exports = { createProjectValidator, updateProjectValidator }
+const importProjectsValidator = [
+  body('projects')
+    .isArray({ min: 1, max: 200 })
+    .withMessage("L'import doit contenir entre 1 et 200 projets."),
+  body('replaceExisting')
+    .optional()
+    .isBoolean()
+    .withMessage('replaceExisting doit etre un booleen.'),
+]
+
+module.exports = { createProjectValidator, updateProjectValidator, importProjectsValidator }

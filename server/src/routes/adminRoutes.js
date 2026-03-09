@@ -1,7 +1,21 @@
 /* Routes protegees du tableau de bord administrateur */
 const { Router } = require('express')
-const { getAllAdmin: getProjects, getByIdAdmin: getProjectByIdAdmin, create: createProject, update: updateProject, remove: deleteProject } = require('../controllers/projectController')
-const { getAllAdmin: getArticles, getByIdAdmin: getArticleByIdAdmin, create: createArticle, update: updateArticle, remove: deleteArticle } = require('../controllers/articleController')
+const {
+  getAllAdmin: getProjects,
+  getByIdAdmin: getProjectByIdAdmin,
+  create: createProject,
+  update: updateProject,
+  remove: deleteProject,
+  importMany: importProjects,
+} = require('../controllers/projectController')
+const {
+  getAllAdmin: getArticles,
+  getByIdAdmin: getArticleByIdAdmin,
+  create: createArticle,
+  update: updateArticle,
+  remove: deleteArticle,
+  importMany: importArticles,
+} = require('../controllers/articleController')
 const { getAllAdmin: getSkills, create: createSkill, update: updateSkill, remove: deleteSkill } = require('../controllers/skillController')
 const { getAll: getMessages, markAsRead } = require('../controllers/messageController')
 const { getAllAdmin: getTestimonials, create: createTestimonial, update: updateTestimonial, remove: deleteTestimonial } = require('../controllers/testimonialController')
@@ -52,8 +66,8 @@ const {
 } = require('../controllers/cmsPageController')
 const { authenticate } = require('../middleware/authMiddleware')
 const { validate } = require('../middleware/validateMiddleware')
-const { createProjectValidator, updateProjectValidator } = require('../validators/projectValidator')
-const { createArticleValidator, updateArticleValidator } = require('../validators/articleValidator')
+const { createProjectValidator, updateProjectValidator, importProjectsValidator } = require('../validators/projectValidator')
+const { createArticleValidator, updateArticleValidator, importArticlesValidator } = require('../validators/articleValidator')
 const { createSkillValidator, updateSkillValidator } = require('../validators/skillValidator')
 const {
   blockTemplateIdParamValidator,
@@ -101,6 +115,7 @@ router.get('/stats', getStats)
 router.get('/projects', getProjects)
 router.get('/projects/:id', getProjectByIdAdmin)
 router.post('/projects', validate(createProjectValidator), createProject)
+router.post('/projects/import', validate(importProjectsValidator), importProjects)
 router.put('/projects/:id', validate(updateProjectValidator), updateProject)
 router.delete('/projects/:id', deleteProject)
 
@@ -108,6 +123,7 @@ router.delete('/projects/:id', deleteProject)
 router.get('/articles', getArticles)
 router.get('/articles/:id', getArticleByIdAdmin)
 router.post('/articles', validate(createArticleValidator), createArticle)
+router.post('/articles/import', validate(importArticlesValidator), importArticles)
 router.put('/articles/:id', validate(updateArticleValidator), updateArticle)
 router.delete('/articles/:id', deleteArticle)
 

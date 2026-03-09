@@ -21,5 +21,6 @@ export const getAdminArticles = (params) => {
 }
 export const getAdminArticleById = (id) => api.get(`/admin/articles/${id}`)
 export const createArticle = (data) => api.post('/admin/articles', data)
+export const importAdminArticles = (data) => api.post('/admin/articles/import', data)
 export const updateArticle = (id, data) => api.put(`/admin/articles/${id}`, data)
 export const deleteArticle = (id) => api.del(`/admin/articles/${id}`)

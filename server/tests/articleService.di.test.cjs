@@ -145,6 +145,122 @@ async function main() {
     )
   })
 
+  await runCase('importArticles creates valid entries and skips rows without content', async () => {
+    const storage = []
+
+    const fakeArticleModel = {
+      findOne: async ({ where }) => {
+        if (where?.slug) {
+          return storage.find((item) => item.slug === where.slug) || null
+        }
+        if (where?.title) {
+          return storage.find((item) => item.title === where.title) || null
+        }
+        return null
+      },
+      create: async (payload) => {
+        const row = {
+          id: storage.length + 1,
+          ...payload,
+          async update(patch) {
+            Object.assign(this, patch)
+            return this
+          },
+        }
+        storage.push(row)
+        return row
+      },
+    }
+
+    const service = createArticleService({
+      articleModel: fakeArticleModel,
+      now: () => new Date('2026-03-09T10:00:00.000Z'),
+      slugify: (value) =>
+        String(value || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, ''),
+    })
+
+    const result = await service.importArticles({
+      articles: [
+        {
+          title: 'Article Alpha',
+          blocks: [{ type: 'paragraph', content: 'Bonjour' }],
+          published: true,
+          tags: ['news', 'news'],
+        },
+        { title: 'Article Sans Contenu' },
+      ],
+    })
+
+    assert.equal(result.created, 1)
+    assert.equal(result.updated, 0)
+    assert.equal(result.skippedCount, 1)
+    assert.equal(storage[0].slug, 'article-alpha')
+    assert.equal(storage[0].published, true)
+    assert.equal(storage[0].published_at.toISOString(), '2026-03-09T10:00:00.000Z')
+    assert.deepEqual(storage[0].tags, ['news'])
+    assert.match(storage[0].content, /"blocks":\[/)
+  })
+
+  await runCase('importArticles updates duplicates when replaceExisting=true', async () => {
+    const storage = [
+      {
+        id: 12,
+        title: 'Article Beta',
+        slug: 'article-beta',
+        excerpt: 'Ancien',
+        published: false,
+        published_at: null,
+        async update(patch) {
+          Object.assign(this, patch)
+          return this
+        },
+      },
+    ]
+
+    const fakeArticleModel = {
+      findOne: async ({ where }) => {
+        if (where?.slug) {
+          return storage.find((item) => item.slug === where.slug) || null
+        }
+        if (where?.title) {
+          return storage.find((item) => item.title === where.title) || null
+        }
+        return null
+      },
+      create: async (payload) => ({ id: 99, ...payload }),
+    }
+
+    const service = createArticleService({
+      articleModel: fakeArticleModel,
+      now: () => new Date('2026-03-09T10:00:00.000Z'),
+      slugify: (value) =>
+        String(value || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, ''),
+    })
+
+    const result = await service.importArticles({
+      articles: [
+        {
+          title: 'Article Beta',
+          content: 'Contenu mis a jour',
+          published: true,
+        },
+      ],
+      replaceExisting: true,
+    })
+
+    assert.equal(result.created, 0)
+    assert.equal(result.updated, 1)
+    assert.equal(storage[0].published, true)
+    assert.equal(storage[0].content, 'Contenu mis a jour')
+    assert.ok(storage[0].published_at instanceof Date)
+  })
+
   if (failures > 0) {
     console.error(`\nDI unit tests failed: ${failures}`)
     process.exit(1)

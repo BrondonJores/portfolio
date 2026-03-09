@@ -103,6 +103,102 @@ async function main() {
     assert.equal(capturedWhere.tags[fakeLike], '%"react"%')
   })
 
+  await runCase('importProjects creates valid rows and skips invalid ones', async () => {
+    const storage = []
+
+    const fakeProjectModel = {
+      findOne: async ({ where }) => {
+        if (where?.slug) {
+          return storage.find((item) => item.slug === where.slug) || null
+        }
+        if (where?.title) {
+          return storage.find((item) => item.title === where.title) || null
+        }
+        return null
+      },
+      create: async (payload) => {
+        const row = {
+          id: storage.length + 1,
+          ...payload,
+          async update(patch) {
+            Object.assign(this, patch)
+            return this
+          },
+        }
+        storage.push(row)
+        return row
+      },
+    }
+
+    const service = createProjectService({
+      projectModel: fakeProjectModel,
+      slugify: (value) =>
+        String(value || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, ''),
+    })
+
+    const result = await service.importProjects({
+      projects: [
+        { title: 'Projet Alpha', tags: ['react', 'react'] },
+        { title: '' },
+      ],
+    })
+
+    assert.equal(result.created, 1)
+    assert.equal(result.updated, 0)
+    assert.equal(result.skippedCount, 1)
+    assert.equal(storage[0].slug, 'projet-alpha')
+    assert.deepEqual(storage[0].tags, ['react'])
+  })
+
+  await runCase('importProjects updates duplicates when replaceExisting=true', async () => {
+    const storage = [
+      {
+        id: 7,
+        title: 'Projet Beta',
+        slug: 'projet-beta',
+        description: 'Ancienne description',
+        async update(patch) {
+          Object.assign(this, patch)
+          return this
+        },
+      },
+    ]
+
+    const fakeProjectModel = {
+      findOne: async ({ where }) => {
+        if (where?.slug) {
+          return storage.find((item) => item.slug === where.slug) || null
+        }
+        if (where?.title) {
+          return storage.find((item) => item.title === where.title) || null
+        }
+        return null
+      },
+      create: async (payload) => ({ id: 99, ...payload }),
+    }
+
+    const service = createProjectService({
+      projectModel: fakeProjectModel,
+      slugify: (value) =>
+        String(value || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, ''),
+    })
+
+    const result = await service.importProjects({
+      projects: [{ title: 'Projet Beta', description: 'Description importee' }],
+      replaceExisting: true,
+    })
+
+    assert.equal(result.created, 0)
+    assert.equal(result.updated, 1)
+    assert.equal(storage[0].description, 'Description importee')
+  })
+
   if (failures > 0) {
     console.error(`\nDI unit tests failed: ${failures}`)
     process.exit(1)

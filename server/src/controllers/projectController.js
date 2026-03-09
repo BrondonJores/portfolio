@@ -7,6 +7,7 @@ const {
   createProject,
   updateProject,
   deleteProject,
+  importProjects,
 } = require('../services/projectService')
 
 /**
@@ -130,4 +131,20 @@ async function remove(req, res, next) {
   }
 }
 
-module.exports = { getAllPublic, getBySlug, getAllAdmin, getByIdAdmin, create, update, remove }
+/**
+ * Importe un lot de projets JSON.
+ * @param {import('express').Request} req Requete avec `body.projects`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres import.
+ */
+async function importMany(req, res, next) {
+  try {
+    const result = await importProjects(req.body)
+    return res.status(200).json({ data: result })
+  } catch (err) {
+    next(err)
+  }
+}
+
+module.exports = { getAllPublic, getBySlug, getAllAdmin, getByIdAdmin, create, update, remove, importMany }

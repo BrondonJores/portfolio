@@ -19,5 +19,6 @@ export const getAdminProjects = (params) => {
 }
 export const getAdminProjectById = (id) => api.get(`/admin/projects/${id}`)
 export const createProject = (data) => api.post('/admin/projects', data)
+export const importAdminProjects = (data) => api.post('/admin/projects/import', data)
 export const updateProject = (id, data) => api.put(`/admin/projects/${id}`, data)
 export const deleteProject = (id) => api.del(`/admin/projects/${id}`)
