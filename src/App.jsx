@@ -2,9 +2,11 @@
 import { Helmet } from 'react-helmet-async'
 import { Outlet, useLocation } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { useSettings } from './context/SettingsContext.jsx'
 import Spinner from './components/ui/Spinner.jsx'
+import InteractiveCursor from './components/ui/InteractiveCursor.jsx'
+import PageTransitionOverlay from './components/ui/PageTransitionOverlay.jsx'
 import { getAnimationConfig, parseBooleanSetting } from './utils/animationSettings.js'
 import { applyThemeSettings } from './utils/themeSettings.js'
 
@@ -89,6 +91,8 @@ export default function App() {
   const prefersReducedMotion = useReducedMotion()
   const [speedInsightsReady, setSpeedInsightsReady] = useState(false)
   const [siteLoaderDelayDone, setSiteLoaderDelayDone] = useState(false)
+  const [isPageTransitionVisible, setIsPageTransitionVisible] = useState(false)
+  const previousPathRef = useRef(location.pathname)
   const activeThemeSettings = useMemo(
     () => getThemeSettingsForPath(location.pathname),
     [getThemeSettingsForPath, location.pathname]
@@ -148,6 +152,36 @@ export default function App() {
     return () => window.clearTimeout(timer)
   }, [speedInsightsReady])
 
+  useEffect(() => {
+    const previousPath = previousPathRef.current
+    if (previousPath === location.pathname) {
+      return undefined
+    }
+
+    previousPathRef.current = location.pathname
+
+    if (location.pathname.startsWith('/admin')) {
+      setIsPageTransitionVisible(false)
+      return undefined
+    }
+
+    if (!animationConfig.canAnimate || !animationConfig.pageTransitionEnabled || maintenanceMode) {
+      setIsPageTransitionVisible(false)
+      return undefined
+    }
+
+    const safeDuration = Math.max(250, Number(animationConfig.pageTransitionDurationMs) || 850)
+    setIsPageTransitionVisible(true)
+    const timer = window.setTimeout(() => setIsPageTransitionVisible(false), safeDuration)
+    return () => window.clearTimeout(timer)
+  }, [
+    animationConfig.canAnimate,
+    animationConfig.pageTransitionDurationMs,
+    animationConfig.pageTransitionEnabled,
+    location.pathname,
+    maintenanceMode,
+  ])
+
   return (
     <>
       <Helmet>
@@ -180,6 +214,7 @@ export default function App() {
             <AnimatedSpriteSystem />
           </Suspense>
         )}
+        {showPublicDecorations && <InteractiveCursor />}
         <main>
           {maintenanceMode ? (
             <MaintenanceScreen
@@ -197,6 +232,14 @@ export default function App() {
             </Suspense>
           )}
         </main>
+        {showPublicDecorations && (
+          <PageTransitionOverlay
+            visible={isPageTransitionVisible}
+            assetUrl={animationConfig.loaderPageAssetUrl}
+            overlayOpacity={animationConfig.pageTransitionOverlayOpacity}
+            durationMs={animationConfig.pageTransitionDurationMs}
+          />
+        )}
         {showSiteLoader && (
           <div
             className="fixed inset-0 z-[120] flex items-center justify-center"

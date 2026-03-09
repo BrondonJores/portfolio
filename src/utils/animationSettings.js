@@ -4,6 +4,10 @@ export const ANIMATION_CORE_SETTING_KEYS = [
   'anim_enabled',
   'anim_duration_scale',
   'anim_intensity',
+  'anim_ui_card_tilt_enabled',
+  'anim_ui_card_tilt_max_deg',
+  'anim_ui_card_tilt_scale',
+  'anim_ui_card_tilt_glare_enabled',
   'anim_ui_button_micro_enabled',
   'anim_ui_button_hover_lift_px',
   'anim_ui_button_press_scale',
@@ -18,6 +22,20 @@ export const ANIMATION_CORE_SETTING_KEYS = [
   'anim_ui_button_asset_primary_url',
   'anim_ui_button_asset_secondary_url',
   'anim_ui_button_asset_ghost_url',
+  'anim_cursor_enabled',
+  'anim_cursor_size',
+  'anim_cursor_ring_size',
+  'anim_cursor_smoothness',
+  'anim_cursor_idle_opacity',
+  'anim_stats_counter_enabled',
+  'anim_stats_counter_duration_ms',
+  'anim_feedback_particles_enabled',
+  'anim_feedback_particles_count',
+  'anim_feedback_particles_spread_px',
+  'anim_feedback_particles_duration_ms',
+  'anim_page_transition_enabled',
+  'anim_page_transition_duration_ms',
+  'anim_page_transition_overlay_opacity',
   'anim_ui_scroll_reveal_type',
   'anim_ui_scroll_reveal_duration_ms',
   'anim_ui_scroll_reveal_distance_px',
@@ -194,6 +212,18 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
   const buttonGlowBoost = clampNumber(settings.anim_ui_button_glow_boost, 0.4, 2.5, 1)
   const buttonPulseIntervalMs = clampNumber(settings.anim_ui_button_pulse_interval_ms, 800, 5000, 1800)
   const buttonAssetOpacity = clampNumber(settings.anim_ui_button_asset_opacity, 0.15, 1, 0.82)
+  const cardTiltMaxDeg = clampNumber(settings.anim_ui_card_tilt_max_deg, 2, 18, 10) * Math.max(0.75, intensity)
+  const cardTiltScale = clampNumber(settings.anim_ui_card_tilt_scale, 1, 1.08, 1.03)
+  const cursorSizePx = clampNumber(settings.anim_cursor_size, 6, 24, 14)
+  const cursorRingSizePx = clampNumber(settings.anim_cursor_ring_size, 18, 72, 36)
+  const cursorSmoothness = clampNumber(settings.anim_cursor_smoothness, 0.08, 0.35, 0.18)
+  const cursorIdleOpacity = clampNumber(settings.anim_cursor_idle_opacity, 0.2, 1, 0.6)
+  const statsCounterDurationMs = clampNumber(settings.anim_stats_counter_duration_ms, 400, 4000, 1200)
+  const feedbackParticlesCount = Math.round(clampNumber(settings.anim_feedback_particles_count, 6, 40, 16))
+  const feedbackParticlesSpreadPx = clampNumber(settings.anim_feedback_particles_spread_px, 24, 220, 88)
+  const feedbackParticlesDurationMs = clampNumber(settings.anim_feedback_particles_duration_ms, 300, 2000, 700)
+  const pageTransitionDurationMs = clampNumber(settings.anim_page_transition_duration_ms, 300, 3000, 850)
+  const pageTransitionOverlayOpacity = clampNumber(settings.anim_page_transition_overlay_opacity, 0.3, 1, 0.86)
   const scrollProgressThickness = clampNumber(settings.anim_ui_scroll_progress_thickness, 2, 10, 4)
 
   return {
@@ -210,10 +240,14 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     sectionOnce,
     sectionViewportAmount,
     sectionStaggerMs,
-    cardHover: true,
+    cardHover: parseBooleanSetting(settings.anim_ui_card_tilt_enabled, true),
     cardLiftPx: 8 * intensity,
-    cardScale: 1.02,
-    cardTiltDeg: 1.5 * intensity,
+    cardScale: cardTiltScale,
+    cardTiltDeg: cardTiltMaxDeg,
+    cardTiltEnabled: parseBooleanSetting(settings.anim_ui_card_tilt_enabled, true),
+    cardTiltMaxDeg,
+    cardTiltScale,
+    cardTiltGlareEnabled: parseBooleanSetting(settings.anim_ui_card_tilt_glare_enabled, true),
     buttonMicroEnabled: parseBooleanSetting(settings.anim_ui_button_micro_enabled, true),
     buttonHoverLiftPx,
     buttonPressScale,
@@ -228,6 +262,20 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     buttonAssetPrimaryUrl: toTrimmedString(settings.anim_ui_button_asset_primary_url),
     buttonAssetSecondaryUrl: toTrimmedString(settings.anim_ui_button_asset_secondary_url),
     buttonAssetGhostUrl: toTrimmedString(settings.anim_ui_button_asset_ghost_url),
+    cursorEnabled: parseBooleanSetting(settings.anim_cursor_enabled, false),
+    cursorSizePx,
+    cursorRingSizePx,
+    cursorSmoothness,
+    cursorIdleOpacity,
+    statsCounterEnabled: parseBooleanSetting(settings.anim_stats_counter_enabled, true),
+    statsCounterDurationMs,
+    feedbackParticlesEnabled: parseBooleanSetting(settings.anim_feedback_particles_enabled, true),
+    feedbackParticlesCount,
+    feedbackParticlesSpreadPx,
+    feedbackParticlesDurationMs,
+    pageTransitionEnabled: parseBooleanSetting(settings.anim_page_transition_enabled, true),
+    pageTransitionDurationMs,
+    pageTransitionOverlayOpacity,
     loaderSpinnerAssetUrl: toTrimmedString(settings.anim_loader_spinner_asset_url),
     loaderPageAssetUrl: toTrimmedString(settings.anim_loader_page_asset_url),
     loaderSiteAssetUrl: toTrimmedString(settings.anim_loader_site_asset_url),

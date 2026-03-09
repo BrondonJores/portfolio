@@ -5,6 +5,7 @@ import { ArrowDownIcon, BoltIcon, MapPinIcon } from '@heroicons/react/24/outline
 import Button from '../ui/Button.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
 import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
+import AnimatedCounter from '../ui/AnimatedCounter.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
@@ -221,9 +222,13 @@ export default function Hero() {
                     backgroundColor: 'var(--color-bg-card)',
                   }}
                 >
-                  <div className="text-2xl font-black" style={{ color: 'var(--color-text-primary)' }}>
-                    {stat.value}
-                  </div>
+                  <AnimatedCounter
+                    value={stat.value}
+                    enabled={animationConfig.statsCounterEnabled}
+                    durationMs={animationConfig.statsCounterDurationMs}
+                    className="text-2xl font-black"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  />
                   <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                     {stat.label}
                   </div>

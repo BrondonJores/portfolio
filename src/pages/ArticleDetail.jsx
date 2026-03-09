@@ -1,8 +1,8 @@
 /* Page de detail d'un article de blog */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   ArrowLeftIcon,
   CalendarIcon,
@@ -21,6 +21,7 @@ import Badge from '../components/ui/Badge.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
 import RecaptchaNotice from '../components/ui/RecaptchaNotice.jsx'
+import ParticleBurst from '../components/ui/ParticleBurst.jsx'
 import {
   getArticleBySlug,
   getArticles,
@@ -33,6 +34,7 @@ import { executeRecaptcha } from '../services/recaptchaService.js'
 import { useScrollPosition } from '../hooks/useScrollPosition.jsx'
 import { useSettings } from '../context/SettingsContext.jsx'
 import { buildPageTitle } from '../utils/seoSettings.js'
+import { getAnimationConfig } from '../utils/animationSettings.js'
 
 /* Formatage de la date */
 function formatDate(dateString) {
@@ -252,6 +254,11 @@ function ShareSidebar({
   copied,
   likeAnimKey,
   likePending,
+  particleTriggerKey = 0,
+  particlesEnabled = true,
+  particlesCount = 16,
+  particlesSpreadPx = 88,
+  particlesDurationMs = 700,
   copyLabel = 'Copier le lien',
   copiedLabel = 'Lien copie !',
   likeAddLabel = "J'aime cet article",
@@ -310,26 +317,35 @@ function ShareSidebar({
         </svg>
       </a>
       <div className="w-full border-t my-1" style={{ borderColor: 'var(--color-border)' }} />
-      <motion.button
-        key={likeAnimKey}
-        onClick={onLike}
-        initial={{ scale: 1 }}
-        animate={{ scale: [1, 1.3, 1] }}
-        whileTap={{ scale: 0.8 }}
-        transition={{ duration: 0.3 }}
-        disabled={likePending}
-        className="flex flex-col items-center gap-0.5 focus:outline-none disabled:opacity-60"
-        aria-label={liked ? likeRemoveLabel : likeAddLabel}
-      >
-        <HeartIcon
-          className="h-5 w-5 transition-colors"
-          style={{ color: liked ? '#ef4444' : 'var(--color-text-secondary)', fill: liked ? '#ef4444' : 'none' }}
-          aria-hidden="true"
+      <div className="relative">
+        <motion.button
+          key={likeAnimKey}
+          onClick={onLike}
+          initial={{ scale: 1 }}
+          animate={{ scale: [1, 1.3, 1] }}
+          whileTap={{ scale: 0.8 }}
+          transition={{ duration: 0.3 }}
+          disabled={likePending}
+          className="flex flex-col items-center gap-0.5 focus:outline-none disabled:opacity-60"
+          aria-label={liked ? likeRemoveLabel : likeAddLabel}
+        >
+          <HeartIcon
+            className="h-5 w-5 transition-colors"
+            style={{ color: liked ? '#ef4444' : 'var(--color-text-secondary)', fill: liked ? '#ef4444' : 'none' }}
+            aria-hidden="true"
+          />
+          <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            {likesCount}
+          </span>
+        </motion.button>
+        <ParticleBurst
+          triggerKey={particleTriggerKey}
+          active={particlesEnabled}
+          count={particlesCount}
+          spreadPx={particlesSpreadPx}
+          durationMs={particlesDurationMs}
         />
-        <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          {likesCount}
-        </span>
-      </motion.button>
+      </div>
     </div>
   )
 }
@@ -484,6 +500,11 @@ export default function ArticleDetail() {
   const { slug } = useParams()
   const navigate = useNavigate()
   const { settings } = useSettings()
+  const prefersReducedMotion = useReducedMotion()
+  const animationConfig = useMemo(
+    () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
+    [settings, prefersReducedMotion]
+  )
   const [article, setArticle] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -497,6 +518,8 @@ export default function ArticleDetail() {
   const [liked, setLiked] = useState(false)
   const [likesCount, setLikesCount] = useState(0)
   const [likeAnimKey, setLikeAnimKey] = useState(0)
+  const [likeBurstKey, setLikeBurstKey] = useState(0)
+  const [commentBurstKey, setCommentBurstKey] = useState(0)
   const [likePending, setLikePending] = useState(false)
   const [likeError, setLikeError] = useState('')
   const articleNotFoundLabel = settings.ui_article_not_found || 'Article introuvable.'
@@ -586,6 +609,9 @@ export default function ArticleDetail() {
     setLiked(nextLiked)
     setLikesCount(optimisticCount)
     setLikeAnimKey((k) => k + 1)
+    if (nextLiked) {
+      setLikeBurstKey((key) => key + 1)
+    }
 
     try {
       const response = nextLiked
@@ -686,6 +712,11 @@ export default function ArticleDetail() {
                 copied={copied}
                 likeAnimKey={likeAnimKey}
                 likePending={likePending}
+                particleTriggerKey={likeBurstKey}
+                particlesEnabled={animationConfig.feedbackParticlesEnabled}
+                particlesCount={animationConfig.feedbackParticlesCount}
+                particlesSpreadPx={animationConfig.feedbackParticlesSpreadPx}
+                particlesDurationMs={animationConfig.feedbackParticlesDurationMs}
                 copyLabel={articleCopyLinkLabel}
                 copiedLabel={articleLinkCopiedLabel}
                 likeAddLabel={articleLikeAddLabel}
@@ -793,29 +824,38 @@ export default function ArticleDetail() {
                 className="flex items-center gap-3 mt-10 pt-6 border-t"
                 style={{ borderColor: 'var(--color-border)' }}
               >
-                <motion.button
-                  key={likeAnimKey}
-                  onClick={handleLike}
-                  initial={{ scale: 1 }}
-                  animate={{ scale: [1, 1.4, 1] }}
-                  whileTap={{ scale: 0.8 }}
-                  transition={{ duration: 0.3 }}
-                  disabled={likePending}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full border transition-colors focus:outline-none disabled:opacity-60"
-                  style={{
-                    borderColor: liked ? '#ef4444' : 'var(--color-border)',
-                    color: liked ? '#ef4444' : 'var(--color-text-secondary)',
-                    backgroundColor: 'var(--color-bg-card)',
-                  }}
-                  aria-label={liked ? likeRemoveLabel : likeAddLabel}
-                >
-                  <HeartIcon
-                    className="h-5 w-5"
-                    style={{ fill: liked ? '#ef4444' : 'none' }}
-                    aria-hidden="true"
+                <div className="relative inline-flex">
+                  <motion.button
+                    key={likeAnimKey}
+                    onClick={handleLike}
+                    initial={{ scale: 1 }}
+                    animate={{ scale: [1, 1.4, 1] }}
+                    whileTap={{ scale: 0.8 }}
+                    transition={{ duration: 0.3 }}
+                    disabled={likePending}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full border transition-colors focus:outline-none disabled:opacity-60"
+                    style={{
+                      borderColor: liked ? '#ef4444' : 'var(--color-border)',
+                      color: liked ? '#ef4444' : 'var(--color-text-secondary)',
+                      backgroundColor: 'var(--color-bg-card)',
+                    }}
+                    aria-label={liked ? likeRemoveLabel : likeAddLabel}
+                  >
+                    <HeartIcon
+                      className="h-5 w-5"
+                      style={{ fill: liked ? '#ef4444' : 'none' }}
+                      aria-hidden="true"
+                    />
+                    {liked ? articleLikeOnLabel : articleLikeOffLabel} - {likesCount}
+                  </motion.button>
+                  <ParticleBurst
+                    triggerKey={likeBurstKey}
+                    active={animationConfig.feedbackParticlesEnabled}
+                    count={animationConfig.feedbackParticlesCount}
+                    spreadPx={animationConfig.feedbackParticlesSpreadPx}
+                    durationMs={animationConfig.feedbackParticlesDurationMs}
                   />
-                  {liked ? articleLikeOnLabel : articleLikeOffLabel} - {likesCount}
-                </motion.button>
+                </div>
                 {likeError && (
                   <p className="text-sm" style={{ color: '#ef4444' }}>
                     {likeError}
@@ -897,7 +937,7 @@ export default function ArticleDetail() {
 
                 {/* Formulaire d'ajout de commentaire */}
                 <div
-                  className="p-6 rounded-xl border"
+                  className="relative p-6 rounded-xl border"
                   style={{
                     backgroundColor: 'var(--color-bg-card)',
                     borderColor: 'var(--color-border)',
@@ -929,6 +969,7 @@ export default function ArticleDetail() {
                             captcha_token: captchaToken,
                           })
                           setSubmitSuccess(true)
+                          setCommentBurstKey((key) => key + 1)
                           setCommentForm({ author_name: '', author_email: '', content: '' })
                         } catch (err) {
                           setSubmitError(err?.message || articleGenericErrorLabel)
@@ -992,6 +1033,13 @@ export default function ArticleDetail() {
                       </button>
                     </form>
                   )}
+                  <ParticleBurst
+                    triggerKey={commentBurstKey}
+                    active={animationConfig.feedbackParticlesEnabled}
+                    count={animationConfig.feedbackParticlesCount}
+                    spreadPx={animationConfig.feedbackParticlesSpreadPx}
+                    durationMs={animationConfig.feedbackParticlesDurationMs}
+                  />
                 </div>
               </section>
             </div>

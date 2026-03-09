@@ -1870,6 +1870,206 @@ export default function AdminSettings() {
               </CardSection>
 
               <CardSection>
+                <SectionTitle>Cartes 3D (Tilt)</SectionTitle>
+                <InlineTip>
+                  Controle l inclinaison 3D des cartes au survol et l effet de glare lumineux.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox
+                    label="Activer le tilt 3D des cartes"
+                    fieldKey="anim_ui_card_tilt_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldCheckbox
+                    label="Activer le glare lumineux"
+                    fieldKey="anim_ui_card_tilt_glare_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldRange
+                    label="Inclinaison max des cartes"
+                    fieldKey="anim_ui_card_tilt_max_deg"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={2}
+                    max={18}
+                    step={1}
+                    unit="deg"
+                    defaultValue={10}
+                  />
+                  <FieldRange
+                    label="Scale des cartes au hover"
+                    fieldKey="anim_ui_card_tilt_scale"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={1}
+                    max={1.08}
+                    step={0.01}
+                    unit="x"
+                    defaultValue={1.03}
+                  />
+                </div>
+              </CardSection>
+
+              <CardSection>
+                <SectionTitle>Curseur Interactif</SectionTitle>
+                <InlineTip>
+                  Active un curseur custom (desktop uniquement) avec anneau et point central.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox
+                    label="Activer le curseur interactif"
+                    fieldKey="anim_cursor_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldRange
+                    label="Taille point curseur"
+                    fieldKey="anim_cursor_size"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={6}
+                    max={24}
+                    step={1}
+                    unit="px"
+                    defaultValue={14}
+                  />
+                  <FieldRange
+                    label="Taille anneau curseur"
+                    fieldKey="anim_cursor_ring_size"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={18}
+                    max={72}
+                    step={1}
+                    unit="px"
+                    defaultValue={36}
+                  />
+                  <FieldRange
+                    label="Lissage du curseur"
+                    fieldKey="anim_cursor_smoothness"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.08}
+                    max={0.35}
+                    step={0.01}
+                    defaultValue={0.18}
+                  />
+                  <FieldRange
+                    label="Opacite idle du curseur"
+                    fieldKey="anim_cursor_idle_opacity"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.2}
+                    max={1}
+                    step={0.05}
+                    defaultValue={0.6}
+                  />
+                </div>
+              </CardSection>
+
+              <CardSection>
+                <SectionTitle>Compteurs et Feedback</SectionTitle>
+                <InlineTip>
+                  Reglages des compteurs animes et des particules de feedback (likes/commentaires).
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox
+                    label="Activer les compteurs animes"
+                    fieldKey="anim_stats_counter_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldRange
+                    label="Duree compteur anime"
+                    fieldKey="anim_stats_counter_duration_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={400}
+                    max={4000}
+                    step={50}
+                    unit="ms"
+                    defaultValue={1200}
+                  />
+                  <FieldCheckbox
+                    label="Activer les particules de feedback"
+                    fieldKey="anim_feedback_particles_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldRange
+                    label="Nombre de particules"
+                    fieldKey="anim_feedback_particles_count"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={6}
+                    max={40}
+                    step={1}
+                    defaultValue={16}
+                  />
+                  <FieldRange
+                    label="Dispersion des particules"
+                    fieldKey="anim_feedback_particles_spread_px"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={24}
+                    max={220}
+                    step={2}
+                    unit="px"
+                    defaultValue={88}
+                  />
+                  <FieldRange
+                    label="Duree des particules"
+                    fieldKey="anim_feedback_particles_duration_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={300}
+                    max={2000}
+                    step={25}
+                    unit="ms"
+                    defaultValue={700}
+                  />
+                </div>
+              </CardSection>
+
+              <CardSection>
+                <SectionTitle>Transition Entre Pages</SectionTitle>
+                <InlineTip>
+                  Ajoute un overlay de transition sur navigation (asset dedie depuis Loaders DotLottie/Rive).
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox
+                    label="Activer la transition de page"
+                    fieldKey="anim_page_transition_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldRange
+                    label="Duree transition de page"
+                    fieldKey="anim_page_transition_duration_ms"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={300}
+                    max={3000}
+                    step={50}
+                    unit="ms"
+                    defaultValue={850}
+                  />
+                  <FieldRange
+                    label="Opacite overlay transition"
+                    fieldKey="anim_page_transition_overlay_opacity"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.3}
+                    max={1}
+                    step={0.05}
+                    defaultValue={0.86}
+                  />
+                </div>
+              </CardSection>
+
+              <CardSection>
                 <SectionTitle>Scroll et Reveal</SectionTitle>
                 <InlineTip>
                   Controle fin des entrees de sections et de la barre de progression de scroll.

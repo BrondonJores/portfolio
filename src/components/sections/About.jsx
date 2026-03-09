@@ -1,13 +1,22 @@
 /* Section A propos avec mise en page deux colonnes */
+import { useMemo } from 'react'
+import { useReducedMotion } from 'framer-motion'
 import { UserIcon, BriefcaseIcon, CodeBracketIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
 import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import Card from '../ui/Card.jsx'
+import AnimatedCounter from '../ui/AnimatedCounter.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
+import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
 export default function About() {
   const { settings } = useSettings()
+  const prefersReducedMotion = useReducedMotion()
+  const animationConfig = useMemo(
+    () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), 'about'),
+    [settings, prefersReducedMotion]
+  )
 
   const stats = [
     { icon: BriefcaseIcon, value: settings.stat_1_value || '3+', label: settings.stat_1_label || "ans d'experience" },
@@ -141,12 +150,13 @@ export default function About() {
                       style={{ color: 'var(--color-accent)' }}
                       aria-hidden="true"
                     />
-                    <div
+                    <AnimatedCounter
+                      value={stat.value}
+                      enabled={animationConfig.statsCounterEnabled}
+                      durationMs={animationConfig.statsCounterDurationMs}
                       className="text-2xl font-bold mb-1"
                       style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      {stat.value}
-                    </div>
+                    />
                     <div
                       className="text-xs"
                       style={{ color: 'var(--color-text-secondary)' }}
