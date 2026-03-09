@@ -162,7 +162,7 @@ function SpriteAssetRenderer({ asset, fit, onError }) {
 }
 
 /**
- * Systeme global de sprites assets (dotLottie/Rive/video/image) en overlay.
+ * Systeme global de sprites assets (Lottie JSON/Rive/video/image) en overlay.
  * @returns {JSX.Element | null} Overlay des sprites.
  */
 export default function AnimatedSpriteSystem() {

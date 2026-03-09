@@ -182,30 +182,14 @@ runCase('validateMascotUpload rejects invalid lottie json structure', () => {
   assert.equal(err.statusCode, 400)
 })
 
-runCase('validateMascotUpload accepts dotlottie archive payload', () => {
+runCase('validateMascotUpload rejects dotlottie extension', () => {
   const dotLottieBuffer = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00])
-
   const err = runMascotUploadValidation({
     file: {
       mimetype: 'application/zip',
       originalname: 'guide.lottie',
       size: dotLottieBuffer.length,
       buffer: dotLottieBuffer,
-    },
-  })
-
-  assert.equal(err, null)
-})
-
-runCase('validateMascotUpload rejects invalid dotlottie payload', () => {
-  const invalidArchive = Buffer.from([0x11, 0x22, 0x33, 0x44, 0x55])
-
-  const err = runMascotUploadValidation({
-    file: {
-      mimetype: 'application/zip',
-      originalname: 'guide.lottie',
-      size: invalidArchive.length,
-      buffer: invalidArchive,
     },
   })
 

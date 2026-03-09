@@ -212,7 +212,7 @@ function MascotAssetRenderer({ url, mode, fit, onError }) {
 }
 
 /**
- * Affiche les mascottes de section en mode assets reels (dotLottie/Rive/video/image).
+ * Affiche les mascottes de section en mode assets reels (Lottie JSON/Rive/video/image).
  * @param {{scope?: string, sceneKey?: string}} props Props composant.
  * @returns {JSX.Element | null} Overlay de mascotte ou null.
  */

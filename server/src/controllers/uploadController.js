@@ -22,7 +22,7 @@ async function uploadImage(req, res, next) {
 }
 
 /**
- * Recoit un asset mascotte (gif/webm/json/lottie/riv...) via Multer puis delegue l'upload.
+ * Recoit un asset mascotte (gif/webm/json/riv...) via Multer puis delegue l'upload.
  * @param {import('express').Request} req Requete contenant `file`.
  * @param {import('express').Response} res Reponse HTTP.
  * @param {import('express').NextFunction} next Middleware d'erreur.

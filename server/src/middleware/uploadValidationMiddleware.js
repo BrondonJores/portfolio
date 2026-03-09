@@ -21,7 +21,6 @@ const ALLOWED_MASCOT_EXTENSIONS = new Set([
   'webm',
   'mp4',
   'json',
-  'lottie',
   'riv',
 ])
 
@@ -34,13 +33,6 @@ const MASCOT_EXTENSION_MIME_MAP = {
   webm: new Set(['video/webm', 'application/octet-stream']),
   mp4: new Set(['video/mp4', 'application/mp4']),
   json: new Set(['application/json', 'text/json', 'text/plain', 'application/octet-stream']),
-  lottie: new Set([
-    'application/zip',
-    'application/octet-stream',
-    'application/x-zip-compressed',
-    'application/x-lottie',
-    'application/vnd.lottie+json',
-  ]),
   riv: new Set(['application/octet-stream', 'application/riv', 'application/x-riv', 'application/x-rive']),
 }
 
@@ -201,19 +193,6 @@ function isLikelyRiveBinary(buffer) {
 }
 
 /**
- * Verifie qu'un fichier .lottie ressemble a une archive zip valide.
- * @param {Buffer} buffer Buffer brut.
- * @returns {boolean} true si la signature ZIP est detectee.
- */
-function isLikelyDotLottieArchive(buffer) {
-  if (!Buffer.isBuffer(buffer) || buffer.length < 4) {
-    return false
-  }
-
-  return startsWithSignature(buffer, [0x50, 0x4b, 0x03, 0x04])
-}
-
-/**
  * Valide un upload image Multer contre la liste blanche de formats autorises.
  * @param {import('express').Request} req Requete contenant `file`.
  * @param {import('express').Response} res Reponse HTTP.
@@ -287,7 +266,7 @@ function validateDocumentUpload(req, res, next) {
 }
 
 /**
- * Valide un upload de mascotte (image/video/lottie/rive).
+ * Valide un upload de mascotte (image/video/lottie-json/rive).
  * @param {import('express').Request} req Requete HTTP.
  * @param {import('express').Response} res Reponse HTTP.
  * @param {import('express').NextFunction} next Middleware suivant.
@@ -312,7 +291,7 @@ function validateMascotUpload(req, res, next) {
 
   const extension = getExtension(file.originalname)
   if (!ALLOWED_MASCOT_EXTENSIONS.has(extension)) {
-    next(createHttpError(400, 'Extension non autorisee. Formats: gif, webp, png, jpg, webm, mp4, json, lottie, riv.'))
+    next(createHttpError(400, 'Extension non autorisee. Formats: gif, webp, png, jpg, webm, mp4, json, riv.'))
     return
   }
 
@@ -352,11 +331,6 @@ function validateMascotUpload(req, res, next) {
 
   if (extension === 'json' && !isLikelyLottieJson(file.buffer)) {
     next(createHttpError(400, 'Le fichier JSON ne ressemble pas a une animation Lottie valide.'))
-    return
-  }
-
-  if (extension === 'lottie' && !isLikelyDotLottieArchive(file.buffer)) {
-    next(createHttpError(400, 'Le fichier .lottie doit etre une archive valide.'))
     return
   }
 

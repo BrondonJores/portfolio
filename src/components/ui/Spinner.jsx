@@ -29,7 +29,7 @@ function resolveLoaderAssetUrl(settings, variant) {
 }
 
 /**
- * Spinner SVG avec fallback asset (dotLottie/Rive/video/image) configurable depuis AdminSettings.
+ * Spinner SVG avec fallback asset (Lottie JSON/Rive/video/image) configurable depuis AdminSettings.
  * @param {{size?:'sm'|'md'|'lg', className?:string, variant?:'spinner'|'page'|'site'}} props Props composant.
  * @returns {JSX.Element} Spinner rendu.
  */

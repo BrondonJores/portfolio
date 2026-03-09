@@ -85,7 +85,7 @@ const documentUpload = multer({
 const router = Router()
 router.post('/', authenticate, imageUpload.single('image'), validateImageUpload, uploadImage)
 
-/* POST /api/upload/mascot : upload des assets animables (gif/webm/json/lottie/riv...). */
+/* POST /api/upload/mascot : upload des assets animables (gif/webm/json/riv...). */
 router.post('/mascot', authenticate, mascotUpload.single('asset'), validateMascotUpload, uploadMascot)
 router.post('/document', authenticate, documentUpload.single('document'), validateDocumentUpload, uploadDocument)
 

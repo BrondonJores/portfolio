@@ -42,7 +42,7 @@ export function detectAnimationAssetMode(rawUrl) {
     return 'unsupported'
   }
 
-  if (/\.(lottie|json)$/.test(clean)) {
+  if (/\.json$/.test(clean)) {
     return 'lottie'
   }
 

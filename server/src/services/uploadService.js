@@ -13,8 +13,8 @@ const { createHttpError } = require('../utils/httpError')
 function createUploadService(deps = {}) {
   const cloudinary = deps.cloudinary || cloudinaryLib
   const logger = deps.logger || console
-  const ALLOWED_MASCOT_FORMATS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'webm', 'mp4', 'json', 'lottie', 'riv'])
-  const RAW_MASCOT_FORMATS = new Set(['json', 'lottie', 'riv'])
+  const ALLOWED_MASCOT_FORMATS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'webm', 'mp4', 'json', 'riv'])
+  const RAW_MASCOT_FORMATS = new Set(['json', 'riv'])
   const ALLOWED_DOCUMENT_FORMATS = new Set(['pdf'])
 
   /**
@@ -106,7 +106,7 @@ function createUploadService(deps = {}) {
   }
 
   /**
-   * Upload un asset mascotte (image/video/lottie/rive) vers Cloudinary.
+   * Upload un asset mascotte (image/video/lottie-json/rive) vers Cloudinary.
    * @param {{buffer?:Buffer,path?:string,originalname?:string}|undefined} file Fichier Multer.
    * @returns {Promise<{url:string,resourceType:string,format:string}>} Meta upload utile au front.
    */

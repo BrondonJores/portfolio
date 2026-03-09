@@ -1,4 +1,4 @@
-/* Overlay de transition de page pilote par asset DotLottie. */
+/* Overlay de transition de page pilote par asset Lottie JSON/Rive/video/image. */
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { detectAnimationAssetMode, sanitizeAnimationAssetUrl } from '../../utils/animationAsset.js'
@@ -6,7 +6,7 @@ import LoaderAssetPlayer from './LoaderAssetPlayer.jsx'
 import Spinner from './Spinner.jsx'
 
 /**
- * Overlay de transition page avec rendu DotLottie (fallback spinner).
+ * Overlay de transition page avec rendu asset anime (fallback spinner).
  * @param {{
  *   visible: boolean,
  *   assetUrl?: string,
@@ -26,7 +26,7 @@ export default function PageTransitionOverlay({
     () => sanitizeAnimationAssetUrl(assetUrl),
     [assetUrl]
   )
-  const isDotLottieAsset = useMemo(
+  const isLottieAsset = useMemo(
     () => detectAnimationAssetMode(safeUrl) === 'lottie',
     [safeUrl]
   )
@@ -63,7 +63,7 @@ export default function PageTransitionOverlay({
             exit={{ scale: 0.96, opacity: 0 }}
             transition={{ duration: Math.min(0.6, safeDurationSec * 0.36), ease: 'easeOut' }}
           >
-            {isDotLottieAsset && !assetFailed ? (
+            {isLottieAsset && !assetFailed ? (
               <LoaderAssetPlayer
                 url={safeUrl}
                 fit="contain"

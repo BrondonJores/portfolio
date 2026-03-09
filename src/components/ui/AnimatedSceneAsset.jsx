@@ -226,7 +226,7 @@ function SceneAssetRenderer({ asset, fit, onError }) {
 }
 
 /**
- * Affiche un grand asset anime (dotLottie/Rive/video/image) en decoration de section.
+ * Affiche un grand asset anime (Lottie JSON/Rive/video/image) en decoration de section.
  * @param {{scope?:string,sceneKey?:string}} props Props composant.
  * @returns {JSX.Element | null} Overlay decoratif.
  */

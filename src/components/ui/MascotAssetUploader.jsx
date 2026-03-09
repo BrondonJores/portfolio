@@ -9,7 +9,7 @@ import { detectAnimationAssetMode } from '../../utils/animationAsset.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 const MAX_SIZE_MB = 12
-const DEFAULT_ACCEPTED_EXTENSIONS = ['gif', 'webp', 'png', 'jpg', 'jpeg', 'webm', 'mp4', 'json', 'lottie', 'riv']
+const DEFAULT_ACCEPTED_EXTENSIONS = ['gif', 'webp', 'png', 'jpg', 'jpeg', 'webm', 'mp4', 'json', 'riv']
 
 /**
  * Deduit le mode d'affichage d'un media depuis son extension.

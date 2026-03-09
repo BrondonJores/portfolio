@@ -1663,7 +1663,7 @@ export default function AdminSettings() {
           {activeTab === 'animations' && (
             <>
               <CardSection>
-                <SectionTitle>Import / Export Lottie-Rive</SectionTitle>
+                <SectionTitle>Import / Export Animations</SectionTitle>
                 <InlineTip>
                   Les anciens presets cinematics ont ete retires. Cette section ne gere plus que le pack animations assets-only.
                 </InlineTip>
@@ -1731,7 +1731,7 @@ export default function AdminSettings() {
                       JSON de preset animation
                     </label>
                     <InlineTip>
-                      Seules les cles Lottie/Rive essentielles sont acceptees a l&apos;import.
+                      Seules les cles animation supportees sont acceptees a l&apos;import.
                     </InlineTip>
                     <textarea
                       value={animationPresetJson}
@@ -1746,7 +1746,7 @@ export default function AdminSettings() {
               </CardSection>
 
               <CardSection>
-                <SectionTitle>Loaders DotLottie/Rive</SectionTitle>
+                <SectionTitle>Loaders Lottie JSON / Rive</SectionTitle>
                 <InlineTip>
                   Personnalise ici les animations de chargement globales: spinner classique, transition entre pages et loader de demarrage du site.
                 </InlineTip>
@@ -2056,7 +2056,7 @@ export default function AdminSettings() {
               <CardSection>
                 <SectionTitle>Transition Entre Pages</SectionTitle>
                 <InlineTip>
-                  Ajoute un overlay de transition sur navigation (asset dedie depuis Loaders DotLottie/Rive).
+                  Ajoute un overlay de transition sur navigation (asset dedie depuis Loaders Lottie JSON / Rive).
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox
@@ -2177,9 +2177,9 @@ export default function AdminSettings() {
               </CardSection>
 
               <CardSection>
-                <SectionTitle>Assets DotLottie Boutons</SectionTitle>
+                <SectionTitle>Assets Lottie JSON Boutons</SectionTitle>
                 <InlineTip>
-                  Anime les boutons uniquement avec des assets DotLottie (.lottie/.json). Si un asset echoue ou n est pas au bon format, le bouton repasse automatiquement sur le style micro-interaction classique.
+                  Anime les boutons uniquement avec des assets Lottie JSON (.json). Si un asset echoue ou n est pas au bon format, le bouton repasse automatiquement sur le style micro-interaction classique.
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox
@@ -2213,7 +2213,7 @@ export default function AdminSettings() {
                       label="Asset bouton global (fallback)"
                       value={settings.anim_ui_button_asset_default_url || ''}
                       onUpload={(url) => handleChange('anim_ui_button_asset_default_url', url)}
-                      acceptedExtensions={['lottie', 'json']}
+                      acceptedExtensions={['json']}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -2221,7 +2221,7 @@ export default function AdminSettings() {
                       label="Asset bouton primary"
                       value={settings.anim_ui_button_asset_primary_url || ''}
                       onUpload={(url) => handleChange('anim_ui_button_asset_primary_url', url)}
-                      acceptedExtensions={['lottie', 'json']}
+                      acceptedExtensions={['json']}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -2229,7 +2229,7 @@ export default function AdminSettings() {
                       label="Asset bouton secondary"
                       value={settings.anim_ui_button_asset_secondary_url || ''}
                       onUpload={(url) => handleChange('anim_ui_button_asset_secondary_url', url)}
-                      acceptedExtensions={['lottie', 'json']}
+                      acceptedExtensions={['json']}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -2237,14 +2237,14 @@ export default function AdminSettings() {
                       label="Asset bouton ghost"
                       value={settings.anim_ui_button_asset_ghost_url || ''}
                       onUpload={(url) => handleChange('anim_ui_button_asset_ghost_url', url)}
-                      acceptedExtensions={['lottie', 'json']}
+                      acceptedExtensions={['json']}
                     />
                   </div>
                 </div>
               </CardSection>
 
               <CardSection>
-                <SectionTitle>Assets DotLottie/Rive Par Section</SectionTitle>
+                <SectionTitle>Assets Lottie JSON / Rive Par Section</SectionTitle>
                 <InlineTip>
                   Ajoute une grande animation par section (Hero/About/Skills/Projects/Blog/Contact). Ces assets remplacent les anciens effets decoratifs locaux.
                 </InlineTip>
@@ -2365,7 +2365,7 @@ export default function AdminSettings() {
               <CardSection>
                 <SectionTitle>Mascottes Animees (Petits Bonhommes)</SectionTitle>
                 <InlineTip>
-                  Branche ici des assets humains reels (dotLottie/Rive/video/image). Formats supportes: GIF, WebM, MP4, JSON, LOTTIE et RIV.
+                  Branche ici des assets humains reels (Lottie JSON/Rive/video/image). Formats supportes: GIF, WebM, MP4, JSON et RIV.
                 </InlineTip>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCheckbox label="Activer les mascottes" fieldKey="anim_mascots_enabled" settings={settings} onChange={handleChange} />
