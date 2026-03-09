@@ -1,5 +1,5 @@
 /* Uploader d'assets mascottes (image/video/lottie/rive) avec preview. */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FilmIcon, SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import Spinner from './Spinner.jsx'
 import MascotLottiePlayer from './MascotLottiePlayer.jsx'
@@ -9,9 +9,7 @@ import { detectAnimationAssetMode } from '../../utils/animationAsset.js'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 const MAX_SIZE_MB = 12
-const ACCEPTED_EXTENSIONS = ['gif', 'webp', 'png', 'jpg', 'jpeg', 'webm', 'mp4', 'json', 'lottie', 'riv']
-const ACCEPT_INPUT = ACCEPTED_EXTENSIONS.map((ext) => `.${ext}`).join(',')
-const ALLOWED_EXTENSIONS = new Set(ACCEPTED_EXTENSIONS)
+const DEFAULT_ACCEPTED_EXTENSIONS = ['gif', 'webp', 'png', 'jpg', 'jpeg', 'webm', 'mp4', 'json', 'lottie', 'riv']
 
 /**
  * Deduit le mode d'affichage d'un media depuis son extension.
@@ -39,15 +37,48 @@ function getFileExtension(filename) {
 
 /**
  * Uploader admin pour mascottes animees, avec upload securise vers l'API.
- * @param {{label:string, value?:string, onUpload?:(url:string)=>void}} props Props composant.
+ * @param {{
+ *   label:string,
+ *   value?:string,
+ *   onUpload?:(url:string)=>void,
+ *   acceptedExtensions?: string[]
+ * }} props Props composant.
  * @returns {JSX.Element} Bloc upload + preview.
  */
-export default function MascotAssetUploader({ label, value = '', onUpload }) {
+export default function MascotAssetUploader({
+  label,
+  value = '',
+  onUpload,
+  acceptedExtensions = DEFAULT_ACCEPTED_EXTENSIONS,
+}) {
   const inputRef = useRef(null)
   const { accessToken } = useAuthContext()
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [localPreview, setLocalPreview] = useState(null)
+  const normalizedExtensions = useMemo(() => {
+    if (!Array.isArray(acceptedExtensions)) {
+      return DEFAULT_ACCEPTED_EXTENSIONS
+    }
+
+    const sanitized = acceptedExtensions
+      .map((ext) => String(ext || '').replace(/^\./, '').trim().toLowerCase())
+      .filter(Boolean)
+
+    if (sanitized.length === 0) {
+      return DEFAULT_ACCEPTED_EXTENSIONS
+    }
+
+    return [...new Set(sanitized)]
+  }, [acceptedExtensions])
+  const acceptInput = useMemo(
+    () => normalizedExtensions.map((ext) => `.${ext}`).join(','),
+    [normalizedExtensions]
+  )
+  const allowedExtensions = useMemo(
+    () => new Set(normalizedExtensions),
+    [normalizedExtensions]
+  )
 
   const previewUrl = localPreview?.url || value
   const previewMode = localPreview?.mode || detectModeFromValue(previewUrl)
@@ -112,8 +143,8 @@ export default function MascotAssetUploader({ label, value = '', onUpload }) {
     }
 
     const extension = getFileExtension(file.name)
-    if (!ALLOWED_EXTENSIONS.has(extension)) {
-      setError('Format non autorise. Utilise gif, webp, png, jpg, webm, mp4, json, lottie ou riv.')
+    if (!allowedExtensions.has(extension)) {
+      setError(`Format non autorise. Utilise ${normalizedExtensions.join(', ')}.`)
       return
     }
 
@@ -256,7 +287,7 @@ export default function MascotAssetUploader({ label, value = '', onUpload }) {
               Cliquer pour importer une mascotte
             </span>
             <span className="text-xs">
-              {`Formats: ${ACCEPTED_EXTENSIONS.join(', ')} - max ${MAX_SIZE_MB} Mo`}
+              {`Formats: ${normalizedExtensions.join(', ')} - max ${MAX_SIZE_MB} Mo`}
             </span>
           </div>
         </button>
@@ -281,7 +312,7 @@ export default function MascotAssetUploader({ label, value = '', onUpload }) {
         ref={inputRef}
         type="file"
         className="hidden"
-        accept={ACCEPT_INPUT}
+        accept={acceptInput}
         onChange={(event) => {
           const file = event.target.files?.[0]
           if (file) {

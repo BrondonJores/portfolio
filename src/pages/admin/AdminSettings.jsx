@@ -1957,6 +1957,73 @@ export default function AdminSettings() {
               </CardSection>
 
               <CardSection>
+                <SectionTitle>Assets DotLottie Boutons</SectionTitle>
+                <InlineTip>
+                  Anime les boutons uniquement avec des assets DotLottie (.lottie/.json). Si un asset echoue ou n est pas au bon format, le bouton repasse automatiquement sur le style micro-interaction classique.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldCheckbox
+                    label="Activer les assets sur les boutons"
+                    fieldKey="anim_ui_button_asset_enabled"
+                    settings={settings}
+                    onChange={handleChange}
+                  />
+                  <FieldSelect
+                    label="Mode de cadrage asset bouton"
+                    fieldKey="anim_ui_button_asset_fit"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={[
+                      { value: 'cover', label: 'Cover (recommande)' },
+                      { value: 'contain', label: 'Contain' },
+                    ]}
+                  />
+                  <FieldRange
+                    label="Opacite asset bouton"
+                    fieldKey="anim_ui_button_asset_opacity"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.15}
+                    max={1}
+                    step={0.05}
+                    defaultValue={0.82}
+                  />
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset bouton global (fallback)"
+                      value={settings.anim_ui_button_asset_default_url || ''}
+                      onUpload={(url) => handleChange('anim_ui_button_asset_default_url', url)}
+                      acceptedExtensions={['lottie', 'json']}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset bouton primary"
+                      value={settings.anim_ui_button_asset_primary_url || ''}
+                      onUpload={(url) => handleChange('anim_ui_button_asset_primary_url', url)}
+                      acceptedExtensions={['lottie', 'json']}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset bouton secondary"
+                      value={settings.anim_ui_button_asset_secondary_url || ''}
+                      onUpload={(url) => handleChange('anim_ui_button_asset_secondary_url', url)}
+                      acceptedExtensions={['lottie', 'json']}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MascotAssetUploader
+                      label="Asset bouton ghost"
+                      value={settings.anim_ui_button_asset_ghost_url || ''}
+                      onUpload={(url) => handleChange('anim_ui_button_asset_ghost_url', url)}
+                      acceptedExtensions={['lottie', 'json']}
+                    />
+                  </div>
+                </div>
+              </CardSection>
+
+              <CardSection>
                 <SectionTitle>Assets DotLottie/Rive Par Section</SectionTitle>
                 <InlineTip>
                   Ajoute une grande animation par section (Hero/About/Skills/Projects/Blog/Contact). Ces assets remplacent les anciens effets decoratifs locaux.

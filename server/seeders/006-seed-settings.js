@@ -76,6 +76,13 @@ module.exports = {
       { key: 'anim_ui_button_ripple_enabled', value: 'true' },
       { key: 'anim_ui_button_pulse_enabled', value: 'true' },
       { key: 'anim_ui_button_pulse_interval_ms', value: '1800' },
+      { key: 'anim_ui_button_asset_enabled', value: 'true' },
+      { key: 'anim_ui_button_asset_fit', value: 'cover' },
+      { key: 'anim_ui_button_asset_opacity', value: '0.82' },
+      { key: 'anim_ui_button_asset_default_url', value: '' },
+      { key: 'anim_ui_button_asset_primary_url', value: '' },
+      { key: 'anim_ui_button_asset_secondary_url', value: '' },
+      { key: 'anim_ui_button_asset_ghost_url', value: '' },
       { key: 'anim_ui_scroll_reveal_type', value: 'fade-up' },
       { key: 'anim_ui_scroll_reveal_duration_ms', value: '650' },
       { key: 'anim_ui_scroll_reveal_distance_px', value: '36' },
@@ -137,4 +144,5 @@ module.exports = {
     await queryInterface.bulkDelete('settings', null, {})
   },
 }
+
 

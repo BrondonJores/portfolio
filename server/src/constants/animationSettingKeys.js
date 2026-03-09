@@ -11,6 +11,13 @@ const ANIMATION_CORE_SETTING_KEYS = [
   'anim_ui_button_ripple_enabled',
   'anim_ui_button_pulse_enabled',
   'anim_ui_button_pulse_interval_ms',
+  'anim_ui_button_asset_enabled',
+  'anim_ui_button_asset_fit',
+  'anim_ui_button_asset_opacity',
+  'anim_ui_button_asset_default_url',
+  'anim_ui_button_asset_primary_url',
+  'anim_ui_button_asset_secondary_url',
+  'anim_ui_button_asset_ghost_url',
   'anim_ui_scroll_reveal_type',
   'anim_ui_scroll_reveal_duration_ms',
   'anim_ui_scroll_reveal_distance_px',
@@ -69,3 +76,4 @@ module.exports = {
   ANIMATION_CORE_SETTING_KEYS,
   ANIMATION_CORE_SETTING_KEY_SET: new Set(ANIMATION_CORE_SETTING_KEYS),
 }
+

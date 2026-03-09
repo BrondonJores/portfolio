@@ -11,6 +11,13 @@ export const ANIMATION_CORE_SETTING_KEYS = [
   'anim_ui_button_ripple_enabled',
   'anim_ui_button_pulse_enabled',
   'anim_ui_button_pulse_interval_ms',
+  'anim_ui_button_asset_enabled',
+  'anim_ui_button_asset_fit',
+  'anim_ui_button_asset_opacity',
+  'anim_ui_button_asset_default_url',
+  'anim_ui_button_asset_primary_url',
+  'anim_ui_button_asset_secondary_url',
+  'anim_ui_button_asset_ghost_url',
   'anim_ui_scroll_reveal_type',
   'anim_ui_scroll_reveal_duration_ms',
   'anim_ui_scroll_reveal_distance_px',
@@ -101,6 +108,10 @@ function normalizeRevealType(value) {
   return 'fade-up'
 }
 
+function normalizeAssetFit(value) {
+  return String(value || '').trim().toLowerCase() === 'contain' ? 'contain' : 'cover'
+}
+
 export function extractAnimationSettings(settings = {}) {
   const payload = {}
   const source = settings && typeof settings === 'object' ? settings : {}
@@ -182,6 +193,7 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
   const buttonPressScale = clampNumber(settings.anim_ui_button_press_scale, 0.9, 1, 0.97)
   const buttonGlowBoost = clampNumber(settings.anim_ui_button_glow_boost, 0.4, 2.5, 1)
   const buttonPulseIntervalMs = clampNumber(settings.anim_ui_button_pulse_interval_ms, 800, 5000, 1800)
+  const buttonAssetOpacity = clampNumber(settings.anim_ui_button_asset_opacity, 0.15, 1, 0.82)
   const scrollProgressThickness = clampNumber(settings.anim_ui_scroll_progress_thickness, 2, 10, 4)
 
   return {
@@ -209,6 +221,13 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     buttonRippleEnabled: parseBooleanSetting(settings.anim_ui_button_ripple_enabled, true),
     ctaPulse: parseBooleanSetting(settings.anim_ui_button_pulse_enabled, true),
     ctaPulseIntervalMs: buttonPulseIntervalMs / Math.max(0.7, intensity),
+    buttonAssetEnabled: parseBooleanSetting(settings.anim_ui_button_asset_enabled, true),
+    buttonAssetFit: normalizeAssetFit(settings.anim_ui_button_asset_fit),
+    buttonAssetOpacity,
+    buttonAssetDefaultUrl: toTrimmedString(settings.anim_ui_button_asset_default_url),
+    buttonAssetPrimaryUrl: toTrimmedString(settings.anim_ui_button_asset_primary_url),
+    buttonAssetSecondaryUrl: toTrimmedString(settings.anim_ui_button_asset_secondary_url),
+    buttonAssetGhostUrl: toTrimmedString(settings.anim_ui_button_asset_ghost_url),
     loaderSpinnerAssetUrl: toTrimmedString(settings.anim_loader_spinner_asset_url),
     loaderPageAssetUrl: toTrimmedString(settings.anim_loader_page_asset_url),
     loaderSiteAssetUrl: toTrimmedString(settings.anim_loader_site_asset_url),

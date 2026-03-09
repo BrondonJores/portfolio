@@ -1,4 +1,4 @@
-﻿const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
 export const FONT_FAMILY_MAP = {
   inter: '"Inter Variable", sans-serif',
@@ -55,6 +55,13 @@ export const DEFAULT_THEME_SETTINGS = {
   anim_ui_button_ripple_enabled: 'true',
   anim_ui_button_pulse_enabled: 'true',
   anim_ui_button_pulse_interval_ms: '1800',
+  anim_ui_button_asset_enabled: 'true',
+  anim_ui_button_asset_fit: 'cover',
+  anim_ui_button_asset_opacity: '0.82',
+  anim_ui_button_asset_default_url: '',
+  anim_ui_button_asset_primary_url: '',
+  anim_ui_button_asset_secondary_url: '',
+  anim_ui_button_asset_ghost_url: '',
   anim_ui_scroll_reveal_type: 'fade-up',
   anim_ui_scroll_reveal_duration_ms: '650',
   anim_ui_scroll_reveal_distance_px: '36',
@@ -241,6 +248,7 @@ export function applyThemeSettings(settings = {}) {
   rootStyle.setProperty('--anim-mascot-opacity', String(config.mascotOpacity))
   rootStyle.setProperty('--anim-scroll-progress-thickness', `${config.scrollProgressThickness}px`)
 }
+
 
 
 
