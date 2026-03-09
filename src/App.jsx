@@ -23,6 +23,7 @@ const RECAPTCHA_SCRIPT_ORIGINS = ['https://www.google.com', 'https://www.gstatic
 const RECAPTCHA_FRAME_ORIGINS = ['https://www.google.com', 'https://recaptcha.google.com', 'https://www.recaptcha.net']
 const VERCEL_SCRIPT_ORIGINS = ['https://va.vercel-scripts.com']
 const VERCEL_CONNECT_ORIGINS = ['https://vitals.vercel-insights.com']
+const CLOUDINARY_ORIGINS = ['https://res.cloudinary.com']
 const ANIMATION_ASSET_URL_SETTING_KEYS = [
   'anim_loader_spinner_asset_url',
   'anim_loader_page_asset_url',
@@ -87,15 +88,16 @@ function buildCspPolicy(assetOrigins = []) {
       ...VERCEL_SCRIPT_ORIGINS,
     ])}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src ${joinCspSources(["'self'", 'data:', 'https:', serverOrigin, ...RECAPTCHA_SCRIPT_ORIGINS])}`,
+    `img-src ${joinCspSources(["'self'", 'data:', 'https:', serverOrigin, ...RECAPTCHA_SCRIPT_ORIGINS, ...CLOUDINARY_ORIGINS])}`,
     `font-src ${joinCspSources(["'self'", 'data:'])}`,
-    `media-src ${joinCspSources(["'self'", 'data:', 'blob:', ...assetOrigins])}`,
+    `media-src ${joinCspSources(["'self'", 'data:', 'blob:', ...CLOUDINARY_ORIGINS, ...assetOrigins])}`,
     `connect-src ${joinCspSources([
       "'self'",
       'https://api.resend.com',
       apiOrigin,
       ...RECAPTCHA_SCRIPT_ORIGINS,
       ...VERCEL_CONNECT_ORIGINS,
+      ...CLOUDINARY_ORIGINS,
       ...assetOrigins,
     ])}`,
     `frame-src ${joinCspSources(["'self'", ...RECAPTCHA_FRAME_ORIGINS])}`,

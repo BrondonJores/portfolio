@@ -12,6 +12,7 @@ const { getSitemapXml } = require('./controllers/sitemapController')
 const { logSecurityEventFromRequest } = require('./services/securityEventService')
 
 const app = express()
+const CLOUDINARY_ASSET_ORIGIN = 'https://res.cloudinary.com'
 
 /**
  * Parse une valeur booleenne style env (`true`, `1`, `yes`, `on`).
@@ -179,11 +180,18 @@ app.use(
           'https://www.google.com',
           'https://www.gstatic.com',
           'https://www.recaptcha.net',
+          CLOUDINARY_ASSET_ORIGIN,
         ],
         imgSrc: [
           "'self'",
           'data:',
           'https:',
+        ],
+        mediaSrc: [
+          "'self'",
+          'data:',
+          'blob:',
+          CLOUDINARY_ASSET_ORIGIN,
         ],
         workerSrc: [
           "'self'",
