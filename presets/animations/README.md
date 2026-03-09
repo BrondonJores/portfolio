@@ -1,7 +1,7 @@
 # Presets Animation JSON
 
 Ces fichiers sont compatibles avec l'import JSON de:
-`Admin > Parametres > Animations > Import / Export Lottie-Rive > Importer fichier .json`.
+`Admin > Parametres > Animations > Importer fichier .json`.
 
 ## Comment importer
 
@@ -16,14 +16,25 @@ Pour generer un pack avec le mapping exact de tes URLs actuelles:
 2. Clique `Exporter pack assets actuels`.
 3. Garde ce fichier comme base "site reel" pour duplication/restauration.
 
-## Presets inclus
+## Presets recommandes
 
-- `ultra-elementor-vibe.json`: style dynamique assets-only, hero fort, sprites split.
-- `cinematic-portfolio.json`: preset cinematic equilibre assets-only.
-- `story-soft.json`: ambiance douce assets-only.
-- `arcade-energy.json`: style energique assets-only avec sprites split.
-- `minimal-clean.json`: animation reduite assets-only.
-- `performance-focus.json`: compromis animation/charge assets-only.
-- `dotlottie-rive-starter.json`: base assets-only dotLottie/Rive (sections + mascottes + sprites).
-- `dotlottie-rive-split-sides.json`: sprites gauche/droite separes + assets de section plus grands.
-- `dotlottie-rive-mobile-friendly.json`: variante plus douce avec affichage assets aussi sur mobile.
+- `06-global-signature.json`: preset global premium (loader, spinner, boutons, reveal, tilt, particles, sections, mascottes, sprites).
+- `01-balanced-default.json`: profil equilibre pour usage quotidien.
+- `02-snappy-performance.json`: ressenti rapide, plus sobre en motion.
+- `03-cinematic-wow.json`: style plus dramatique et immersif.
+- `04-calm-accessible.json`: doux et confortable visuellement.
+- `05-motion-minimal.json`: animation minimale.
+
+## Presets legacy (toujours importables)
+
+- `ultra-elementor-vibe.json`
+- `cinematic-portfolio.json`
+- `story-soft.json`
+- `arcade-energy.json`
+- `minimal-clean.json`
+- `performance-focus.json`
+- `dotlottie-rive-starter.json`
+- `dotlottie-rive-split-sides.json`
+- `dotlottie-rive-mobile-friendly.json`
+
+Note: les noms legacy peuvent mentionner DotLottie, mais l'import reste un JSON de settings d'animation.
