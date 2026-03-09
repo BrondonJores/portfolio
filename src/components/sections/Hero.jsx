@@ -8,28 +8,7 @@ import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import AnimatedCounter from '../ui/AnimatedCounter.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
-
-function buildContainerVariants(staggerSeconds) {
-  return {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: staggerSeconds,
-        delayChildren: Math.min(0.25, staggerSeconds * 1.6),
-      },
-    },
-  }
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: 'easeOut' },
-  },
-}
+import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
 
 function buildInitials(name) {
   const safeName = typeof name === 'string' ? name.trim() : ''
@@ -91,8 +70,12 @@ export default function Hero() {
   const canAnimate = animationConfig.canAnimate
   const revealDuration = Math.max(0.2, 0.6 * animationConfig.durationScale)
   const containerVariants = useMemo(
-    () => buildContainerVariants(animationConfig.sectionStaggerMs / 1000),
-    [animationConfig.sectionStaggerMs]
+    () => buildSectionContainerVariants('hero', animationConfig),
+    [animationConfig]
+  )
+  const itemVariants = useMemo(
+    () => buildSectionItemVariants('hero', animationConfig),
+    [animationConfig]
   )
 
   return (

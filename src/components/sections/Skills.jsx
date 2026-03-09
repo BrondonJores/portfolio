@@ -11,26 +11,7 @@ import Spinner from '../ui/Spinner.jsx'
 import { getSkills } from '../../services/skillService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
-
-/* Variants pour l'animation staggeree des elements */
-function buildContainerVariants(staggerSeconds) {
-  return {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: staggerSeconds },
-    },
-  }
-}
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: 'easeOut' },
-  },
-}
+import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
 
 export default function Skills() {
   const [skillGroups, setSkillGroups] = useState([])
@@ -43,8 +24,12 @@ export default function Skills() {
   )
   const canAnimate = animationConfig.canAnimate
   const containerVariants = useMemo(
-    () => buildContainerVariants(animationConfig.sectionStaggerMs / 1000),
-    [animationConfig.sectionStaggerMs]
+    () => buildSectionContainerVariants('skills', animationConfig),
+    [animationConfig]
+  )
+  const itemVariants = useMemo(
+    () => buildSectionItemVariants('skills', animationConfig),
+    [animationConfig]
   )
   const skillsTitle = settings.ui_section_skills_title || 'Competences'
   const skillsSubtitle = settings.ui_section_skills_subtitle || "Technologies et outils que j'utilise au quotidien"

@@ -55,6 +55,77 @@ function getScopePreset(scope) {
   return SECTION_MASCOT_PRESETS[scope] || SECTION_MASCOT_PRESETS.section
 }
 
+function getMascotMotionPreset(scope, animationConfig, travel, driftX, index) {
+  const intensity = Math.max(0.7, Number(animationConfig?.intensity) || 1)
+  const speed = Math.max(0.4, Number(animationConfig?.mascotSpeed) || 1)
+  const durationScale = Math.max(0.6, Number(animationConfig?.durationScale) || 1)
+  const baseDuration = (8.1 / speed) * durationScale
+  const phaseDelay = index * 0.18
+
+  switch (scope) {
+    case 'about':
+      return {
+        animate: {
+          y: [0, -travel, 0],
+          x: [0, driftX * 0.6 * intensity, 0],
+          rotate: [-1.2, 1.2, -1.2],
+          scale: [1, 1.015, 1],
+        },
+        transition: { duration: baseDuration * 0.95, repeat: Infinity, ease: 'easeInOut', delay: phaseDelay },
+      }
+    case 'skills':
+      return {
+        animate: {
+          y: [0, -travel * 0.65, -travel * 1.15, 0],
+          x: [0, driftX * 1.25 * intensity, driftX * -0.85 * intensity, 0],
+          rotate: [-1.8, 2.6, -2.3, -1.8],
+          scale: [1, 1.02, 0.99, 1],
+        },
+        transition: { duration: baseDuration * 0.88, repeat: Infinity, ease: 'easeInOut', delay: phaseDelay },
+      }
+    case 'projects':
+      return {
+        animate: {
+          y: [0, -travel * 1.2, 0],
+          x: [0, driftX * intensity, 0],
+          rotate: [-2, 2, -2],
+          scale: [1, 1.025, 1],
+        },
+        transition: { duration: baseDuration, repeat: Infinity, ease: 'easeInOut', delay: phaseDelay },
+      }
+    case 'blog':
+      return {
+        animate: {
+          y: [0, -travel * 0.85, 0],
+          x: [0, driftX * 1.05 * intensity, driftX * -0.75 * intensity, 0],
+          rotate: [0.6, -1.4, 1.1, 0.6],
+          scale: [1, 1.015, 1],
+        },
+        transition: { duration: baseDuration * 0.92, repeat: Infinity, ease: 'easeInOut', delay: phaseDelay },
+      }
+    case 'contact':
+      return {
+        animate: {
+          y: [0, -travel * 0.7, 0],
+          x: [0, driftX * 0.7 * intensity, 0],
+          rotate: [-1, 1, -1],
+          scale: [1, 1.012, 1],
+        },
+        transition: { duration: baseDuration * 0.9, repeat: Infinity, ease: 'easeInOut', delay: phaseDelay },
+      }
+    default:
+      return {
+        animate: {
+          y: [0, -travel, 0],
+          x: [0, driftX * intensity, 0],
+          rotate: [-1.8, 1.8, -1.8],
+          scale: [1, 1.02, 1],
+        },
+        transition: { duration: baseDuration, repeat: Infinity, ease: 'easeInOut', delay: phaseDelay },
+      }
+  }
+}
+
 /**
  * Resolve l'asset de mascotte a utiliser pour une section.
  * @param {object} config Configuration animation.
@@ -214,23 +285,15 @@ export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
       {shouldRenderAsset && Array.from({ length: count }).map((_, index) => {
         const size = Math.max(160, animationConfig.mascotSizePx * preset.sizeFactor)
         const travel = Math.max(6, 10 * preset.sizeFactor)
-        const duration = 8.2 / Math.max(0.4, animationConfig.mascotSpeed)
+        const motionPreset = getMascotMotionPreset(scope, animationConfig, travel, preset.driftX, index)
         const bubbleMessage = bubbleCount > index
           ? animationConfig.mascotBubbleMessages[(bubbleCursor + index) % animationConfig.mascotBubbleMessages.length]
           : null
 
         const motionProps = shouldAnimate
           ? {
-              animate: {
-                y: [0, -travel, 0],
-                x: [0, preset.driftX * animationConfig.intensity, 0],
-                rotate: [-1.8, 1.8, -1.8],
-              },
-              transition: {
-                duration,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              },
+              animate: motionPreset.animate,
+              transition: motionPreset.transition,
             }
           : {}
 

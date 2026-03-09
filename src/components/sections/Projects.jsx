@@ -18,26 +18,7 @@ import Spinner from '../ui/Spinner.jsx'
 import { getProjects } from '../../services/projectService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
-
-/* Variants pour l'animation staggeree des cartes */
-function buildContainerVariants(staggerSeconds) {
-  return {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: staggerSeconds },
-    },
-  }
-}
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: 'easeOut' },
-  },
-}
+import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
 
 export default function Projects() {
   const [projects, setProjects] = useState([])
@@ -50,8 +31,12 @@ export default function Projects() {
   )
   const canAnimate = animationConfig.canAnimate
   const containerVariants = useMemo(
-    () => buildContainerVariants(animationConfig.sectionStaggerMs / 1000),
-    [animationConfig.sectionStaggerMs]
+    () => buildSectionContainerVariants('projects', animationConfig),
+    [animationConfig]
+  )
+  const cardVariants = useMemo(
+    () => buildSectionItemVariants('projects', animationConfig),
+    [animationConfig]
   )
   const projectsTitle = settings.ui_section_projects_title || 'Projets'
   const projectsSubtitle = settings.ui_section_projects_subtitle || 'Quelques-uns de mes realisations recentes'

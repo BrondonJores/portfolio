@@ -15,6 +15,7 @@ function createUploadService(deps = {}) {
   const logger = deps.logger || console
   const ALLOWED_MASCOT_FORMATS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'webm', 'mp4', 'json', 'lottie', 'riv'])
   const RAW_MASCOT_FORMATS = new Set(['json', 'lottie', 'riv'])
+  const ALLOWED_DOCUMENT_FORMATS = new Set(['pdf'])
 
   /**
    * Derive un identifiant Cloudinary securise depuis un nom de fichier.
@@ -154,7 +155,56 @@ function createUploadService(deps = {}) {
     }
   }
 
-  return { uploadImage, uploadMascotAsset }
+  /**
+   * Upload un document PDF vers Cloudinary (resource raw).
+   * @param {{buffer?:Buffer,path?:string,originalname?:string}|undefined} file Fichier Multer.
+   * @returns {Promise<{url:string,resourceType:string,format:string}>} Meta upload utile au front.
+   */
+  async function uploadDocument(file) {
+    if (!file) {
+      throw createHttpError(400, 'Aucun fichier fourni.')
+    }
+
+    const extension = extractExtension(file.originalname)
+    if (!ALLOWED_DOCUMENT_FORMATS.has(extension)) {
+      throw createHttpError(400, 'Format document non autorise.')
+    }
+
+    const uploadOptions = {
+      folder: 'portfolio/documents',
+      resource_type: 'raw',
+      use_filename: true,
+      unique_filename: true,
+      overwrite: false,
+      public_id: sanitizePublicIdFromFilename(file.originalname),
+    }
+
+    try {
+      let result
+
+      if (Buffer.isBuffer(file.buffer)) {
+        result = await uploadBufferToCloudinary(file.buffer, uploadOptions)
+      } else if (file.path) {
+        result = await cloudinary.uploader.upload(file.path, uploadOptions)
+      } else {
+        throw createHttpError(400, 'Fichier invalide.')
+      }
+
+      return {
+        url: result.secure_url,
+        resourceType: result.resource_type || 'raw',
+        format: result.format || extension,
+      }
+    } catch (err) {
+      if (err?.statusCode) {
+        throw err
+      }
+      logger.error(err)
+      throw createHttpError(500, 'Upload document echoue.')
+    }
+  }
+
+  return { uploadImage, uploadMascotAsset, uploadDocument }
 }
 
 module.exports = {

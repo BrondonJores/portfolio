@@ -9,6 +9,9 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/gif',
 ])
 
+const ALLOWED_DOCUMENT_MIME_TYPES = new Set(['application/pdf'])
+const MAX_DOCUMENT_UPLOAD_BYTES = 15 * 1024 * 1024
+
 const ALLOWED_MASCOT_EXTENSIONS = new Set([
   'jpg',
   'jpeg',
@@ -134,6 +137,23 @@ function detectVideoMimeFromMagicBytes(buffer) {
 }
 
 /**
+ * Detecte un fichier PDF via magic bytes.
+ * @param {Buffer} buffer Buffer binaire.
+ * @returns {'application/pdf' | null} MIME detecte ou null.
+ */
+function detectPdfMimeFromMagicBytes(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 5) {
+    return null
+  }
+
+  if (startsWithSignature(buffer, [0x25, 0x50, 0x44, 0x46, 0x2d])) {
+    return 'application/pdf'
+  }
+
+  return null
+}
+
+/**
  * Verifie qu'un JSON ressemble a une animation Lottie.
  * @param {Buffer} buffer Contenu JSON brut.
  * @returns {boolean} true si la structure ressemble a une animation Lottie.
@@ -228,6 +248,45 @@ function validateImageUpload(req, res, next) {
 }
 
 /**
+ * Valide un upload document PDF contre la signature binaire.
+ * @param {import('express').Request} req Requete contenant `file`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware suivant.
+ * @returns {void}
+ */
+function validateDocumentUpload(req, res, next) {
+  const file = req.file
+
+  if (!file) {
+    next(createHttpError(400, 'Aucun fichier fourni.'))
+    return
+  }
+
+  if (file.size > MAX_DOCUMENT_UPLOAD_BYTES) {
+    next(createHttpError(400, 'Fichier trop volumineux. Taille max: 15 Mo.'))
+    return
+  }
+
+  if (!ALLOWED_DOCUMENT_MIME_TYPES.has(file.mimetype)) {
+    next(createHttpError(400, 'Type de document non autorise. Utilisez uniquement PDF.'))
+    return
+  }
+
+  const detectedMime = detectPdfMimeFromMagicBytes(file.buffer)
+  if (!detectedMime) {
+    next(createHttpError(400, 'Le fichier envoye n est pas un PDF valide.'))
+    return
+  }
+
+  if (detectedMime !== file.mimetype) {
+    next(createHttpError(400, 'Le type MIME annonce ne correspond pas au contenu du document.'))
+    return
+  }
+
+  next()
+}
+
+/**
  * Valide un upload de mascotte (image/video/lottie/rive).
  * @param {import('express').Request} req Requete HTTP.
  * @param {import('express').Response} res Reponse HTTP.
@@ -311,10 +370,14 @@ function validateMascotUpload(req, res, next) {
 
 module.exports = {
   ALLOWED_IMAGE_MIME_TYPES,
+  ALLOWED_DOCUMENT_MIME_TYPES,
   ALLOWED_MASCOT_MIME_TYPES,
+  MAX_DOCUMENT_UPLOAD_BYTES,
   MAX_MASCOT_UPLOAD_BYTES,
   detectImageMimeFromMagicBytes,
+  detectPdfMimeFromMagicBytes,
   detectVideoMimeFromMagicBytes,
   validateImageUpload,
+  validateDocumentUpload,
   validateMascotUpload,
 }

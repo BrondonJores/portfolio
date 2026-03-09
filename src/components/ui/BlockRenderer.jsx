@@ -1,7 +1,10 @@
 /* Composant de rendu public des blocs (JSON moderne + fallback HTML legacy). */
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/outline'
 import DOMPurify from 'dompurify'
+import { useSettings } from '../../context/SettingsContext.jsx'
+import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 
 const SECTION_LAYOUT_COLUMNS = {
   '1-col': 1,
@@ -105,6 +108,73 @@ function normalizeSectionSpacing(value) {
     return normalized
   }
   return 'md'
+}
+
+/**
+ * Retourne un preset d'animation selon le type de bloc.
+ * @param {string} blockType Type de bloc.
+ * @param {object} animationConfig Configuration animation active.
+ * @param {number} depth Profondeur de rendu (section imbriquee).
+ * @returns {{initial:object,target:object}} Preset motion.
+ */
+function getBlockMotionPreset(blockType, animationConfig, depth = 0) {
+  const distance = Math.max(8, (animationConfig?.sectionDistancePx || 24) * (depth > 0 ? 0.72 : 1))
+
+  switch (blockType) {
+    case 'heading':
+      return {
+        initial: { opacity: 0, y: distance * 0.65, letterSpacing: '0.06em', filter: 'blur(6px)' },
+        target: { opacity: 1, y: 0, letterSpacing: '0em', filter: 'blur(0px)' },
+      }
+    case 'code':
+      return {
+        initial: { opacity: 0, y: distance * 0.55, scale: 0.97, rotateX: -8, filter: 'blur(4px)' },
+        target: { opacity: 1, y: 0, scale: 1, rotateX: 0, filter: 'blur(0px)' },
+      }
+    case 'quote':
+      return {
+        initial: { opacity: 0, x: -distance * 0.55, y: distance * 0.2, scale: 0.985 },
+        target: { opacity: 1, x: 0, y: 0, scale: 1 },
+      }
+    case 'list':
+      return {
+        initial: { opacity: 0, x: distance * 0.4, y: distance * 0.2 },
+        target: { opacity: 1, x: 0, y: 0 },
+      }
+    case 'image':
+      return {
+        initial: { opacity: 0, y: distance * 0.4, scale: 0.96, filter: 'blur(3px)' },
+        target: { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' },
+      }
+    case 'section':
+      return {
+        initial: { opacity: 0, y: distance * 0.5, scale: 0.985 },
+        target: { opacity: 1, y: 0, scale: 1 },
+      }
+    case 'paragraph':
+    default:
+      return {
+        initial: { opacity: 0, y: distance * 0.45 },
+        target: { opacity: 1, y: 0 },
+      }
+  }
+}
+
+/**
+ * Construit la transition d'un bloc selon son index et la config.
+ * @param {number} index Index du bloc.
+ * @param {object} animationConfig Configuration animation.
+ * @param {number} depth Profondeur de rendu.
+ * @returns {{duration:number,delay:number,ease:string}} Transition motion.
+ */
+function getBlockMotionTransition(index, animationConfig, depth = 0) {
+  const duration = Math.min(0.95, Math.max(0.24, (animationConfig?.sectionDurationMs || 650) / 1000 * (depth > 0 ? 0.82 : 0.72)))
+  const stepDelay = Math.min(0.06, Math.max(0.012, (animationConfig?.sectionStaggerMs || 110) / 1000 * 0.18))
+  return {
+    duration,
+    delay: Math.max(0, index) * stepDelay,
+    ease: animationConfig?.easePreset || 'easeOut',
+  }
 }
 
 /* Rendu d'un bloc paragraphe. */
@@ -273,9 +343,11 @@ function ListBlock({ block }) {
  * @param {object} props Props React.
  * @param {object} props.block Bloc section.
  * @param {number} props.depth Profondeur courante.
+ * @param {object} props.animationConfig Config animation.
+ * @param {boolean} props.animateBlocks Active les animations de blocs.
  * @returns {JSX.Element|null} Section rendue.
  */
-function SectionBlock({ block, depth }) {
+function SectionBlock({ block, depth, animationConfig, animateBlocks }) {
   if (depth >= 2) return null
 
   const layout = normalizeSectionLayout(block.layout)
@@ -310,7 +382,14 @@ function SectionBlock({ block, depth }) {
         {columns.map((widgets, columnIndex) => (
           <div key={`col-${columnIndex}`} className="min-w-0">
             {widgets.map((widget, widgetIndex) => (
-              <Block key={widget?.id || `widget-${columnIndex}-${widgetIndex}`} block={widget} depth={depth + 1} />
+              <Block
+                key={widget?.id || `widget-${columnIndex}-${widgetIndex}`}
+                block={widget}
+                depth={depth + 1}
+                index={widgetIndex}
+                animationConfig={animationConfig}
+                animateBlocks={animateBlocks}
+              />
             ))}
           </div>
         ))}
@@ -324,45 +403,89 @@ function SectionBlock({ block, depth }) {
  * @param {object} props Props React.
  * @param {object} props.block Bloc a rendre.
  * @param {number} [props.depth=0] Profondeur courante (anti-recursion).
+ * @param {number} [props.index=0] Position du bloc dans son groupe.
+ * @param {object} props.animationConfig Config animation.
+ * @param {boolean} props.animateBlocks Active les animations de blocs.
  * @returns {JSX.Element|null} Bloc rendu.
  */
-function Block({ block, depth = 0 }) {
+function Block({ block, depth = 0, index = 0, animationConfig, animateBlocks }) {
   if (!block || typeof block !== 'object') return null
 
+  let rendered = null
   switch (block.type) {
     case 'paragraph':
-      return <ParagraphBlock block={block} />
+      rendered = <ParagraphBlock block={block} />
+      break
     case 'heading':
-      return <HeadingBlock block={block} />
+      rendered = <HeadingBlock block={block} />
+      break
     case 'image':
-      return <ImageBlock block={block} />
+      rendered = <ImageBlock block={block} />
+      break
     case 'code':
-      return <CodeBlock block={block} />
+      rendered = <CodeBlock block={block} />
+      break
     case 'quote':
-      return <QuoteBlock block={block} />
+      rendered = <QuoteBlock block={block} />
+      break
     case 'list':
-      return <ListBlock block={block} />
+      rendered = <ListBlock block={block} />
+      break
     case 'section':
-      return <SectionBlock block={block} depth={depth} />
+      rendered = <SectionBlock block={block} depth={depth} animationConfig={animationConfig} animateBlocks={animateBlocks} />
+      break
     default:
-      return null
+      rendered = null
   }
+
+  if (!rendered) return null
+  if (!animateBlocks) return rendered
+
+  const preset = getBlockMotionPreset(block.type, animationConfig, depth)
+  const transition = getBlockMotionTransition(index, animationConfig, depth)
+
+  return (
+    <motion.div
+      initial={preset.initial}
+      whileInView={preset.target}
+      viewport={{ once: animationConfig.sectionOnce, amount: Math.min(0.68, animationConfig.sectionViewportAmount + 0.08) }}
+      transition={transition}
+      style={{ transformOrigin: '50% 50%' }}
+    >
+      {rendered}
+    </motion.div>
+  )
 }
 
 /**
  * Rendu public du contenu (JSON blocks ou HTML legacy).
  * @param {object} props Props composant.
  * @param {string} props.content Chaine JSON `{ blocks: [...] }` ou HTML legacy.
+ * @param {string} [props.animationScope='content'] Scope animation de section.
  * @returns {JSX.Element} Contenu rendu.
  */
-export default function BlockRenderer({ content }) {
+export default function BlockRenderer({ content, animationScope = 'content' }) {
   const blocks = parseContent(content)
+  const { settings } = useSettings()
+  const prefersReducedMotion = useReducedMotion()
+  const animationConfig = useMemo(
+    () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), animationScope),
+    [settings, prefersReducedMotion, animationScope]
+  )
 
   if (blocks) {
+    const animateBlocks = animationConfig.canAnimate
+
     return (
       <div className="prose max-w-none">
         {blocks.map((block, index) => (
-          <Block key={block?.id || `block-${index}`} block={block} />
+          <Block
+            key={block?.id || `block-${index}`}
+            block={block}
+            index={index}
+            animationConfig={animationConfig}
+            animateBlocks={animateBlocks}
+          />
         ))}
       </div>
     )

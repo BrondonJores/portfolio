@@ -4,6 +4,7 @@ const Admin = require('./Admin')
 const Project = require('./Project')
 const Article = require('./Article')
 const Skill = require('./Skill')
+const Certification = require('./Certification')
 const Message = require('./Message')
 const Testimonial = require('./Testimonial')
 const Comment = require('./Comment')
@@ -26,6 +27,7 @@ module.exports = {
   Project,
   Article,
   Skill,
+  Certification,
   Message,
   Testimonial,
   Comment,

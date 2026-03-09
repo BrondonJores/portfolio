@@ -2,6 +2,7 @@
 const {
   uploadImage: uploadImageFile,
   uploadMascotAsset: uploadMascotAssetFile,
+  uploadDocument: uploadDocumentFile,
 } = require('../services/uploadService')
 
 /**
@@ -36,4 +37,20 @@ async function uploadMascot(req, res, next) {
   }
 }
 
-module.exports = { uploadImage, uploadMascot }
+/**
+ * Recoit un document PDF via Multer puis delegue l'upload au service.
+ * @param {import('express').Request} req Requete contenant `file`.
+ * @param {import('express').Response} res Reponse HTTP.
+ * @param {import('express').NextFunction} next Middleware d'erreur.
+ * @returns {Promise<void>} Promise resolue apres envoi de l'URL upload.
+ */
+async function uploadDocument(req, res, next) {
+  try {
+    const result = await uploadDocumentFile(req.file)
+    return res.status(201).json(result)
+  } catch (err) {
+    next(err)
+  }
+}
+
+module.exports = { uploadImage, uploadMascot, uploadDocument }

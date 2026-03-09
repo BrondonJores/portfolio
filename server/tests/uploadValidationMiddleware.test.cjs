@@ -2,7 +2,9 @@
 const assert = require('node:assert/strict')
 const {
   detectImageMimeFromMagicBytes,
+  detectPdfMimeFromMagicBytes,
   detectVideoMimeFromMagicBytes,
+  validateDocumentUpload,
   validateImageUpload,
   validateMascotUpload,
 } = require('../src/middleware/uploadValidationMiddleware')
@@ -56,6 +58,21 @@ function runMascotUploadValidation(req) {
   return capturedError
 }
 
+/**
+ * Execute le middleware document et retourne l'erreur eventuelle.
+ * @param {object} req Requete fake.
+ * @returns {Error|null} Erreur retournee a `next`, sinon null.
+ */
+function runDocumentUploadValidation(req) {
+  let capturedError = null
+
+  validateDocumentUpload(req, {}, (err) => {
+    capturedError = err || null
+  })
+
+  return capturedError
+}
+
 runCase('detectImageMimeFromMagicBytes detects jpeg signature', () => {
   const jpegBuffer = Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
   assert.equal(detectImageMimeFromMagicBytes(jpegBuffer), 'image/jpeg')
@@ -69,6 +86,11 @@ runCase('detectImageMimeFromMagicBytes returns null on non image payload', () =>
 runCase('detectVideoMimeFromMagicBytes detects webm signature', () => {
   const webmBuffer = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x9f, 0x42, 0x86, 0x81, 0x01, 0x42, 0xf7, 0x81])
   assert.equal(detectVideoMimeFromMagicBytes(webmBuffer), 'video/webm')
+})
+
+runCase('detectPdfMimeFromMagicBytes detects pdf signature', () => {
+  const pdfBuffer = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37])
+  assert.equal(detectPdfMimeFromMagicBytes(pdfBuffer), 'application/pdf')
 })
 
 runCase('validateImageUpload rejects MIME/content mismatch', () => {
@@ -94,6 +116,33 @@ runCase('validateImageUpload accepts valid png', () => {
   })
 
   assert.equal(err, null)
+})
+
+runCase('validateDocumentUpload accepts valid pdf', () => {
+  const pdfBuffer = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 0x25, 0xe2, 0xe3, 0xcf, 0xd3])
+  const err = runDocumentUploadValidation({
+    file: {
+      mimetype: 'application/pdf',
+      size: pdfBuffer.length,
+      buffer: pdfBuffer,
+    },
+  })
+
+  assert.equal(err, null)
+})
+
+runCase('validateDocumentUpload rejects invalid pdf payload', () => {
+  const fakeBuffer = Buffer.from('not-a-pdf')
+  const err = runDocumentUploadValidation({
+    file: {
+      mimetype: 'application/pdf',
+      size: fakeBuffer.length,
+      buffer: fakeBuffer,
+    },
+  })
+
+  assert.ok(err)
+  assert.equal(err.statusCode, 400)
 })
 
 runCase('validateMascotUpload accepts lottie json payload', () => {

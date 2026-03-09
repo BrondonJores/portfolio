@@ -1,4 +1,6 @@
 /* Section Contact avec formulaire et informations */
+import { useMemo } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { EnvelopeIcon, MapPinIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
@@ -8,6 +10,8 @@ import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import RecaptchaNotice from '../ui/RecaptchaNotice.jsx'
 import { useContactForm } from '../../hooks/useContactForm.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
+import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
+import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
 
 /* Style commun des inputs */
 const inputStyle = {
@@ -19,6 +23,20 @@ const inputStyle = {
 export default function Contact() {
   const { fields, handleChange, handleSubmit, status } = useContactForm()
   const { settings } = useSettings()
+  const prefersReducedMotion = useReducedMotion()
+  const animationConfig = useMemo(
+    () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), 'contact'),
+    [settings, prefersReducedMotion]
+  )
+  const canAnimate = animationConfig.canAnimate
+  const containerVariants = useMemo(
+    () => buildSectionContainerVariants('contact', animationConfig),
+    [animationConfig]
+  )
+  const itemVariants = useMemo(
+    () => buildSectionItemVariants('contact', animationConfig),
+    [animationConfig]
+  )
 
   const socialLinks = [
     settings.github_url && { label: 'GitHub', href: settings.github_url },
@@ -57,9 +75,15 @@ export default function Contact() {
           subtitle={sectionSubtitle}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <motion.div
+          className="grid grid-cols-1 lg:grid-cols-2 gap-12"
+          variants={containerVariants}
+          initial={canAnimate ? 'hidden' : false}
+          whileInView={canAnimate ? 'visible' : false}
+          viewport={{ once: animationConfig.sectionOnce }}
+        >
           {/* Colonne gauche : informations de contact */}
-          <div>
+          <motion.div variants={itemVariants}>
             <p
               className="text-base leading-relaxed mb-8"
               style={{ color: 'var(--color-text-secondary)' }}
@@ -118,13 +142,13 @@ export default function Contact() {
                 </a>
               ))}
             </div>
-          </div>
+          </motion.div>
 
           {/* Colonne droite : formulaire de contact */}
-          <form onSubmit={handleSubmit} noValidate>
+          <motion.form onSubmit={handleSubmit} noValidate variants={itemVariants}>
             <div className="space-y-4">
               {/* Champ nom */}
-              <div>
+              <motion.div variants={itemVariants}>
                 <label
                   htmlFor="name"
                   className="block text-sm font-medium mb-1.5"
@@ -144,10 +168,10 @@ export default function Contact() {
                   style={inputStyle}
                   placeholder={formNamePlaceholder}
                 />
-              </div>
+              </motion.div>
 
               {/* Champ email */}
-              <div>
+              <motion.div variants={itemVariants}>
                 <label
                   htmlFor="email"
                   className="block text-sm font-medium mb-1.5"
@@ -167,10 +191,10 @@ export default function Contact() {
                   style={inputStyle}
                   placeholder={formEmailPlaceholder}
                 />
-              </div>
+              </motion.div>
 
               {/* Champ message */}
-              <div>
+              <motion.div variants={itemVariants}>
                 <label
                   htmlFor="message"
                   className="block text-sm font-medium mb-1.5"
@@ -189,7 +213,7 @@ export default function Contact() {
                   style={inputStyle}
                   placeholder={formMessagePlaceholder}
                 />
-              </div>
+              </motion.div>
 
               {/* Message de succes */}
               {status.success && (
@@ -222,19 +246,21 @@ export default function Contact() {
               <RecaptchaNotice />
 
               {/* Bouton de soumission */}
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={status.loading}
-                className="w-full justify-center"
-                aria-label={formSubmitLabel}
-              >
-                <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
-                {status.loading ? formSubmittingLabel : formSubmitLabel}
-              </Button>
+              <motion.div variants={itemVariants}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={status.loading}
+                  className="w-full justify-center"
+                  aria-label={formSubmitLabel}
+                >
+                  <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
+                  {status.loading ? formSubmittingLabel : formSubmitLabel}
+                </Button>
+              </motion.div>
             </div>
-          </form>
-        </div>
+          </motion.form>
+        </motion.div>
       </div>
     </AnimatedSection>
   )

@@ -17,6 +17,12 @@ const {
   importMany: importArticles,
 } = require('../controllers/articleController')
 const { getAllAdmin: getSkills, create: createSkill, update: updateSkill, remove: deleteSkill } = require('../controllers/skillController')
+const {
+  getAllAdmin: getCertifications,
+  create: createCertification,
+  update: updateCertification,
+  remove: deleteCertification,
+} = require('../controllers/certificationController')
 const { getAll: getMessages, markAsRead } = require('../controllers/messageController')
 const { getAllAdmin: getTestimonials, create: createTestimonial, update: updateTestimonial, remove: deleteTestimonial } = require('../controllers/testimonialController')
 const { getAll: getComments, approve: approveComment, remove: deleteComment } = require('../controllers/commentController')
@@ -69,6 +75,7 @@ const { validate } = require('../middleware/validateMiddleware')
 const { createProjectValidator, updateProjectValidator, importProjectsValidator } = require('../validators/projectValidator')
 const { createArticleValidator, updateArticleValidator, importArticlesValidator } = require('../validators/articleValidator')
 const { createSkillValidator, updateSkillValidator } = require('../validators/skillValidator')
+const { createCertificationValidator, updateCertificationValidator } = require('../validators/certificationValidator')
 const {
   blockTemplateIdParamValidator,
   listBlockTemplateValidator,
@@ -132,6 +139,12 @@ router.get('/skills', getSkills)
 router.post('/skills', validate(createSkillValidator), createSkill)
 router.put('/skills/:id', validate(updateSkillValidator), updateSkill)
 router.delete('/skills/:id', deleteSkill)
+
+/* Routes des certifications admin */
+router.get('/certifications', getCertifications)
+router.post('/certifications', validate(createCertificationValidator), createCertification)
+router.put('/certifications/:id', validate(updateCertificationValidator), updateCertification)
+router.delete('/certifications/:id', deleteCertification)
 
 /* Routes des messages admin */
 router.get('/messages', getMessages)

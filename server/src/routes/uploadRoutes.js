@@ -1,15 +1,18 @@
-/* Routes d'upload de medias admin (images + mascottes). */
+/* Routes d'upload de medias admin (images, PDF et mascottes). */
 const { Router } = require('express')
 const multer = require('multer')
 const { authenticate } = require('../middleware/authMiddleware')
 const {
   ALLOWED_IMAGE_MIME_TYPES,
+  ALLOWED_DOCUMENT_MIME_TYPES,
   ALLOWED_MASCOT_MIME_TYPES,
+  MAX_DOCUMENT_UPLOAD_BYTES,
   MAX_MASCOT_UPLOAD_BYTES,
   validateImageUpload,
+  validateDocumentUpload,
   validateMascotUpload,
 } = require('../middleware/uploadValidationMiddleware')
-const { uploadImage, uploadMascot } = require('../controllers/uploadController')
+const { uploadImage, uploadMascot, uploadDocument } = require('../controllers/uploadController')
 
 /**
  * Filtre rapide Multer sur le MIME annonce.
@@ -44,6 +47,22 @@ function mascotFileFilter(_req, file, cb) {
   cb(new Error('Type de fichier non autorise pour une mascotte.'))
 }
 
+/**
+ * Filtre Multer pour les documents PDF.
+ * @param {import('express').Request} _req Requete HTTP.
+ * @param {Express.Multer.File} file Fichier courant.
+ * @param {Function} cb Callback Multer.
+ * @returns {void}
+ */
+function documentFileFilter(_req, file, cb) {
+  if (ALLOWED_DOCUMENT_MIME_TYPES.has(file.mimetype)) {
+    cb(null, true)
+    return
+  }
+
+  cb(new Error('Type de document non autorise. Utilisez uniquement un PDF.'))
+}
+
 const imageUpload = multer({
   storage: multer.memoryStorage(),
   fileFilter,
@@ -56,11 +75,18 @@ const mascotUpload = multer({
   limits: { fileSize: MAX_MASCOT_UPLOAD_BYTES },
 })
 
+const documentUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: documentFileFilter,
+  limits: { fileSize: MAX_DOCUMENT_UPLOAD_BYTES },
+})
+
 /* POST /api/upload : authentification + upload image + validation binaire. */
 const router = Router()
 router.post('/', authenticate, imageUpload.single('image'), validateImageUpload, uploadImage)
 
 /* POST /api/upload/mascot : upload des assets animables (gif/webm/json/lottie/riv...). */
 router.post('/mascot', authenticate, mascotUpload.single('asset'), validateMascotUpload, uploadMascot)
+router.post('/document', authenticate, documentUpload.single('document'), validateDocumentUpload, uploadDocument)
 
 module.exports = router

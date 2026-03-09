@@ -12,6 +12,7 @@ import Badge from '../ui/Badge.jsx'
 import { getArticles } from '../../services/articleService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
+import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
 
 export default function Blog() {
   const [articles, setArticles] = useState([])
@@ -22,7 +23,14 @@ export default function Blog() {
     [settings, prefersReducedMotion]
   )
   const canAnimate = animationConfig.canAnimate
-  const staggerDelaySeconds = animationConfig.sectionStaggerMs / 1000
+  const containerVariants = useMemo(
+    () => buildSectionContainerVariants('blog', animationConfig),
+    [animationConfig]
+  )
+  const itemVariants = useMemo(
+    () => buildSectionItemVariants('blog', animationConfig),
+    [animationConfig]
+  )
   const blogTitle = settings.ui_section_blog_title || 'Blog'
   const blogSubtitle = settings.ui_section_blog_subtitle || 'Mes derniers articles et reflexions'
   const blogViewAllLabel = settings.ui_section_blog_view_all || 'Voir tous les articles'
@@ -51,18 +59,18 @@ export default function Blog() {
           subtitle={blogSubtitle}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          {articles.map((article, i) => (
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10"
+          variants={containerVariants}
+          initial={canAnimate ? 'hidden' : false}
+          whileInView={canAnimate ? 'visible' : false}
+          viewport={{ once: animationConfig.sectionOnce }}
+        >
+          {articles.map((article) => (
             <motion.div
               key={article.id}
-              initial={canAnimate ? { opacity: 0, y: 20 } : false}
-              whileInView={canAnimate ? { opacity: 1, y: 0 } : false}
-              viewport={{ once: animationConfig.sectionOnce }}
-              transition={{
-                duration: 0.4 * animationConfig.durationScale,
-                delay: i * staggerDelaySeconds * animationConfig.durationScale,
-                ease: animationConfig.easePreset,
-              }}
+              variants={itemVariants}
+              transition={{ duration: 0.44 * animationConfig.durationScale, ease: animationConfig.easePreset }}
             >
               <Link to={`/blog/${article.slug}`} className="block h-full">
                 <Card className="h-full flex flex-col hover:border-[var(--color-accent)] transition-colors overflow-hidden !p-0">
@@ -124,7 +132,7 @@ export default function Blog() {
               </Link>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Lien vers tous les articles */}
         <div className="text-center">

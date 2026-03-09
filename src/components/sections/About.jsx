@@ -1,6 +1,6 @@
 /* Section A propos avec mise en page deux colonnes */
 import { useMemo } from 'react'
-import { useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { UserIcon, BriefcaseIcon, CodeBracketIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
@@ -9,6 +9,7 @@ import Card from '../ui/Card.jsx'
 import AnimatedCounter from '../ui/AnimatedCounter.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
+import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
 
 export default function About() {
   const { settings } = useSettings()
@@ -35,6 +36,15 @@ export default function About() {
   const aboutPhotoCaption = settings.about_photo_caption || 'De la conception au deploiement, je prends en charge le cycle complet.'
   const aboutTitle = settings.ui_about_title || 'A propos de moi'
   const initials = heroName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+  const canAnimate = animationConfig.canAnimate
+  const containerVariants = useMemo(
+    () => buildSectionContainerVariants('about', animationConfig),
+    [animationConfig]
+  )
+  const itemVariants = useMemo(
+    () => buildSectionItemVariants('about', animationConfig),
+    [animationConfig]
+  )
 
   return (
     <AnimatedSection
@@ -47,9 +57,15 @@ export default function About() {
       <AnimatedSceneAsset scope="about" sceneKey="about" />
 
       <div className="max-w-6xl mx-auto relative z-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <motion.div
+          className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center"
+          variants={containerVariants}
+          initial={canAnimate ? 'hidden' : false}
+          whileInView={canAnimate ? 'visible' : false}
+          viewport={{ once: animationConfig.sectionOnce }}
+        >
           {/* Colonne gauche : photo hero retravaillee */}
-          <div className="flex flex-col items-center lg:items-start">
+          <motion.div variants={itemVariants} className="flex flex-col items-center lg:items-start">
             <div className="relative w-fit">
               <div
                 className="absolute -inset-5 rounded-[2.4rem] opacity-65 -z-10 pointer-events-none"
@@ -118,10 +134,10 @@ export default function About() {
               <MapPinIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
               <span>{location}</span>
             </div>
-          </div>
+          </motion.div>
 
           {/* Colonne droite : bio et statistiques */}
-          <div>
+          <motion.div variants={itemVariants}>
             <h2
               className="text-4xl font-bold mb-4"
               style={{ color: 'var(--color-text-primary)' }}
@@ -140,35 +156,37 @@ export default function About() {
             </p>
 
             {/* Statistiques */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <motion.div className="grid grid-cols-1 sm:grid-cols-3 gap-4" variants={containerVariants}>
               {stats.map((stat) => {
                 const Icon = stat.icon
                 return (
-                  <Card key={stat.label} className="text-center py-4 transition-transform duration-300 hover:-translate-y-1">
-                    <Icon
-                      className="h-6 w-6 mx-auto mb-2"
-                      style={{ color: 'var(--color-accent)' }}
-                      aria-hidden="true"
-                    />
-                    <AnimatedCounter
-                      value={stat.value}
-                      enabled={animationConfig.statsCounterEnabled}
-                      durationMs={animationConfig.statsCounterDurationMs}
-                      className="text-2xl font-bold mb-1"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    />
-                    <div
-                      className="text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      {stat.label}
-                    </div>
-                  </Card>
+                  <motion.div key={stat.label} variants={itemVariants}>
+                    <Card className="text-center py-4 transition-transform duration-300 hover:-translate-y-1">
+                      <Icon
+                        className="h-6 w-6 mx-auto mb-2"
+                        style={{ color: 'var(--color-accent)' }}
+                        aria-hidden="true"
+                      />
+                      <AnimatedCounter
+                        value={stat.value}
+                        enabled={animationConfig.statsCounterEnabled}
+                        durationMs={animationConfig.statsCounterDurationMs}
+                        className="text-2xl font-bold mb-1"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      />
+                      <div
+                        className="text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {stat.label}
+                      </div>
+                    </Card>
+                  </motion.div>
                 )
               })}
-            </div>
-          </div>
-        </div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
       </div>
     </AnimatedSection>
   )

@@ -10,6 +10,6 @@ const router = Router()
 router.use('/auth', authRoutes)      // Routes d'authentification
 router.use('/', publicRoutes)        // Routes publiques
 router.use('/admin', adminRoutes)    // Routes admin
-router.use('/upload', uploadRoutes)  // Routes upload Cloudinary (images + mascottes)
+router.use('/upload', uploadRoutes)  // Routes upload Cloudinary (images, PDF, mascottes)
 
 module.exports = router

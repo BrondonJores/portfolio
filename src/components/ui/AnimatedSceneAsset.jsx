@@ -59,6 +59,86 @@ function getSceneAssetPreset(scope) {
   return SECTION_ASSET_PRESETS[scope] || SECTION_ASSET_PRESETS.section
 }
 
+function getSceneMotionPreset(scope, animationConfig) {
+  const intensity = Math.max(0.7, Number(animationConfig?.intensity) || 1)
+  const speed = Math.max(0.45, Number(animationConfig?.sceneAssetSpeed) || 1)
+  const durationScale = Math.max(0.6, Number(animationConfig?.durationScale) || 1)
+  const baseDuration = (10.8 / speed) * durationScale
+
+  switch (scope) {
+    case 'hero':
+      return {
+        animate: {
+          y: [0, -18 * intensity, 0, 12 * intensity, 0],
+          x: [0, -14 * intensity, 0, 10 * intensity, 0],
+          rotate: [-2.4, 2.1, -2.4],
+          scale: [1, 1.03, 0.99, 1.02, 1],
+        },
+        transition: { duration: baseDuration * 1.05, repeat: Infinity, ease: 'easeInOut' },
+      }
+    case 'about':
+      return {
+        animate: {
+          y: [0, -10 * intensity, 0],
+          x: [0, -6 * intensity, 6 * intensity, 0],
+          rotate: [-1.2, 1.4, -1.2],
+          scale: [1, 1.015, 1],
+        },
+        transition: { duration: baseDuration * 0.92, repeat: Infinity, ease: 'easeInOut' },
+      }
+    case 'skills':
+      return {
+        animate: {
+          y: [0, -8 * intensity, -15 * intensity, -6 * intensity, 0],
+          x: [0, 14 * intensity, -10 * intensity, 8 * intensity, 0],
+          rotate: [-1.8, 2.4, -2.2, 1.6, -1.8],
+          scale: [1, 1.02, 0.985, 1.02, 1],
+        },
+        transition: { duration: baseDuration * 0.88, repeat: Infinity, ease: 'easeInOut' },
+      }
+    case 'projects':
+      return {
+        animate: {
+          y: [0, -15 * intensity, 0],
+          x: [0, -12 * intensity, 0],
+          rotate: [-2, 2, -2],
+          scale: [1, 1.02, 1],
+        },
+        transition: { duration: baseDuration, repeat: Infinity, ease: 'easeInOut' },
+      }
+    case 'blog':
+      return {
+        animate: {
+          y: [0, -9 * intensity, 0],
+          x: [0, 10 * intensity, -8 * intensity, 0],
+          rotate: [0.6, -1.6, 1.3, 0.6],
+          scale: [1, 1.01, 1],
+        },
+        transition: { duration: baseDuration * 0.94, repeat: Infinity, ease: 'easeInOut' },
+      }
+    case 'contact':
+      return {
+        animate: {
+          y: [0, -7 * intensity, 0],
+          x: [0, -6 * intensity, 0],
+          rotate: [-1, 1, -1],
+          scale: [1, 1.015, 1],
+        },
+        transition: { duration: baseDuration * 0.9, repeat: Infinity, ease: 'easeInOut' },
+      }
+    default:
+      return {
+        animate: {
+          y: [0, -12 * intensity, 0],
+          x: [0, -8 * intensity, 0],
+          rotate: [-2, 2, -2],
+          scale: [1, 1.02, 1],
+        },
+        transition: { duration: baseDuration, repeat: Infinity, ease: 'easeInOut' },
+      }
+  }
+}
+
 /**
  * Resolve l'asset de scene de la section.
  * @param {object} config Config animation section.
@@ -179,6 +259,8 @@ export default function AnimatedSceneAsset({ scope = 'section', sceneKey = '' })
     setAssetLoadFailed(false)
   }, [asset.url])
 
+
+  const sceneMotion = useMemo(() => getSceneMotionPreset(scope, animationConfig), [scope, animationConfig])
   const canDisplay = animationConfig.sceneAssetsEnabled
     && (!isHero || animationConfig.sceneAssetShowHero)
   const canUseAsset = Boolean(asset.url) && asset.mode !== 'unsupported' && !assetLoadFailed
@@ -190,7 +272,6 @@ export default function AnimatedSceneAsset({ scope = 'section', sceneKey = '' })
   }
 
   const sizePx = Math.max(220, animationConfig.sceneAssetSizePx * preset.sizeFactor)
-  const duration = 11 / Math.max(0.45, animationConfig.sceneAssetSpeed)
   const className = animationConfig.sceneAssetMobileEnabled
     ? 'absolute pointer-events-none z-[5]'
     : 'absolute pointer-events-none z-[5] hidden md:block'
@@ -208,18 +289,13 @@ export default function AnimatedSceneAsset({ scope = 'section', sceneKey = '' })
       }}
       animate={shouldAnimate
         ? {
-            y: [0, -14, 0],
-            x: [0, preset.driftX * Math.min(1.6, animationConfig.intensity), 0],
-            rotate: [-2, 2, -2],
+            ...sceneMotion.animate,
+            x: Array.isArray(sceneMotion.animate?.x)
+              ? sceneMotion.animate.x.map((value) => value + preset.driftX * 0.35)
+              : sceneMotion.animate?.x,
           }
         : undefined}
-      transition={shouldAnimate
-        ? {
-            duration: duration * animationConfig.durationScale,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }
-        : undefined}
+      transition={shouldAnimate ? sceneMotion.transition : undefined}
       aria-hidden="true"
     >
       <div
