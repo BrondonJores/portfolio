@@ -130,14 +130,7 @@ export default function CertificationBadgesShowcase() {
         />
       </div>
 
-      <div
-        className="relative mt-5"
-        style={{
-          width: '100vw',
-          marginLeft: 'calc(50% - 50vw)',
-          marginRight: 'calc(50% - 50vw)',
-        }}
-      >
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative mt-5">
         <SponsorBadgeRibbon
           badges={badges}
           shouldAnimate={shouldAnimate}
