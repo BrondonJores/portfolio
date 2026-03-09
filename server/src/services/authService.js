@@ -39,7 +39,7 @@ function createAuthService(deps = {}) {
    * @returns {string} Token JWT court.
    */
   function generateAccessToken(payload) {
-    return jwt.sign(payload, env.JWT_ACCESS_SECRET, {
+    return jwt.sign({ ...payload, typ: 'access' }, env.JWT_ACCESS_SECRET, {
       expiresIn: env.JWT_ACCESS_EXPIRES || '15m',
     })
   }
@@ -114,6 +114,10 @@ function createAuthService(deps = {}) {
     try {
       payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET)
     } catch {
+      throw createHttpError(401, 'Refresh token invalide ou expire.')
+    }
+
+    if (payload?.typ !== 'refresh') {
       throw createHttpError(401, 'Refresh token invalide ou expire.')
     }
 
@@ -509,6 +513,10 @@ function createAuthService(deps = {}) {
       return { revoked: false }
     }
 
+    if (payload?.typ !== 'refresh') {
+      return { revoked: false }
+    }
+
     const adminId = Number(payload?.id)
     if (!Number.isInteger(adminId) || adminId <= 0) {
       return { revoked: false }
@@ -548,4 +556,3 @@ module.exports = {
   createAuthService,
   ...createAuthService(),
 }
-

@@ -49,10 +49,7 @@ function createTwoFactorService(deps = {}) {
    * @throws {Error} Erreur 500 si secret indisponible.
    */
   function getTwoFactorJwtSecret() {
-    const secret =
-      String(env.JWT_MFA_SECRET || '').trim() ||
-      String(env.JWT_ACCESS_SECRET || '').trim() ||
-      String(env.JWT_REFRESH_SECRET || '').trim()
+    const secret = String(env.JWT_MFA_SECRET || '').trim()
 
     if (!secret) {
       throw createHttpError(500, 'Configuration JWT MFA manquante.')
@@ -443,4 +440,3 @@ module.exports = {
   createTwoFactorService,
   ...createTwoFactorService(),
 }
-

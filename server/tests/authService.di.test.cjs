@@ -83,6 +83,7 @@ async function main() {
     const session = await service.loginAdmin({ email: 'admin@example.com', password: 'secret' })
     assert.equal(session.user.id, 1)
     assert.equal(signCalls.length, 2)
+    assert.equal(signCalls[0].typ, 'access')
     assert.equal(signCalls[1].rtv, 7)
     assert.equal(signCalls[1].typ, 'refresh')
   })
@@ -133,7 +134,7 @@ async function main() {
         findByPk: async (id) => (id === 1 ? fakeAdmin : null),
       },
       jwt: {
-        verify: () => ({ id: 1, username: 'admin', email: 'admin@example.com', rtv: 2 }),
+        verify: () => ({ id: 1, username: 'admin', email: 'admin@example.com', rtv: 2, typ: 'refresh' }),
         sign: (payload) => {
           signCalls.push(payload)
           return `token-${signCalls.length}`
@@ -149,6 +150,7 @@ async function main() {
     assert.equal(session.user.id, 1)
     assert.equal(fakeAdmin.refresh_token_version, 3)
     assert.equal(signCalls.length, 2)
+    assert.equal(signCalls[0].typ, 'access')
     assert.equal(signCalls[1].rtv, 3)
     assert.equal(signCalls[1].typ, 'refresh')
   })
@@ -161,7 +163,7 @@ async function main() {
         findByPk: async () => fakeAdmin,
       },
       jwt: {
-        verify: () => ({ id: 1, username: 'admin', email: 'admin@example.com', rtv: 1 }),
+        verify: () => ({ id: 1, username: 'admin', email: 'admin@example.com', rtv: 1, typ: 'refresh' }),
         sign: () => 'unused',
       },
       env: {
@@ -180,6 +182,39 @@ async function main() {
     )
   })
 
+  await runCase('refreshAdminSession rejects token with non-refresh typ', async () => {
+    const fakeAdmin = createFakeAdmin({ refresh_token_version: 2 })
+
+    const service = createAuthService({
+      adminModel: {
+        findByPk: async () => fakeAdmin,
+      },
+      jwt: {
+        verify: () => ({
+          id: 1,
+          username: 'admin',
+          email: 'admin@example.com',
+          rtv: 2,
+          typ: 'access',
+        }),
+        sign: () => 'unused',
+      },
+      env: {
+        JWT_ACCESS_SECRET: 'access',
+        JWT_REFRESH_SECRET: 'refresh',
+      },
+    })
+
+    await assert.rejects(
+      () => service.refreshAdminSession('wrong-type-token'),
+      (err) => {
+        assert.equal(err.statusCode, 401)
+        assert.equal(err.message, 'Refresh token invalide ou expire.')
+        return true
+      }
+    )
+  })
+
   await runCase('logoutAdminSession revokes version when token is current', async () => {
     const fakeAdmin = createFakeAdmin({ refresh_token_version: 4 })
 
@@ -188,7 +223,7 @@ async function main() {
         findByPk: async () => fakeAdmin,
       },
       jwt: {
-        verify: () => ({ id: 1, rtv: 4 }),
+        verify: () => ({ id: 1, rtv: 4, typ: 'refresh' }),
         sign: () => 'unused',
       },
       env: {
@@ -223,6 +258,28 @@ async function main() {
 
     const result = await service.logoutAdminSession('bad-token')
     assert.equal(result.revoked, false)
+  })
+
+  await runCase('logoutAdminSession stays idempotent for non-refresh typ token', async () => {
+    const fakeAdmin = createFakeAdmin({ refresh_token_version: 4 })
+
+    const service = createAuthService({
+      adminModel: {
+        findByPk: async () => fakeAdmin,
+      },
+      jwt: {
+        verify: () => ({ id: 1, rtv: 4, typ: 'access' }),
+        sign: () => 'unused',
+      },
+      env: {
+        JWT_ACCESS_SECRET: 'access',
+        JWT_REFRESH_SECRET: 'refresh',
+      },
+    })
+
+    const result = await service.logoutAdminSession('wrong-type-token')
+    assert.equal(result.revoked, false)
+    assert.equal(fakeAdmin.refresh_token_version, 4)
   })
 
   await runCase('verifyTwoFactorLogin issues a full session when TOTP is valid', async () => {
@@ -269,6 +326,7 @@ async function main() {
     assert.equal(result.usedRecoveryCode, false)
     assert.equal(result.user.id, 1)
     assert.equal(signCalls.length, 2)
+    assert.equal(signCalls[0].typ, 'access')
     assert.equal(signCalls[1].typ, 'refresh')
   })
 

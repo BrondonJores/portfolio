@@ -10,7 +10,7 @@ function parseBooleanEnv(value, fallback = false) {
 }
 
 const dbSslEnabled = parseBooleanEnv(process.env.DB_SSL, process.env.NODE_ENV === 'production')
-const dbSslRejectUnauthorized = parseBooleanEnv(process.env.DB_SSL_REJECT_UNAUTHORIZED, false)
+const dbSslRejectUnauthorized = parseBooleanEnv(process.env.DB_SSL_REJECT_UNAUTHORIZED, true)
 
 const dialectOptions = dbSslEnabled
   ? {

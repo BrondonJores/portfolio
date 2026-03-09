@@ -45,7 +45,7 @@ function parsePositiveInteger(value, fallback) {
  */
 function parseTrustProxy(value) {
   if (value === undefined || value === null || value === '') {
-    return process.env.NODE_ENV === 'production' ? 1 : false
+    return false
   }
 
   const trimmed = String(value).trim().toLowerCase()

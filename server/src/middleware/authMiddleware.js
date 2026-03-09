@@ -3,6 +3,16 @@ const jwt = require('jsonwebtoken')
 const { logSecurityEventFromRequest } = require('../services/securityEventService')
 
 /**
+ * Valide la structure minimale d'un access token.
+ * @param {unknown} payload Charge utile JWT decodee.
+ * @returns {payload is {id:number,username:string,email:string,twoFactorEnabled?:boolean,typ:string}}
+ */
+function isValidAccessPayload(payload) {
+  const userId = Number(payload?.id)
+  return payload?.typ === 'access' && Number.isInteger(userId) && userId > 0
+}
+
+/**
  * Verifie le token JWT dans le header Authorization.
  * Attache req.user si le token est valide.
  */
@@ -23,8 +33,13 @@ function authenticate(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET)
+    if (!isValidAccessPayload(payload)) {
+      throw new Error('invalid access token payload')
+    }
+
+    const userId = Number(payload.id)
     req.user = {
-      id: payload.id,
+      id: userId,
       username: payload.username,
       email: payload.email,
       twoFactorEnabled: payload.twoFactorEnabled === true,

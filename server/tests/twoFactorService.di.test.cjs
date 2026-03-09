@@ -151,6 +151,29 @@ runCase('verifyTotpCode normalizes code before delegating to TOTP provider', () 
   assert.equal(calls[0].digits, 6)
 })
 
+runCase('JWT_MFA_SECRET is mandatory for signing MFA tokens', () => {
+  const service = createService({
+    env: {
+      JWT_MFA_SECRET: '',
+    },
+  })
+
+  assert.throws(
+    () =>
+      service.signLoginChallengeToken({
+        adminId: 1,
+        email: 'admin@example.com',
+        username: 'admin',
+        tokenVersion: 0,
+      }),
+    (err) => {
+      assert.equal(err.statusCode, 500)
+      assert.equal(err.message, 'Configuration JWT MFA manquante.')
+      return true
+    }
+  )
+})
+
 if (failures > 0) {
   console.error(`\nDI unit tests failed: ${failures}`)
   process.exit(1)

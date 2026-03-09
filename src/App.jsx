@@ -93,7 +93,6 @@ function buildCspPolicy(assetOrigins = []) {
     `media-src ${joinCspSources(["'self'", 'data:', 'blob:', ...CLOUDINARY_ORIGINS, ...assetOrigins])}`,
     `connect-src ${joinCspSources([
       "'self'",
-      'https://api.resend.com',
       apiOrigin,
       ...RECAPTCHA_SCRIPT_ORIGINS,
       ...VERCEL_CONNECT_ORIGINS,
