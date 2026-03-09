@@ -144,6 +144,9 @@ function createUploadService(deps = {}) {
 
   /**
    * Upload un asset mascotte (image/video/lottie-json/rive) vers Cloudinary.
+   * Pour les formats `raw` (json/riv), on conserve l'URL secure_url telle quelle:
+   * certains comptes/profils Cloudinary retournent des variantes ou aliases qui
+   * ne supportent pas l'ajout d'extension forcee.
    * @param {{buffer?:Buffer,path?:string,originalname?:string}|undefined} file Fichier Multer.
    * @returns {Promise<{url:string,resourceType:string,format:string}>} Meta upload utile au front.
    */
@@ -179,7 +182,10 @@ function createUploadService(deps = {}) {
       }
 
       const resolvedFormat = String(result.format || extension || '').toLowerCase()
-      const resolvedUrl = ensureUrlExtension(result.secure_url, resolvedFormat || extension)
+      const isRawAnimationAsset = RAW_MASCOT_FORMATS.has(extension)
+      const resolvedUrl = isRawAnimationAsset
+        ? String(result.secure_url || '')
+        : ensureUrlExtension(result.secure_url, resolvedFormat || extension)
 
       return {
         url: resolvedUrl,
@@ -235,7 +241,7 @@ function createUploadService(deps = {}) {
 
       return {
         url: resolvedUrl,
-        resourceType: result.resource_type || 'raw',
+        resourceType: result.resource_type || 'image',
         format: resolvedFormat || extension,
       }
     } catch (err) {

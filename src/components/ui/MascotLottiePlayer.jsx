@@ -43,6 +43,85 @@ async function loadLottieJsonPayload(url) {
 }
 
 /**
+ * Construit une liste de variantes d'URL pour limiter les 404 Cloudinary raw.
+ * @param {string} url URL initiale.
+ * @returns {string[]} URL candidates dans l'ordre de tentative.
+ */
+function buildLottieFetchCandidates(url) {
+  const initial = String(url || '').trim()
+  if (!initial) {
+    return []
+  }
+
+  const candidates = [initial]
+  const cloudinaryRaw = isCloudinaryRawAssetUrl(initial)
+
+  if (!cloudinaryRaw) {
+    return candidates
+  }
+
+  const hashIndex = initial.indexOf('#')
+  const queryIndex = initial.indexOf('?')
+  let splitIndex = -1
+  if (hashIndex >= 0 && queryIndex >= 0) {
+    splitIndex = Math.min(hashIndex, queryIndex)
+  } else {
+    splitIndex = Math.max(hashIndex, queryIndex)
+  }
+
+  const base = splitIndex >= 0 ? initial.slice(0, splitIndex) : initial
+  const suffix = splitIndex >= 0 ? initial.slice(splitIndex) : ''
+
+  const withoutJsonExtension = base.replace(/\.json$/i, '')
+  const withJsonExtension = withoutJsonExtension.endsWith('.json')
+    ? withoutJsonExtension
+    : `${withoutJsonExtension}.json`
+
+  const cloudinaryImageVariant = base.replace('/raw/upload/', '/image/upload/')
+
+  const pushUnique = (candidate) => {
+    const normalized = String(candidate || '').trim()
+    if (!normalized || candidates.includes(normalized)) {
+      return
+    }
+    candidates.push(normalized)
+  }
+
+  pushUnique(`${withoutJsonExtension}${suffix}`)
+  pushUnique(`${withJsonExtension}${suffix}`)
+  if (cloudinaryImageVariant !== base) {
+    pushUnique(`${cloudinaryImageVariant}${suffix}`)
+    pushUnique(`${cloudinaryImageVariant.replace(/\.json$/i, '')}.json${suffix}`)
+  }
+
+  return candidates
+}
+
+/**
+ * Charge un JSON Lottie en testant des variantes d'URL en cas de 404 Cloudinary.
+ * @param {string} url URL principale.
+ * @returns {Promise<object>} Payload Lottie.
+ */
+async function loadLottieJsonWithFallback(url) {
+  const candidates = buildLottieFetchCandidates(url)
+  let lastError = null
+
+  for (const candidate of candidates) {
+    try {
+      const payload = await loadLottieJsonPayload(candidate)
+      if (candidate !== url && payload) {
+        LOTTIE_JSON_CACHE.set(url, payload)
+      }
+      return payload
+    } catch (err) {
+      lastError = err
+    }
+  }
+
+  throw lastError || new Error('Impossible de charger le JSON Lottie.')
+}
+
+/**
  * Duplique un payload JSON Lottie pour eviter les mutations internes du player.
  * @param {object} payload Donnees source.
  * @returns {object} Copie profonde.
@@ -99,7 +178,7 @@ export default function MascotLottiePlayer({ url, fit = 'contain', onError }) {
     const controller = new AbortController()
     let isMounted = true
 
-    loadLottieJsonPayload(safeUrl)
+    loadLottieJsonWithFallback(safeUrl)
       .then((payload) => {
         if (!isMounted || controller.signal.aborted) {
           return

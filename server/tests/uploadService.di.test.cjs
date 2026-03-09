@@ -61,7 +61,7 @@ async function main() {
     assert.equal(result.url.endsWith('.webp'), true)
   })
 
-  await runCase('uploadMascotAsset appends .json when Cloudinary raw URL has no extension', async () => {
+  await runCase('uploadMascotAsset keeps Cloudinary raw URL when no extension is provided', async () => {
     const service = createUploadService({
       cloudinary: createCloudinaryMock({
         secure_url: 'https://res.cloudinary.com/demo/raw/upload/v1/portfolio/mascots/code-dark',
@@ -76,11 +76,11 @@ async function main() {
       originalname: 'code-dark.json',
     })
 
-    assert.equal(result.url.endsWith('.json'), true)
+    assert.equal(result.url, 'https://res.cloudinary.com/demo/raw/upload/v1/portfolio/mascots/code-dark')
     assert.equal(result.format, 'json')
   })
 
-  await runCase('uploadMascotAsset appends .riv when Cloudinary raw URL has no extension', async () => {
+  await runCase('uploadMascotAsset keeps Cloudinary raw URL for .riv when no extension is provided', async () => {
     const service = createUploadService({
       cloudinary: createCloudinaryMock({
         secure_url: 'https://res.cloudinary.com/demo/raw/upload/v1/portfolio/mascots/character-idle',
@@ -95,7 +95,7 @@ async function main() {
       originalname: 'character-idle.riv',
     })
 
-    assert.equal(result.url.endsWith('.riv'), true)
+    assert.equal(result.url, 'https://res.cloudinary.com/demo/raw/upload/v1/portfolio/mascots/character-idle')
     assert.equal(result.format, 'riv')
   })
 
