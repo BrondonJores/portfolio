@@ -4,6 +4,7 @@ export const ANIMATION_CORE_SETTING_KEYS = [
   'anim_enabled',
   'anim_duration_scale',
   'anim_intensity',
+  'anim_badges_showcase_speed',
   'anim_ui_card_tilt_enabled',
   'anim_ui_card_tilt_max_deg',
   'anim_ui_card_tilt_scale',

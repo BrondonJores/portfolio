@@ -164,6 +164,7 @@ const CONTENT_TAB_SECTIONS = [
       { key: 'ui_nav_label_home', label: 'Menu: Accueil' },
       { key: 'ui_nav_label_about', label: 'Menu: A propos' },
       { key: 'ui_nav_label_skills', label: 'Menu: Competences' },
+      { key: 'ui_nav_label_certifications', label: 'Menu: Certifications' },
       { key: 'ui_nav_label_projects', label: 'Menu: Projets' },
       { key: 'ui_nav_label_blog', label: 'Menu: Blog' },
       { key: 'ui_nav_label_contact', label: 'Menu: Contact' },
@@ -188,6 +189,11 @@ const CONTENT_TAB_SECTIONS = [
       { key: 'ui_section_skills_title', label: 'Section Competences: titre' },
       { key: 'ui_section_skills_subtitle', label: 'Section Competences: sous-titre' },
       { key: 'ui_section_skills_empty', label: 'Section Competences: vide' },
+      { key: 'ui_section_certifications_title', label: 'Section Certifications: titre' },
+      { key: 'ui_section_certifications_subtitle', label: 'Section Certifications: sous-titre' },
+      { key: 'ui_section_certifications_view_all', label: 'Section Certifications: lien voir tout' },
+      { key: 'ui_section_badges_showcase_title', label: 'Section Badges: titre' },
+      { key: 'ui_section_badges_showcase_subtitle', label: 'Section Badges: sous-titre' },
       { key: 'ui_section_blog_title', label: 'Section Blog: titre' },
       { key: 'ui_section_blog_subtitle', label: 'Section Blog: sous-titre' },
       { key: 'ui_section_blog_view_all', label: 'Section Blog: lien voir tout' },
@@ -221,6 +227,9 @@ const CONTENT_TAB_SECTIONS = [
       { key: 'ui_blog_page_title', label: 'Page Blog: titre' },
       { key: 'ui_blog_page_subtitle', label: 'Page Blog: sous-titre' },
       { key: 'ui_blog_page_empty', label: 'Page Blog: etat vide' },
+      { key: 'ui_certifications_page_title', label: 'Page Certifications: titre' },
+      { key: 'ui_certifications_page_subtitle', label: 'Page Certifications: sous-titre' },
+      { key: 'ui_certifications_page_empty', label: 'Page Certifications: etat vide' },
       { key: 'ui_projects_page_title', label: 'Page Projets: titre' },
       { key: 'ui_projects_page_subtitle', label: 'Page Projets: sous-titre' },
       { key: 'ui_skills_page_title', label: 'Page Competences: titre' },
@@ -1790,6 +1799,17 @@ export default function AdminSettings() {
                     settings={settings}
                     onChange={handleChange}
                     min={0.4}
+                    max={2.5}
+                    step={0.05}
+                    unit="x"
+                    defaultValue={1}
+                  />
+                  <FieldRange
+                    label="Vitesse ruban badges images"
+                    fieldKey="anim_badges_showcase_speed"
+                    settings={settings}
+                    onChange={handleChange}
+                    min={0.5}
                     max={2.5}
                     step={0.05}
                     unit="x"
