@@ -305,12 +305,7 @@ export default function App() {
             className="fixed inset-0 z-[120] flex items-center justify-center"
             style={{ backgroundColor: 'var(--color-bg-primary)' }}
           >
-            <div className="flex flex-col items-center gap-3">
-              <Spinner size="lg" variant="site" />
-              <p className="text-xs font-semibold tracking-[0.2em] uppercase" style={{ color: 'var(--color-text-secondary)' }}>
-                {siteName}
-              </p>
-            </div>
+            <Spinner size="xl" className="sm:h-20 sm:w-20" variant="site" />
           </div>
         )}
       </motion.div>

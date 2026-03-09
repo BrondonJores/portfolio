@@ -9,6 +9,7 @@ const SIZE_MAP = {
   sm: 'h-4 w-4',
   md: 'h-6 w-6',
   lg: 'h-10 w-10',
+  xl: 'h-16 w-16',
 }
 
 const LOADER_SETTING_KEY_BY_VARIANT = {
@@ -30,7 +31,7 @@ function resolveLoaderAssetUrl(settings, variant) {
 
 /**
  * Spinner SVG avec fallback asset (Lottie JSON/Rive/video/image) configurable depuis AdminSettings.
- * @param {{size?:'sm'|'md'|'lg', className?:string, variant?:'spinner'|'page'|'site'}} props Props composant.
+ * @param {{size?:'sm'|'md'|'lg'|'xl', className?:string, variant?:'spinner'|'page'|'site'}} props Props composant.
  * @returns {JSX.Element} Spinner rendu.
  */
 export default function Spinner({ size = 'md', className = '', variant = 'spinner' }) {

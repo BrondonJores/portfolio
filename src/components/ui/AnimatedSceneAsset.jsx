@@ -15,38 +15,52 @@ const MascotRivePlayer = lazy(() => import('./MascotRivePlayer.jsx'))
 const SECTION_ASSET_PRESETS = {
   hero: {
     position: { top: '8%', right: '1.5%' },
-    sizeFactor: 1.2,
+    sizeFactor: 1.08,
     driftX: -10,
+    railSide: 'right',
+    railOffsetFactor: 0.14,
   },
   about: {
-    position: { top: '6%', right: '1.5%' },
-    sizeFactor: 1.08,
+    position: { top: '14%', right: '0.8%' },
+    sizeFactor: 0.92,
     driftX: -8,
+    railSide: 'right',
+    railOffsetFactor: 0.2,
   },
   skills: {
-    position: { top: '8%', left: '1.5%' },
-    sizeFactor: 1.05,
+    position: { top: '14%', left: '0.8%' },
+    sizeFactor: 0.92,
     driftX: 8,
+    railSide: 'left',
+    railOffsetFactor: 0.2,
   },
   projects: {
-    position: { top: '7%', right: '1.5%' },
-    sizeFactor: 1.08,
+    position: { top: '16%', right: '0.8%' },
+    sizeFactor: 0.9,
     driftX: -8,
+    railSide: 'right',
+    railOffsetFactor: 0.22,
   },
   blog: {
-    position: { top: '7%', left: '1.5%' },
-    sizeFactor: 1.04,
+    position: { top: '16%', left: '0.8%' },
+    sizeFactor: 0.88,
     driftX: 8,
+    railSide: 'left',
+    railOffsetFactor: 0.22,
   },
   contact: {
-    position: { top: '5%', right: '1.5%' },
-    sizeFactor: 1.06,
-    driftX: -8,
+    position: { bottom: '6%', right: '0.8%' },
+    sizeFactor: 0.84,
+    driftX: -6,
+    railSide: 'right',
+    railOffsetFactor: 0.16,
   },
   section: {
-    position: { top: '8%', right: '1.5%' },
-    sizeFactor: 1,
+    position: { top: '12%', right: '0.8%' },
+    sizeFactor: 0.9,
     driftX: -8,
+    railSide: 'right',
+    railOffsetFactor: 0.18,
   },
 }
 
@@ -271,7 +285,8 @@ export default function AnimatedSceneAsset({ scope = 'section', sceneKey = '' })
     return null
   }
 
-  const sizePx = Math.max(220, animationConfig.sceneAssetSizePx * preset.sizeFactor)
+  const sizePx = Math.max(180, animationConfig.sceneAssetSizePx * preset.sizeFactor)
+  const railOffsetPx = Math.round(sizePx * (preset.railOffsetFactor || 0))
   const className = animationConfig.sceneAssetMobileEnabled
     ? 'absolute pointer-events-none z-[5]'
     : 'absolute pointer-events-none z-[5] hidden md:block'
@@ -284,6 +299,8 @@ export default function AnimatedSceneAsset({ scope = 'section', sceneKey = '' })
         ...preset.position,
         width: `${sizePx}px`,
         height: `${sizePx}px`,
+        marginLeft: preset.railSide === 'left' ? `-${railOffsetPx}px` : undefined,
+        marginRight: preset.railSide === 'right' ? `-${railOffsetPx}px` : undefined,
         opacity: animationConfig.sceneAssetOpacity,
         filter: 'drop-shadow(0 18px 30px var(--color-accent-glow))',
       }}

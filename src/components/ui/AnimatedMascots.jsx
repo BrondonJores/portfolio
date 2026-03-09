@@ -11,34 +11,46 @@ import {
 
 const SECTION_MASCOT_PRESETS = {
   about: {
-    position: { top: '10%', left: '2%' },
-    sizeFactor: 1.02,
+    position: { top: '14%', left: '0.8%' },
+    sizeFactor: 0.94,
     driftX: 8,
+    railSide: 'left',
+    railOffsetFactor: 0.2,
   },
   skills: {
-    position: { top: '10%', right: '2%' },
-    sizeFactor: 1,
+    position: { top: '14%', right: '0.8%' },
+    sizeFactor: 0.94,
     driftX: -8,
+    railSide: 'right',
+    railOffsetFactor: 0.2,
   },
   projects: {
-    position: { top: '8%', left: '2%' },
-    sizeFactor: 1,
+    position: { top: '16%', left: '0.8%' },
+    sizeFactor: 0.9,
     driftX: 8,
+    railSide: 'left',
+    railOffsetFactor: 0.22,
   },
   blog: {
-    position: { top: '8%', right: '2%' },
-    sizeFactor: 0.96,
+    position: { top: '16%', right: '0.8%' },
+    sizeFactor: 0.9,
     driftX: -8,
+    railSide: 'right',
+    railOffsetFactor: 0.22,
   },
   contact: {
-    position: { top: '8%', left: '2%' },
-    sizeFactor: 1,
-    driftX: 8,
+    position: { bottom: '8%', left: '0.8%' },
+    sizeFactor: 0.86,
+    driftX: 6,
+    railSide: 'left',
+    railOffsetFactor: 0.16,
   },
   section: {
-    position: { top: '8%', right: '2%' },
-    sizeFactor: 1,
+    position: { top: '12%', right: '0.8%' },
+    sizeFactor: 0.9,
     driftX: -8,
+    railSide: 'right',
+    railOffsetFactor: 0.18,
   },
 }
 
@@ -283,7 +295,8 @@ export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
       aria-hidden="true"
     >
       {shouldRenderAsset && Array.from({ length: count }).map((_, index) => {
-        const size = Math.max(160, animationConfig.mascotSizePx * preset.sizeFactor)
+        const size = Math.max(120, animationConfig.mascotSizePx * preset.sizeFactor)
+        const railOffsetPx = Math.round(size * (preset.railOffsetFactor || 0))
         const travel = Math.max(6, 10 * preset.sizeFactor)
         const motionPreset = getMascotMotionPreset(scope, animationConfig, travel, preset.driftX, index)
         const bubbleMessage = bubbleCount > index
@@ -305,6 +318,8 @@ export default function AnimatedMascots({ scope = 'hero', sceneKey = '' }) {
               ...preset.position,
               width: `${size}px`,
               height: `${size}px`,
+              marginLeft: preset.railSide === 'left' ? `-${railOffsetPx}px` : undefined,
+              marginRight: preset.railSide === 'right' ? `-${railOffsetPx}px` : undefined,
               opacity: animationConfig.mascotOpacity,
               filter: 'drop-shadow(0 14px 26px var(--color-accent-glow))',
             }}
