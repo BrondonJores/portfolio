@@ -11,6 +11,22 @@ const {
 } = require('../utils/projectTaxonomy')
 
 const MAX_IMPORT_ITEMS = 200
+const FACETS_CACHE_DEFAULT_TTL_MS = 2 * 60 * 1000
+const PUBLIC_PROJECT_LIST_ATTRIBUTES = Object.freeze([
+  'id',
+  'title',
+  'slug',
+  'description',
+  'taxonomy',
+  'tags',
+  'github_url',
+  'demo_url',
+  'image_url',
+  'featured',
+  'published',
+  'created_at',
+  'updated_at',
+])
 
 /**
  * Convertit une valeur en entier strictement positif.
@@ -152,6 +168,43 @@ function createProjectService(deps = {}) {
   const projectModel = deps.projectModel || Project
   const slugify = deps.slugify || slugifyLib
   const likeOperator = deps.likeOperator || Op.like
+  const facetsCacheTtlMs = parsePositiveInt(
+    process.env.PROJECT_PUBLIC_FACETS_CACHE_TTL_MS,
+    FACETS_CACHE_DEFAULT_TTL_MS
+  )
+
+  let publicFacetsCache = null
+  let publicFacetsExpiresAt = 0
+
+  /**
+   * Invalide le cache des facettes publiques.
+   * @returns {void}
+   */
+  function invalidatePublicFacetsCache() {
+    publicFacetsCache = null
+    publicFacetsExpiresAt = 0
+  }
+
+  /**
+   * Retourne les facettes publiques avec memoization TTL.
+   * @returns {Promise<object>} Facettes construites.
+   */
+  async function getPublicProjectFacets() {
+    const now = Date.now()
+    if (publicFacetsCache && now < publicFacetsExpiresAt) {
+      return publicFacetsCache
+    }
+
+    const facetRows = await projectModel.findAll({
+      where: { published: true },
+      attributes: ['taxonomy', 'tags'],
+      raw: true,
+    })
+
+    publicFacetsCache = buildProjectFacets(facetRows)
+    publicFacetsExpiresAt = now + facetsCacheTtlMs
+    return publicFacetsCache
+  }
 
   /**
    * Liste les projets publics avec filtres et pagination.
@@ -222,15 +275,12 @@ function createProjectService(deps = {}) {
       limit: safeLimit,
       offset,
       order: [['created_at', 'DESC']],
+      attributes: PUBLIC_PROJECT_LIST_ATTRIBUTES,
     })
 
     let facets
     if (toBoolean(includeFacets, false)) {
-      const facetRows = await projectModel.findAll({
-        where: { published: true },
-        attributes: ['taxonomy', 'tags'],
-      })
-      facets = buildProjectFacets(facetRows)
+      facets = await getPublicProjectFacets()
     }
 
     return {
@@ -336,6 +386,7 @@ function createProjectService(deps = {}) {
       published: payload?.published !== undefined ? toBoolean(payload?.published, true) : true,
     })
 
+    invalidatePublicFacetsCache()
     return toProjectPayload(createdProject)
   }
 
@@ -404,6 +455,7 @@ function createProjectService(deps = {}) {
     }
 
     await project.update(updates)
+    invalidatePublicFacetsCache()
     return toProjectPayload(project)
   }
 
@@ -421,6 +473,7 @@ function createProjectService(deps = {}) {
     }
 
     await project.destroy()
+    invalidatePublicFacetsCache()
   }
 
   /**
@@ -534,6 +587,7 @@ function createProjectService(deps = {}) {
       throw createHttpError(422, 'Import termine sans ajout ni mise a jour.')
     }
 
+    invalidatePublicFacetsCache()
     return {
       created,
       updated,

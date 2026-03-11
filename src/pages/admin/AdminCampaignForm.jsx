@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import DOMPurify from 'dompurify'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -344,6 +345,7 @@ export default function AdminCampaignForm() {
 
   const draftStorageKey = useMemo(() => getLocalDraftKey(isEdit, id), [isEdit, id])
   const previewHtml = useMemo(() => blocksToHtml(blocks), [blocks])
+  const safePreviewHtml = useMemo(() => DOMPurify.sanitize(previewHtml), [previewHtml])
   const hasDraftContent = useMemo(
     () => Boolean(form.subject.trim() || blocks.length > 0 || (form.articles || []).length > 0),
     [form.subject, form.articles, blocks]
@@ -758,8 +760,8 @@ export default function AdminCampaignForm() {
                     className="prose prose-sm max-w-none leading-relaxed"
                     style={{ color: 'var(--color-text-primary)' }}
                   >
-                    {previewHtml ? (
-                      <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                    {safePreviewHtml ? (
+                      <div dangerouslySetInnerHTML={{ __html: safePreviewHtml }} />
                     ) : (
                       <p style={{ color: 'var(--color-text-secondary)' }}>
                         Ajoute des blocs pour voir le rendu ici.
