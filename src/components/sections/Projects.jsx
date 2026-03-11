@@ -533,7 +533,7 @@ export default function Projects() {
           </div>
         </motion.div>
 
-        {/* Lien vers tous les projets */}
+        {/* Lien vers tous la page projet */}
         <div className="mt-10 flex justify-center">
           <Link
             to="/projets"
