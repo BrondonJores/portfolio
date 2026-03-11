@@ -10,6 +10,7 @@ const routes = require('./routes')
 const { errorHandler } = require('./middleware/errorMiddleware')
 const { getSitemapXml } = require('./controllers/sitemapController')
 const { logSecurityEventFromRequest } = require('./services/securityEventService')
+const { getRateLimitCommonOptions } = require('./utils/rateLimitConfig')
 
 const app = express()
 const CLOUDINARY_ASSET_ORIGIN = 'https://res.cloudinary.com'
@@ -136,11 +137,10 @@ function isAdminPath(path) {
  */
 function createScopedRateLimiter(options) {
   return rateLimit({
+    ...getRateLimitCommonOptions(options.namespace || options.source || 'api'),
     windowMs: options.windowMs,
     max: options.max,
     message: { error: options.errorMessage },
-    standardHeaders: true,
-    legacyHeaders: false,
     skip: options.skip,
     handler(req, res) {
       void logSecurityEventFromRequest(req, {
@@ -254,6 +254,7 @@ const authRateLimitMax = parsePositiveInteger(
 const publicApiLimiter = createScopedRateLimiter({
   windowMs: rateLimitWindowMs,
   max: publicRateLimitMax,
+  namespace: 'api_public',
   eventType: 'request.rate_limited.public',
   source: 'public_rate_limiter',
   errorMessage: 'Trop de requetes publiques. Reessayez dans 15 minutes.',
@@ -266,6 +267,7 @@ const publicApiLimiter = createScopedRateLimiter({
 const adminApiLimiter = createScopedRateLimiter({
   windowMs: rateLimitWindowMs,
   max: adminRateLimitMax,
+  namespace: 'api_admin',
   eventType: 'request.rate_limited.admin',
   source: 'admin_rate_limiter',
   errorMessage: 'Trop de requetes admin. Reessayez dans 15 minutes.',
@@ -274,6 +276,7 @@ const adminApiLimiter = createScopedRateLimiter({
 const authApiLimiter = createScopedRateLimiter({
   windowMs: rateLimitWindowMs,
   max: authRateLimitMax,
+  namespace: 'api_auth',
   eventType: 'request.rate_limited.auth',
   source: 'auth_rate_limiter',
   errorMessage: "Trop de requetes d'authentification. Reessayez dans 15 minutes.",

@@ -16,7 +16,51 @@ function createSubscriberService(deps = {}) {
   const subscriberModel = deps.subscriberModel || Subscriber
   const crypto = deps.crypto || cryptoLib
   const sequelizeOps = deps.sequelizeOps || sequelizeLib
+  const env = deps.env || process.env
   const { Op } = sequelizeOps
+
+  /**
+   * Parse une valeur entiere strictement positive.
+   * @param {unknown} value Valeur brute.
+   * @param {number} fallback Valeur de repli.
+   * @returns {number} Entier > 0.
+   */
+  function parsePositiveInteger(value, fallback) {
+    const parsed = Number.parseInt(String(value ?? ''), 10)
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+  }
+
+  /**
+   * Execute un lot de taches avec un plafond de concurrence.
+   * @template T
+   * @param {T[]} items Elements a traiter.
+   * @param {number} concurrency Concurrence max.
+   * @param {(item:T,index:number)=>Promise<void>} worker Travail unitaire.
+   * @returns {Promise<void>} Promise resolue apres traitement complet.
+   */
+  async function runWithConcurrency(items, concurrency, worker) {
+    const source = Array.isArray(items) ? items : []
+    if (source.length === 0) {
+      return
+    }
+
+    const safeConcurrency = Math.min(
+      source.length,
+      Math.max(1, parsePositiveInteger(concurrency, 12))
+    )
+
+    let cursor = 0
+    const lanes = Array.from({ length: safeConcurrency }, async () => {
+      while (cursor < source.length) {
+        const index = cursor
+        cursor += 1
+        // Traite les items en file partagée pour lisser la charge DB.
+        await worker(source[index], index)
+      }
+    })
+
+    await Promise.all(lanes)
+  }
 
   /**
    * Genere un token brut de desinscription (envoye par email uniquement).
@@ -102,15 +146,36 @@ function createSubscriberService(deps = {}) {
    */
   async function prepareSubscribersForNewsletter(subscribers) {
     const source = Array.isArray(subscribers) ? subscribers : []
-    const prepared = []
-
-    for (const subscriber of source) {
+    const prepared = source.map((subscriber) => {
       const rawToken = generateUnsubscribeToken()
       const hashedToken = hashUnsubscribeToken(rawToken)
+      const payload =
+        subscriber && typeof subscriber.toJSON === 'function'
+          ? subscriber.toJSON()
+          : { ...(subscriber || {}) }
 
-      if (subscriber && typeof subscriber.update === 'function') {
-        await subscriber.update({ unsubscribe_token: hashedToken })
-      } else {
+      return {
+        subscriber,
+        payload,
+        rawToken,
+        hashedToken,
+      }
+    })
+
+    const tokenRotationConcurrency = parsePositiveInteger(
+      env.NEWSLETTER_TOKEN_ROTATION_CONCURRENCY,
+      20
+    )
+
+    await runWithConcurrency(
+      prepared,
+      tokenRotationConcurrency,
+      async ({ subscriber, hashedToken }) => {
+        if (subscriber && typeof subscriber.update === 'function') {
+          await subscriber.update({ unsubscribe_token: hashedToken })
+          return
+        }
+
         const subscriberId = Number.parseInt(String(subscriber?.id || ''), 10)
         if (!Number.isFinite(subscriberId) || subscriberId <= 0) {
           throw createHttpError(500, "Impossible de generer le lien de desinscription de l'abonne.")
@@ -120,16 +185,12 @@ function createSubscriberService(deps = {}) {
           { where: { id: subscriberId } }
         )
       }
+    )
 
-      const payload =
-        subscriber && typeof subscriber.toJSON === 'function' ? subscriber.toJSON() : { ...(subscriber || {}) }
-      prepared.push({
-        ...payload,
-        unsubscribe_token: rawToken,
-      })
-    }
-
-    return prepared
+    return prepared.map(({ payload, rawToken }) => ({
+      ...payload,
+      unsubscribe_token: rawToken,
+    }))
   }
 
   /**

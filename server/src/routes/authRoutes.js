@@ -24,16 +24,16 @@ const {
 } = require('../validators/authValidator')
 const rateLimit = require('express-rate-limit')
 const { logSecurityEventFromRequest } = require('../services/securityEventService')
+const { getRateLimitCommonOptions } = require('../utils/rateLimitConfig')
 
 const router = Router()
 
 /* Rate limiter strict pour les tentatives de connexion */
 const authLimiter = rateLimit({
+  ...getRateLimitCommonOptions('auth_login'),
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: { error: 'Trop de tentatives de connexion. Reessayez dans 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false,
   handler(req, res) {
     void logSecurityEventFromRequest(req, {
       eventType: 'auth.login_rate_limited',
@@ -48,20 +48,18 @@ const authLimiter = rateLimit({
 
 /* Rate limiter dedie aux routes session (refresh/logout) */
 const sessionLimiter = rateLimit({
+  ...getRateLimitCommonOptions('auth_session'),
   windowMs: 15 * 60 * 1000,
   max: 30,
   message: { error: 'Trop de requetes de session. Reessayez dans 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false,
 })
 
 /* Rate limiter strict pour validation 2FA login */
 const verifyTwoFactorLimiter = rateLimit({
+  ...getRateLimitCommonOptions('auth_verify_2fa'),
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: 'Trop de tentatives 2FA. Reessayez dans 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false,
   handler(req, res) {
     void logSecurityEventFromRequest(req, {
       eventType: 'auth.2fa_rate_limited',

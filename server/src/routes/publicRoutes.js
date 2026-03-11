@@ -26,39 +26,36 @@ const { subscribeValidator } = require('../validators/subscriberValidator')
 const { createCommentValidator } = require('../validators/commentValidator')
 const { marketplaceListValidator } = require('../validators/themeMarketplaceValidator')
 const { listPublicCmsPagesValidator, cmsPageSlugParamValidator } = require('../validators/cmsPageValidator')
+const { getRateLimitCommonOptions } = require('../utils/rateLimitConfig')
 
 const router = Router()
 
 const commentLimiter = rateLimit({
+  ...getRateLimitCommonOptions('public_comments'),
   windowMs: 15 * 60 * 1000,
   max: 12,
   message: { error: 'Trop de commentaires envoyes. Reessayez dans 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false,
 })
 
 const subscribeLimiter = rateLimit({
+  ...getRateLimitCommonOptions('public_subscribe'),
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: { error: "Trop de tentatives d'abonnement. Reessayez dans 15 minutes." },
-  standardHeaders: true,
-  legacyHeaders: false,
 })
 
 const messageLimiter = rateLimit({
+  ...getRateLimitCommonOptions('public_messages'),
   windowMs: 15 * 60 * 1000,
   max: 8,
   message: { error: 'Trop de messages envoyes. Reessayez dans 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false,
 })
 
 const likeLimiter = rateLimit({
+  ...getRateLimitCommonOptions('public_likes'),
   windowMs: 15 * 60 * 1000,
   max: 80,
   message: { error: 'Trop de likes envoyes. Reessayez dans 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false,
 })
 
 const verifyMessageCaptcha = createRecaptchaGuard({ action: 'contact_message' })

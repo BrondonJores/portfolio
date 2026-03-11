@@ -210,6 +210,35 @@ function resolvePeriodDays(rawValue) {
 }
 
 /**
+ * Parse une valeur entiere strictement positive.
+ * @param {unknown} value Valeur brute.
+ * @param {number} fallback Valeur de repli.
+ * @returns {number} Entier > 0.
+ */
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? ''), 10)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+/**
+ * Clone defensif d'un payload objet.
+ * @template T
+ * @param {T} value Valeur source.
+ * @returns {T} Copie defensive.
+ */
+function clonePayload(value) {
+  if (value === null || value === undefined || typeof value !== 'object') {
+    return value
+  }
+
+  try {
+    return structuredClone(value)
+  } catch {
+    return JSON.parse(JSON.stringify(value))
+  }
+}
+
+/**
  * Construit le service statistiques avec dependances injectables.
  * @param {object} [deps={}] Dependances externes.
  * @returns {{getDashboardStats: Function}} API stats.
@@ -221,10 +250,59 @@ function createStatsService(deps = {}) {
   const subscriberModel = deps.subscriberModel || Subscriber
   const commentModel = deps.commentModel || Comment
   const newsletterCampaignModel = deps.newsletterCampaignModel || NewsletterCampaign
+  const env = deps.env || process.env
   const now = deps.now || (() => new Date())
   const locale = deps.locale || 'fr-FR'
   const sequelizeFns = deps.sequelizeFns || sequelizeLib
   const { Op, fn, col, literal } = sequelizeFns
+  const statsCache = new Map()
+  const statsCacheTtlMs = parsePositiveInteger(env.STATS_CACHE_TTL_MS, 20_000)
+  const statsTagScanLimit = Math.min(parsePositiveInteger(env.STATS_TAG_SCAN_LIMIT, 1500), 5000)
+
+  /**
+   * Construit une cle de cache stable pour le snapshot stats.
+   * @param {number} periodDays Fenetre demandee.
+   * @returns {string} Cle de cache.
+   */
+  function toCacheKey(periodDays) {
+    return `period:${periodDays}|locale:${locale}`
+  }
+
+  /**
+   * Lit un snapshot en cache s'il est encore valide.
+   * @param {string} key Cle de cache.
+   * @returns {object|null} Snapshot clone ou null si absence/expiration.
+   */
+  function readCache(key) {
+    const entry = statsCache.get(key)
+    if (!entry) {
+      return null
+    }
+
+    if (entry.expiresAt <= Date.now()) {
+      statsCache.delete(key)
+      return null
+    }
+
+    return clonePayload(entry.payload)
+  }
+
+  /**
+   * Ecrit un snapshot en cache court.
+   * @param {string} key Cle de cache.
+   * @param {object} payload Snapshot stats.
+   * @returns {void}
+   */
+  function writeCache(key, payload) {
+    if (statsCacheTtlMs <= 0) {
+      return
+    }
+
+    statsCache.set(key, {
+      expiresAt: Date.now() + statsCacheTtlMs,
+      payload: clonePayload(payload),
+    })
+  }
 
   /**
    * Construit l'expression SQL de formatage mois `YYYY-MM`.
@@ -252,6 +330,16 @@ function createStatsService(deps = {}) {
    */
   async function getDashboardStats(options = {}) {
     const periodDays = resolvePeriodDays(options.periodDays)
+    const bypassCache = options.disableCache === true || options.forceRefresh === true
+    const cacheKey = toCacheKey(periodDays)
+
+    if (!bypassCache) {
+      const cached = readCache(cacheKey)
+      if (cached) {
+        return cached
+      }
+    }
+
     const nowDate = now()
 
     const sixMonthsStart = new Date(nowDate)
@@ -457,11 +545,15 @@ function createStatsService(deps = {}) {
       projectModel.findAll({
         attributes: ['tags'],
         where: { published: true },
+        order: [['created_at', 'DESC']],
+        limit: statsTagScanLimit,
         raw: true,
       }),
       articleModel.findAll({
         attributes: ['tags'],
         where: { published: true },
+        order: [['created_at', 'DESC']],
+        limit: statsTagScanLimit,
         raw: true,
       }),
       messageModel.count({
@@ -673,7 +765,7 @@ function createStatsService(deps = {}) {
     const commentsTrend = toTrend(safeCommentsCurrent, safeCommentsPrevious)
     const campaignsTrend = toTrend(safeCampaignsCurrent, safeCampaignsPrevious)
 
-    return {
+    const snapshot = {
       filters: {
         periodDays,
         allowedPeriodDays: ALLOWED_PERIOD_DAYS,
@@ -748,6 +840,12 @@ function createStatsService(deps = {}) {
         currentEnd: nowDate.toISOString(),
       },
     }
+
+    if (!bypassCache) {
+      writeCache(cacheKey, snapshot)
+    }
+
+    return snapshot
   }
 
   return { getDashboardStats }
@@ -757,4 +855,3 @@ module.exports = {
   createStatsService,
   ...createStatsService(),
 }
-

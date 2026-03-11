@@ -16,6 +16,17 @@ function parseBooleanEnv(value, fallback = false) {
 }
 
 /**
+ * Parse une valeur entiere strictement positive.
+ * @param {unknown} value Valeur brute.
+ * @param {number} fallback Valeur de repli.
+ * @returns {number} Entier normalise.
+ */
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? ''), 10)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+/**
  * Verifie qu'une variable requise existe dans l'objet env.
  * @param {object} env Objet des variables d'environnement.
  * @param {string} name Nom de la variable a verifier.
@@ -268,41 +279,60 @@ function createMailerService(deps = {}) {
       throw new Error('Email expediteur manquant')
     }
 
-    const errors = []
+    const failures = []
+    const safeSubscribers = Array.isArray(subscribers) ? subscribers : []
+    const configuredConcurrency = parsePositiveInteger(
+      env.NEWSLETTER_SEND_CONCURRENCY,
+      mode === 'mock' ? 40 : 8
+    )
+    const concurrency = Math.min(
+      safeSubscribers.length || 1,
+      Math.max(1, Math.min(configuredConcurrency, 50))
+    )
 
-    for (const subscriber of subscribers) {
-      const unsubscribeLink = `${appUrl}/api/unsubscribe/${subscriber.unsubscribe_token}`
+    let cursor = 0
+    const workers = Array.from({ length: concurrency }, async () => {
+      while (cursor < safeSubscribers.length) {
+        const index = cursor
+        cursor += 1
+        const subscriber = safeSubscribers[index]
+        const unsubscribeLink = `${appUrl}/api/unsubscribe/${subscriber.unsubscribe_token}`
 
-      const templatePayload = {
-        subject: campaign.subject,
-        preheader: campaign.preheader,
-        body_html: campaign.body_html,
-        cta_label: campaign.cta_label,
-        cta_url: campaign.cta_url,
-        articles: campaign.articles,
-        unsubscribe_url: unsubscribeLink,
-      }
-
-      const html = renderNewsletterHtml(settings, templatePayload)
-
-      try {
-        await sendWithProvider({
-          mode,
-          fromName: senderName,
-          fromEmail: senderEmail,
-          toEmail: subscriber.email,
+        const templatePayload = {
           subject: campaign.subject,
-          html,
-        })
-      } catch {
-        errors.push(subscriber.email)
+          preheader: campaign.preheader,
+          body_html: campaign.body_html,
+          cta_label: campaign.cta_label,
+          cta_url: campaign.cta_url,
+          articles: campaign.articles,
+          unsubscribe_url: unsubscribeLink,
+        }
+
+        const html = renderNewsletterHtml(settings, templatePayload)
+
+        try {
+          await sendWithProvider({
+            mode,
+            fromName: senderName,
+            fromEmail: senderEmail,
+            toEmail: subscriber.email,
+            subject: campaign.subject,
+            html,
+          })
+        } catch {
+          failures.push(subscriber.email)
+        }
       }
-    }
+    })
+
+    await Promise.all(workers)
 
     return {
-      success: subscribers.length - errors.length,
-      failed: errors.length,
-      failedEmails: errors,
+      success: safeSubscribers.length - failures.length,
+      failed: failures.length,
+      failedEmails: failures,
+      attempted: safeSubscribers.length,
+      concurrency,
       mode,
     }
   }

@@ -209,10 +209,26 @@ function createNewsletterService(deps = {}) {
         settings,
       })
 
+      if (Number(result?.success || 0) <= 0) {
+        throw createHttpError(
+          502,
+          "Aucun email n'a pu etre envoye. La campagne reste en brouillon.",
+          mailDebug ? { mailer: result } : undefined
+        )
+      }
+
       await campaign.update({
         status: 'sent',
         sent_at: now(),
       })
+
+      if (Number(result?.failed || 0) > 0) {
+        debug('send:partial', {
+          campaignId: campaign.id,
+          failed: result.failed,
+          success: result.success,
+        })
+      }
 
       debug('send:done', { ms: Date.now() - t0, campaignId: campaign.id })
 
