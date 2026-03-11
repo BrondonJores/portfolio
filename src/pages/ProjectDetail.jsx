@@ -91,7 +91,12 @@ export default function ProjectDetail() {
               <img
                 src={project.image_url}
                 alt={project.title}
-                className="w-full max-h-72 object-cover rounded-xl mb-6"
+                className="w-full max-h-[36rem] object-contain rounded-xl mb-6 p-2"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 72%, transparent)' }}
+                loading="lazy"
+                decoding="async"
+                width="1600"
+                height="900"
               />
             )}
             <h1

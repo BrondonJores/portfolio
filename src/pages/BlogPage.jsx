@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { DocumentTextIcon, CalendarIcon } from '@heroicons/react/24/outline'
+import { DocumentTextIcon, CalendarIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
 import SectionTitle from '../components/ui/SectionTitle.jsx'
@@ -34,6 +34,7 @@ export default function BlogPage() {
   const blogPageHeading = settings.ui_blog_page_title || 'Blog'
   const blogPageSubtitle = settings.ui_blog_page_subtitle || 'Articles et reflexions sur le developpement web'
   const blogPageEmpty = settings.ui_blog_page_empty || 'Aucun article disponible pour le moment.'
+  const blogReadLabel = settings.ui_section_blog_read || "Lire l'article"
 
   useEffect(() => {
     setLoading(true)
@@ -80,7 +81,11 @@ export default function BlogPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: i * 0.05, ease: 'easeOut' }}
                   >
-                    <Link to={`/blog/${article.slug}`} className="block h-full">
+                    <Link
+                      to={`/blog/${article.slug}`}
+                      className="block h-full group"
+                      aria-label={`${blogReadLabel} - ${article.title}`}
+                    >
                       <Card className="h-full flex flex-col overflow-hidden !p-0">
                         {/* Image de couverture */}
                         {article.cover_image ? (
@@ -90,6 +95,9 @@ export default function BlogPage() {
                               alt={article.title}
                               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                               loading="lazy"
+                              decoding="async"
+                              width="1200"
+                              height="675"
                             />
                           </div>
                         ) : (
@@ -146,6 +154,13 @@ export default function BlogPage() {
                               ))}
                             </div>
                           )}
+                          <span
+                            className="inline-flex items-center gap-1 text-sm font-medium mt-4"
+                            style={{ color: 'var(--color-accent)' }}
+                          >
+                            {blogReadLabel}
+                            <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
+                          </span>
                         </div>
                       </Card>
                     </Link>

@@ -101,17 +101,23 @@ export default function ProjectsPage() {
                     <Card className="h-full flex flex-col overflow-hidden !p-0">
                       {/* Image du projet */}
                       {project.image_url ? (
-                        <div className="w-full h-44 overflow-hidden flex-shrink-0">
+                        <div
+                          className="w-full h-52 md:h-56 overflow-hidden flex-shrink-0"
+                          style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 74%, transparent)' }}
+                        >
                           <img
                             src={project.image_url}
                             alt={project.title}
-                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                            className="w-full h-full object-contain p-2 transition-transform duration-300 hover:scale-[1.02]"
                             loading="lazy"
+                            decoding="async"
+                            width="1200"
+                            height="675"
                           />
                         </div>
                       ) : (
                         <div
-                          className="w-full h-44 flex items-center justify-center flex-shrink-0"
+                          className="w-full h-52 md:h-56 flex items-center justify-center flex-shrink-0"
                           style={{ backgroundColor: 'var(--color-bg-secondary)' }}
                         >
                           <FolderOpenIcon

@@ -48,6 +48,50 @@ import {
   readLikedArticlesMap,
 } from './articleDetail/articleDetailUtils.js'
 
+/**
+ * Normalise une valeur de tag pour la comparaison.
+ * @param {unknown} tag Tag source.
+ * @returns {string} Tag normalise.
+ */
+function normalizeTag(tag) {
+  return String(tag || '').trim().toLowerCase()
+}
+
+/**
+ * Classe les articles similaires selon tags partages puis recence.
+ * @param {object} currentArticle Article courant.
+ * @param {Array<object>} candidates Articles candidats.
+ * @param {number} maxItems Nombre max de resultats.
+ * @returns {Array<object>} Articles tries.
+ */
+function rankRelatedArticles(currentArticle, candidates, maxItems = 3) {
+  const sourceTags = new Set((currentArticle?.tags || []).map(normalizeTag).filter(Boolean))
+
+  return (candidates || [])
+    .filter((candidate) => candidate && candidate.id !== currentArticle?.id)
+    .map((candidate) => {
+      const candidateTags = new Set((candidate.tags || []).map(normalizeTag).filter(Boolean))
+      let overlap = 0
+      sourceTags.forEach((tag) => {
+        if (candidateTags.has(tag)) {
+          overlap += 1
+        }
+      })
+      const recencyScore = Number.isFinite(Date.parse(candidate.published_at))
+        ? Date.parse(candidate.published_at) / 1_000_000_000_000
+        : 0
+      const visualBonus = candidate.cover_image ? 0.25 : 0
+
+      return {
+        candidate,
+        score: overlap * 100 + recencyScore + visualBonus,
+      }
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, Math.max(1, maxItems))
+    .map((entry) => entry.candidate)
+}
+
 export default function ArticleDetail() {
   const { slug } = useParams()
   const navigate = useNavigate()
@@ -124,10 +168,10 @@ export default function ArticleDetail() {
     setLiked(Boolean(readLikedArticlesMap()[article.slug]))
     setLikePending(false)
     setLikeError('')
-    getArticles({ limit: 4 })
+    getArticles({ limit: 12 })
       .then((res) => {
         const all = res?.data || []
-        setRelatedArticles(all.filter((a) => a.id !== article.id).slice(0, 3))
+        setRelatedArticles(rankRelatedArticles(article, all, 3))
       })
       .catch(() => {})
     getCommentsByArticle(article.id)
@@ -204,6 +248,27 @@ export default function ArticleDetail() {
 
   const readingTime = estimateReadingTime(article.content)
   const tocHeadings = extractTocHeadings(article.content)
+  const canonicalUrl = typeof window !== 'undefined' ? window.location.href : ''
+  const articleStructuredData = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.excerpt || '',
+    ...(article.cover_image ? { image: [article.cover_image] } : {}),
+    datePublished: article.published_at || undefined,
+    dateModified: article.updated_at || article.published_at || undefined,
+    mainEntityOfPage: canonicalUrl || undefined,
+    author: article.author_name
+      ? { '@type': 'Person', name: article.author_name }
+      : { '@type': 'Organization', name: settings.site_name || 'Portfolio' },
+    publisher: {
+      '@type': 'Organization',
+      name: settings.site_name || 'Portfolio',
+    },
+    keywords: Array.isArray(article.tags) && article.tags.length > 0
+      ? article.tags.join(', ')
+      : undefined,
+  })
 
   return (
     <>
@@ -219,6 +284,7 @@ export default function ArticleDetail() {
         <meta name="twitter:title" content={article.title} />
         <meta name="twitter:description" content={article.excerpt || ''} />
         <meta name="twitter:image" content={article.cover_image || ''} />
+        <script type="application/ld+json">{articleStructuredData}</script>
       </Helmet>
       <ReadingProgress />
       <Navbar />
@@ -232,6 +298,10 @@ export default function ArticleDetail() {
               src={article.cover_image}
               alt={article.title}
               className="w-full h-full object-cover"
+              decoding="async"
+              fetchPriority="high"
+              width="1600"
+              height="900"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[var(--color-bg-primary)]" />
           </div>
@@ -637,6 +707,10 @@ export default function ArticleDetail() {
                           src={a.cover_image}
                           alt={a.title}
                           className="w-full h-32 object-cover"
+                          loading="lazy"
+                          decoding="async"
+                          width="1200"
+                          height="675"
                         />
                       ) : (
                         <div

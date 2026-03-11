@@ -5,6 +5,7 @@ const { createHttpError } = require('../utils/httpError')
 const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../utils/pagination')
 
 const MAX_IMPORT_ITEMS = 200
+const MAX_PUBLIC_ARTICLE_LIMIT = 24
 
 /**
  * Convertit une valeur en entier strictement positif.
@@ -176,11 +177,25 @@ function createArticleService(deps = {}) {
    */
   async function getAllPublicArticles({ page, limit }) {
     const safePage = parsePositiveInt(page, 1)
-    const safeLimit = parsePositiveInt(limit, 10)
+    const safeLimit = Math.min(parsePositiveInt(limit, 10), MAX_PUBLIC_ARTICLE_LIMIT)
     const offset = (safePage - 1) * safeLimit
 
     const { count, rows } = await articleModel.findAndCountAll({
       where: { published: true },
+      // Le listing public n'a pas besoin du contenu complet de l'article.
+      attributes: [
+        'id',
+        'title',
+        'slug',
+        'excerpt',
+        'cover_image',
+        'likes',
+        'tags',
+        'published',
+        'published_at',
+        'created_at',
+        'updated_at',
+      ],
       limit: safeLimit,
       offset,
       order: [['published_at', 'DESC']],

@@ -251,25 +251,23 @@ export default function Projects() {
               <Card className="h-full overflow-hidden !p-0">
                 <article className="flex h-full flex-col">
                   {heroProject.image_url ? (
-                    <div className="relative h-56 md:h-72 overflow-hidden">
+                    <div
+                      className="relative h-64 md:h-80 lg:h-[28rem] overflow-hidden"
+                      style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 72%, transparent)' }}
+                    >
                       <img
                         src={heroProject.image_url}
                         alt={heroProject.title}
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-contain p-2 md:p-3"
                         loading="lazy"
                         decoding="async"
-                      />
-                      <div
-                        className="pointer-events-none absolute inset-0"
-                        style={{
-                          background:
-                            'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-secondary) 88%, transparent) 100%)',
-                        }}
+                        width="1600"
+                        height="900"
                       />
                     </div>
                   ) : (
                     <div
-                      className="h-56 md:h-72 flex items-center justify-center"
+                      className="h-64 md:h-80 lg:h-[28rem] flex items-center justify-center"
                       style={{
                         background:
                           'linear-gradient(135deg, color-mix(in srgb, var(--color-bg-card) 90%, transparent), color-mix(in srgb, var(--color-accent-glow) 42%, transparent))',
@@ -426,18 +424,23 @@ export default function Projects() {
                 >
                   <Card className="h-full flex flex-col overflow-hidden !p-0">
                     {project.image_url ? (
-                      <div className="w-full h-40 overflow-hidden flex-shrink-0">
+                      <div
+                        className="w-full h-48 md:h-52 overflow-hidden flex-shrink-0"
+                        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 72%, transparent)' }}
+                      >
                         <img
                           src={project.image_url}
                           alt={project.title}
-                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                          className="w-full h-full object-contain p-2 transition-transform duration-300 hover:scale-[1.02]"
                           loading="lazy"
                           decoding="async"
+                          width="1200"
+                          height="675"
                         />
                       </div>
                     ) : (
                       <div
-                        className="w-full h-40 flex items-center justify-center flex-shrink-0"
+                        className="w-full h-48 md:h-52 flex items-center justify-center flex-shrink-0"
                         style={{
                           background:
                             'linear-gradient(150deg, color-mix(in srgb, var(--color-bg-primary) 92%, transparent), color-mix(in srgb, var(--color-accent-glow) 32%, transparent))',
