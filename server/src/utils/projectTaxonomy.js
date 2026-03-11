@@ -1,61 +1,21 @@
 /* Outils de normalisation et de filtrage de la taxonomie projet (option A). */
 
+const taxonomyCatalog = require('../../../shared/projectTaxonomyCatalog.json')
+
 const TAXONOMY_LIMITS = Object.freeze({
-  type: 1,
-  stack: 5,
-  technologies: 18,
-  domains: 6,
-  labels: 12,
-  legacyTags: 40,
+  type: Number(taxonomyCatalog?.limits?.type) || 1,
+  stack: Number(taxonomyCatalog?.limits?.stack) || 5,
+  technologies: Number(taxonomyCatalog?.limits?.technologies) || 18,
+  domains: Number(taxonomyCatalog?.limits?.domains) || 6,
+  labels: Number(taxonomyCatalog?.limits?.labels) || 12,
+  legacyTags: Number(taxonomyCatalog?.limits?.legacyTags) || 40,
 })
 
 const TAXONOMY_CATALOG = Object.freeze({
-  type: [
-    { value: 'Application web', aliases: ['app web', 'web app', 'application-web'] },
-    { value: 'API backend', aliases: ['api', 'backend api', 'api-backend'] },
-    { value: 'Site institutionnel', aliases: ['site institutionnel', 'site-institutionnel'] },
-    { value: 'Publication', aliases: ['publications', 'publication'] },
-    { value: 'Documentation juridique', aliases: ['documentation-juridique', 'documentation juridique'] },
-    { value: 'Plateforme interne', aliases: ['outil interne', 'plateforme-interne'] },
-    { value: 'Automatisation', aliases: ['automation', 'automatisation'] },
-  ],
-  stack: [
-    { value: 'Microservices', aliases: ['microservice', 'microservices'] },
-    { value: 'Monolithe', aliases: ['monolith', 'monolithe'] },
-    { value: 'Full-stack', aliases: ['fullstack', 'full-stack'] },
-    { value: 'Frontend SPA', aliases: ['spa', 'frontend-spa'] },
-    { value: 'Backend API', aliases: ['backend-api', 'api backend'] },
-    { value: 'CMS', aliases: ['cms', 'joomla'] },
-    { value: 'Server-side rendering', aliases: ['ssr', 'server-side-rendering'] },
-  ],
-  technologies: [
-    { value: 'Laravel', aliases: ['laravel'] },
-    { value: 'Jakarta EE', aliases: ['jakarta-ee', 'jakarta ee', 'java ee'] },
-    { value: 'Jakarta Servlet', aliases: ['jakarta-servlet', 'jakarta servlet', 'servlet'] },
-    { value: 'JSP', aliases: ['jsp'] },
-    { value: 'Java', aliases: ['java'] },
-    { value: 'Python', aliases: ['python'] },
-    { value: 'Flask', aliases: ['flask'] },
-    { value: 'React', aliases: ['react', 'reactjs', 'react.js'] },
-    { value: 'Bootstrap', aliases: ['bootstrap'] },
-    { value: 'MySQL', aliases: ['mysql'] },
-    { value: 'PostgreSQL', aliases: ['postgres', 'postgresql'] },
-    { value: 'Docker', aliases: ['docker'] },
-    { value: 'Tomcat', aliases: ['tomcat'] },
-    { value: 'Joomla', aliases: ['joomla'] },
-    { value: 'XML', aliases: ['xml'] },
-    { value: 'JSON', aliases: ['json'] },
-    { value: 'XSLT', aliases: ['xslt'] },
-    { value: 'bcrypt', aliases: ['bcrypt'] },
-  ],
-  domains: [
-    { value: 'Association', aliases: ['association', 'associatif'] },
-    { value: 'Institutionnel', aliases: ['institutionnel'] },
-    { value: 'Juridique', aliases: ['juridique', 'legal'] },
-    { value: 'Documentation', aliases: ['documentation'] },
-    { value: 'Open source', aliases: ['open-source', 'opensource', 'open source'] },
-    { value: 'Education', aliases: ['education', 'edtech'] },
-  ],
+  type: Array.isArray(taxonomyCatalog?.axes?.type) ? taxonomyCatalog.axes.type : [],
+  stack: Array.isArray(taxonomyCatalog?.axes?.stack) ? taxonomyCatalog.axes.stack : [],
+  technologies: Array.isArray(taxonomyCatalog?.axes?.technologies) ? taxonomyCatalog.axes.technologies : [],
+  domains: Array.isArray(taxonomyCatalog?.axes?.domains) ? taxonomyCatalog.axes.domains : [],
 })
 
 /**

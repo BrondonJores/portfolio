@@ -7,7 +7,6 @@ const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../util
 const {
   normalizeProjectTaxonomy,
   buildProjectTagsFromTaxonomy,
-  matchesProjectFilters,
   buildProjectFacets,
 } = require('../utils/projectTaxonomy')
 
@@ -69,6 +68,26 @@ function sanitizeLegacyTags(value) {
         .filter(Boolean)
     )
   ).slice(0, 40)
+}
+
+/**
+ * Convertit un filtre query (string csv) en liste de valeurs.
+ * @param {unknown} value Valeur query.
+ * @param {number} maxValues Limite max de valeurs.
+ * @returns {Array<string>} Liste nettoyee.
+ */
+function parseQueryFilterValues(value, maxValues = 8) {
+  const raw = sanitizeText(value, 400)
+  if (!raw) return []
+
+  return Array.from(
+    new Set(
+      raw
+        .split(',')
+        .map((entry) => sanitizeText(entry, 80))
+        .filter(Boolean)
+    )
+  ).slice(0, maxValues)
 }
 
 /**
@@ -145,10 +164,22 @@ function createProjectService(deps = {}) {
    * @param {string|undefined} params.technology Filtre technologie.
    * @param {string|undefined} params.domain Filtre domaine.
    * @param {string|undefined} params.label Filtre label.
+   * @param {string|undefined} params.includeFacets Inclut les facettes si true.
    * @param {string|undefined} params.featured Filtre featured.
    * @returns {Promise<{data:Array,pagination:{total:number,page:number,limit:number,pages:number},facets:object}>} Resultat pagine.
    */
-  async function getAllPublicProjects({ page, limit, tag, type, stack, technology, domain, label, featured }) {
+  async function getAllPublicProjects({
+    page,
+    limit,
+    tag,
+    type,
+    stack,
+    technology,
+    domain,
+    label,
+    includeFacets,
+    featured,
+  }) {
     const safePage = parsePositiveInt(page, 1)
     const safeLimit = parsePositiveInt(limit, 10)
     const offset = (safePage - 1) * safeLimit
@@ -158,65 +189,59 @@ function createProjectService(deps = {}) {
       baseWhere.featured = true
     }
 
-    const hasStructuredFilters = Boolean(type || stack || technology || domain || label)
-    const hasTagFilter = Boolean(sanitizeText(tag, 80))
-    let count = 0
-    let rows = []
+    const tagFilters = []
+    const filterGroups = [
+      parseQueryFilterValues(tag, 8),
+      parseQueryFilterValues(type, 4),
+      parseQueryFilterValues(stack, 8),
+      parseQueryFilterValues(technology, 12),
+      parseQueryFilterValues(domain, 8),
+      parseQueryFilterValues(label, 8),
+    ]
 
-    if (hasTagFilter && !hasStructuredFilters) {
-      const safeTag = sanitizeText(tag, 80)
-      const where = {
-        ...baseWhere,
-        tags: { [likeOperator]: `%"${safeTag}"%` },
+    for (const group of filterGroups) {
+      if (group.length === 0) continue
+
+      if (group.length === 1) {
+        tagFilters.push({ tags: { [likeOperator]: `%"${group[0]}"%` } })
+        continue
       }
 
-      const result = await projectModel.findAndCountAll({
-        where,
-        limit: safeLimit,
-        offset,
-        order: [['created_at', 'DESC']],
+      tagFilters.push({
+        [Op.or]: group.map((entry) => ({ tags: { [likeOperator]: `%"${entry}"%` } })),
       })
-
-      count = result.count
-      rows = result.rows
-    } else if (hasTagFilter || hasStructuredFilters) {
-      const candidates = await projectModel.findAll({
-        where: baseWhere,
-        order: [['created_at', 'DESC']],
-      })
-
-      const filtered = candidates.filter((project) =>
-        matchesProjectFilters(project, { tag, type, stack, technology, domain, label })
-      )
-
-      count = filtered.length
-      rows = filtered.slice(offset, offset + safeLimit)
-    } else {
-      const result = await projectModel.findAndCountAll({
-        where: baseWhere,
-        limit: safeLimit,
-        offset,
-        order: [['created_at', 'DESC']],
-      })
-
-      count = result.count
-      rows = result.rows
     }
 
-    const facetRows = await projectModel.findAll({
-      where: { published: true },
-      attributes: ['taxonomy', 'tags'],
+    const where = {
+      ...baseWhere,
+      ...(tagFilters.length > 0 ? { [Op.and]: tagFilters } : {}),
+    }
+
+    const result = await projectModel.findAndCountAll({
+      where,
+      limit: safeLimit,
+      offset,
+      order: [['created_at', 'DESC']],
     })
 
+    let facets
+    if (toBoolean(includeFacets, false)) {
+      const facetRows = await projectModel.findAll({
+        where: { published: true },
+        attributes: ['taxonomy', 'tags'],
+      })
+      facets = buildProjectFacets(facetRows)
+    }
+
     return {
-      data: rows.map(toProjectPayload),
+      data: result.rows.map(toProjectPayload),
       pagination: {
-        total: count,
+        total: result.count,
         page: safePage,
         limit: safeLimit,
-        pages: Math.ceil(count / safeLimit),
+        pages: Math.ceil(result.count / safeLimit),
       },
-      facets: buildProjectFacets(facetRows),
+      ...(facets ? { facets } : {}),
     }
   }
 
@@ -359,10 +384,14 @@ function createProjectService(deps = {}) {
 
     const hasTaxonomyUpdate = Object.prototype.hasOwnProperty.call(payload || {}, 'taxonomy')
     const hasTagsUpdate = Object.prototype.hasOwnProperty.call(payload || {}, 'tags')
-    if (hasTaxonomyUpdate || hasTagsUpdate) {
-      const sourceTags = hasTagsUpdate ? sanitizeLegacyTags(payload?.tags) : sanitizeLegacyTags(project.tags)
-      const sourceTaxonomy = hasTaxonomyUpdate ? payload?.taxonomy : project.taxonomy
-      const taxonomy = normalizeProjectTaxonomy(sourceTaxonomy, sourceTags)
+    if (hasTaxonomyUpdate) {
+      const sourceTags = hasTagsUpdate ? sanitizeLegacyTags(payload?.tags) : []
+      const taxonomy = normalizeProjectTaxonomy(payload?.taxonomy, sourceTags)
+      updates.taxonomy = taxonomy
+      updates.tags = buildProjectTagsFromTaxonomy(taxonomy, sourceTags)
+    } else if (hasTagsUpdate) {
+      const sourceTags = sanitizeLegacyTags(payload?.tags)
+      const taxonomy = normalizeProjectTaxonomy(project.taxonomy, sourceTags)
       updates.taxonomy = taxonomy
       updates.tags = buildProjectTagsFromTaxonomy(taxonomy, sourceTags)
     } else {

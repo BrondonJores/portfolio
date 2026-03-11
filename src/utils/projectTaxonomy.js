@@ -1,107 +1,27 @@
 /* Utilitaires frontend pour la taxonomie projet (option A). */
+import taxonomyCatalog from '../../shared/projectTaxonomyCatalog.json'
 
 const TAXONOMY_LIMITS = Object.freeze({
-  type: 1,
-  stack: 5,
-  technologies: 18,
-  domains: 6,
-  labels: 12,
-  legacyTags: 40,
+  type: Number(taxonomyCatalog?.limits?.type) || 1,
+  stack: Number(taxonomyCatalog?.limits?.stack) || 5,
+  technologies: Number(taxonomyCatalog?.limits?.technologies) || 18,
+  domains: Number(taxonomyCatalog?.limits?.domains) || 6,
+  labels: Number(taxonomyCatalog?.limits?.labels) || 12,
+  legacyTags: Number(taxonomyCatalog?.limits?.legacyTags) || 40,
+})
+
+const TAXONOMY_AXES = Object.freeze({
+  type: Array.isArray(taxonomyCatalog?.axes?.type) ? taxonomyCatalog.axes.type : [],
+  stack: Array.isArray(taxonomyCatalog?.axes?.stack) ? taxonomyCatalog.axes.stack : [],
+  technologies: Array.isArray(taxonomyCatalog?.axes?.technologies) ? taxonomyCatalog.axes.technologies : [],
+  domains: Array.isArray(taxonomyCatalog?.axes?.domains) ? taxonomyCatalog.axes.domains : [],
 })
 
 export const PROJECT_TAXONOMY_OPTIONS = Object.freeze({
-  type: [
-    'Application web',
-    'API backend',
-    'Site institutionnel',
-    'Publication',
-    'Documentation juridique',
-    'Plateforme interne',
-    'Automatisation',
-  ],
-  stack: [
-    'Microservices',
-    'Monolithe',
-    'Full-stack',
-    'Frontend SPA',
-    'Backend API',
-    'CMS',
-    'Server-side rendering',
-  ],
-  technologies: [
-    'Laravel',
-    'Jakarta EE',
-    'Jakarta Servlet',
-    'JSP',
-    'Java',
-    'Python',
-    'Flask',
-    'React',
-    'Bootstrap',
-    'MySQL',
-    'PostgreSQL',
-    'Docker',
-    'Tomcat',
-    'Joomla',
-    'XML',
-    'JSON',
-    'XSLT',
-    'bcrypt',
-  ],
-  domains: [
-    'Association',
-    'Institutionnel',
-    'Juridique',
-    'Documentation',
-    'Open source',
-    'Education',
-  ],
-})
-
-const TAXONOMY_ALIASES = Object.freeze({
-  type: {
-    'app-web': 'Application web',
-    'web-app': 'Application web',
-    'application-web': 'Application web',
-    'api': 'API backend',
-    'api-backend': 'API backend',
-    'site-institutionnel': 'Site institutionnel',
-    'publications': 'Publication',
-    'documentation-juridique': 'Documentation juridique',
-  },
-  stack: {
-    'microservice': 'Microservices',
-    'microservices': 'Microservices',
-    'monolith': 'Monolithe',
-    'monolithe': 'Monolithe',
-    'fullstack': 'Full-stack',
-    'full-stack': 'Full-stack',
-    'frontend-spa': 'Frontend SPA',
-    'backend-api': 'Backend API',
-    'api-backend': 'Backend API',
-    'cms': 'CMS',
-    'ssr': 'Server-side rendering',
-  },
-  technologies: {
-    'jakarta-ee': 'Jakarta EE',
-    'jakarta-eee': 'Jakarta EE',
-    'jakarta-ee-api': 'Jakarta EE',
-    'jakarta-servlet': 'Jakarta Servlet',
-    'reactjs': 'React',
-    'react-js': 'React',
-    'react-jsx': 'React',
-    'postgres': 'PostgreSQL',
-    'postgresql': 'PostgreSQL',
-  },
-  domains: {
-    'association': 'Association',
-    'institutionnel': 'Institutionnel',
-    'juridique': 'Juridique',
-    'documentation': 'Documentation',
-    'open-source': 'Open source',
-    'opensource': 'Open source',
-    'education': 'Education',
-  },
+  type: TAXONOMY_AXES.type.map((entry) => String(entry?.value || '').trim()).filter(Boolean),
+  stack: TAXONOMY_AXES.stack.map((entry) => String(entry?.value || '').trim()).filter(Boolean),
+  technologies: TAXONOMY_AXES.technologies.map((entry) => String(entry?.value || '').trim()).filter(Boolean),
+  domains: TAXONOMY_AXES.domains.map((entry) => String(entry?.value || '').trim()).filter(Boolean),
 })
 
 /**
@@ -130,6 +50,33 @@ function normalizeKey(value) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
+
+/**
+ * Construit un index alias -> valeur canonique pour un axe.
+ * @param {Array<{value?:string,aliases?:Array<string>}>} options Options d'axe.
+ * @returns {Map<string,string>} Index alias.
+ */
+function buildAliasMap(options) {
+  const map = new Map()
+  for (const option of options) {
+    const canonical = sanitizeText(option?.value, 80)
+    if (!canonical) continue
+    const aliases = [canonical, ...(Array.isArray(option?.aliases) ? option.aliases : [])]
+    for (const alias of aliases) {
+      const key = normalizeKey(alias)
+      if (!key) continue
+      map.set(key, canonical)
+    }
+  }
+  return map
+}
+
+const AXIS_ALIAS_MAP = Object.freeze({
+  type: buildAliasMap(TAXONOMY_AXES.type),
+  stack: buildAliasMap(TAXONOMY_AXES.stack),
+  technologies: buildAliasMap(TAXONOMY_AXES.technologies),
+  domains: buildAliasMap(TAXONOMY_AXES.domains),
+})
 
 /**
  * Transforme string/array en liste de valeurs.
@@ -197,11 +144,8 @@ function resolveAxisValue(axis, raw, allowCustom) {
   const key = normalizeKey(cleaned)
   if (!key) return ''
 
-  const explicitAlias = TAXONOMY_ALIASES[axis]?.[key]
-  if (explicitAlias) return explicitAlias
-
-  const catalogMatch = (PROJECT_TAXONOMY_OPTIONS[axis] || []).find((entry) => normalizeKey(entry) === key)
-  if (catalogMatch) return catalogMatch
+  const mapped = AXIS_ALIAS_MAP[axis]?.get(key)
+  if (mapped) return mapped
 
   if (allowCustom) return cleaned
   return ''

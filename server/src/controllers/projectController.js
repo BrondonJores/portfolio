@@ -12,7 +12,7 @@ const {
 
 /**
  * Recupere les projets publics avec filtres optionnels et pagination.
- * @param {import('express').Request} req Requete (query: page, limit, tag, featured).
+ * @param {import('express').Request} req Requete (query: page, limit, tag, type, stack, technology, domain, label, includeFacets, featured).
  * @param {import('express').Response} res Reponse HTTP.
  * @param {import('express').NextFunction} next Middleware d'erreur.
  * @returns {Promise<void>} Promise resolue apres envoi du resultat.
@@ -28,6 +28,7 @@ async function getAllPublic(req, res, next) {
       technology: req.query.technology,
       domain: req.query.domain,
       label: req.query.label,
+      includeFacets: req.query.includeFacets,
       featured: req.query.featured,
     })
 

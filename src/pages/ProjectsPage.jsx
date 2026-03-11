@@ -35,7 +35,7 @@ export default function ProjectsPage() {
   const projectsActionDemo = settings.ui_project_action_demo || 'Demo'
 
   useEffect(() => {
-    const params = { page, limit: 9 }
+    const params = { page, limit: 9, includeFacets: true }
     if (activeType) params.type = activeType
     if (activeStack) params.stack = activeStack
     if (activeTechnology) params.technology = activeTechnology

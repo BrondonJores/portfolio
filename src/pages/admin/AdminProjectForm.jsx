@@ -2,8 +2,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
+import ProjectTaxonomyEditor from '../../components/admin/ProjectTaxonomyEditor.jsx'
 import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import BlockRenderer from '../../components/ui/BlockRenderer.jsx'
@@ -27,7 +27,6 @@ import {
 } from '../../services/projectService.js'
 import { deleteCurrentVisualBuilderDraft } from '../../services/adminVisualBuilderService.js'
 import {
-  PROJECT_TAXONOMY_OPTIONS,
   createEmptyProjectTaxonomy,
   normalizeProjectTaxonomy,
   taxonomyToLegacyTags,
@@ -124,8 +123,6 @@ export default function AdminProjectForm() {
     taxonomy: createEmptyProjectTaxonomy(),
   }))
   const [blocks, setBlocks] = useState([])
-  const [technologyInput, setTechnologyInput] = useState('')
-  const [labelInput, setLabelInput] = useState('')
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const builderChannel = useMemo(() => createBuilderChannel('project', id || 'new'), [id])
@@ -311,100 +308,17 @@ export default function AdminProjectForm() {
   }
 
   /**
-   * Met a jour le type de projet.
-   * @param {React.ChangeEvent<HTMLSelectElement>} event Evenement select.
+   * Applique un nouvel etat taxonomy au formulaire.
+   * @param {{type:string,stack:Array<string>,technologies:Array<string>,domains:Array<string>,labels:Array<string>}} nextTaxonomy Taxonomie modifiee.
    * @returns {void}
    */
-  const handleTypeChange = (event) => {
-    const nextType = event.target.value
-    setForm((prev) => {
-      const nextTaxonomy = normalizeProjectTaxonomy(
-        { ...(prev.taxonomy || createEmptyProjectTaxonomy()), type: nextType },
-        []
-      )
-      return {
-        ...prev,
-        taxonomy: nextTaxonomy,
-        tags: taxonomyToLegacyTags(nextTaxonomy, []),
-      }
-    })
-  }
-
-  /**
-   * Ajoute/retire une valeur multi-select sur un axe taxonomy.
-   * @param {'stack'|'domains'} axis Axe taxonomy.
-   * @param {string} value Valeur cible.
-   * @returns {void}
-   */
-  const toggleTaxonomyAxis = (axis, value) => {
-    setForm((prev) => {
-      const currentTaxonomy = normalizeProjectTaxonomy(prev.taxonomy, [])
-      const axisValues = Array.isArray(currentTaxonomy[axis]) ? currentTaxonomy[axis] : []
-      const alreadySelected = axisValues.includes(value)
-      const nextAxisValues = alreadySelected
-        ? axisValues.filter((entry) => entry !== value)
-        : [...axisValues, value]
-      const nextTaxonomy = normalizeProjectTaxonomy({ ...currentTaxonomy, [axis]: nextAxisValues }, [])
-      return {
-        ...prev,
-        taxonomy: nextTaxonomy,
-        tags: taxonomyToLegacyTags(nextTaxonomy, []),
-      }
-    })
-  }
-
-  /**
-   * Ajoute une valeur sur technologies ou labels.
-   * @param {'technologies'|'labels'} axis Axe cible.
-   * @param {string} value Valeur a injecter.
-   * @returns {void}
-   */
-  const addTaxonomyTextValue = (axis, value) => {
-    const cleanedValue = value.trim()
-    if (!cleanedValue) return
-
-    setForm((prev) => {
-      const currentTaxonomy = normalizeProjectTaxonomy(prev.taxonomy, [])
-      const axisValues = Array.isArray(currentTaxonomy[axis]) ? currentTaxonomy[axis] : []
-      const nextTaxonomy = normalizeProjectTaxonomy(
-        {
-          ...currentTaxonomy,
-          [axis]: [...axisValues, cleanedValue],
-        },
-        []
-      )
-      return {
-        ...prev,
-        taxonomy: nextTaxonomy,
-        tags: taxonomyToLegacyTags(nextTaxonomy, []),
-      }
-    })
-  }
-
-  /**
-   * Supprime une valeur taxonomy.
-   * @param {'stack'|'technologies'|'domains'|'labels'} axis Axe taxonomy.
-   * @param {string} value Valeur a retirer.
-   * @returns {void}
-   */
-  const removeTaxonomyValue = (axis, value) => {
-    setForm((prev) => {
-      const currentTaxonomy = normalizeProjectTaxonomy(prev.taxonomy, [])
-      const axisValues = Array.isArray(currentTaxonomy[axis]) ? currentTaxonomy[axis] : []
-      const nextTaxonomy = normalizeProjectTaxonomy(
-        {
-          ...currentTaxonomy,
-          [axis]: axisValues.filter((entry) => entry !== value),
-        },
-        []
-      )
-      return {
-        ...prev,
-        taxonomy: nextTaxonomy,
-        tags: taxonomyToLegacyTags(nextTaxonomy, []),
-      }
-    })
-  }
+  const handleTaxonomyChange = useCallback((nextTaxonomy) => {
+    setForm((prev) => ({
+      ...prev,
+      taxonomy: nextTaxonomy,
+      tags: taxonomyToLegacyTags(nextTaxonomy, []),
+    }))
+  }, [])
 
   /**
    * Sauvegarde le projet.
@@ -527,191 +441,11 @@ export default function AdminProjectForm() {
                 />
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="pf-type" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    Type de projet
-                  </label>
-                  <select
-                    id="pf-type"
-                    value={projectTaxonomy.type}
-                    onChange={handleTypeChange}
-                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                    style={inputStyle}
-                  >
-                    <option value="">Selectionner un type</option>
-                    {PROJECT_TAXONOMY_OPTIONS.type.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <p className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    Stack
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {PROJECT_TAXONOMY_OPTIONS.stack.map((option) => {
-                      const selected = projectTaxonomy.stack.includes(option)
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => toggleTaxonomyAxis('stack', option)}
-                          className="px-3 py-1.5 text-xs rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                          style={{
-                            borderColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
-                            color: selected ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
-                            backgroundColor: selected
-                              ? 'color-mix(in srgb, var(--color-accent) 18%, transparent)'
-                              : 'var(--color-bg-primary)',
-                          }}
-                        >
-                          {option}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="pf-tech" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    Technologies
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="pf-tech"
-                      type="text"
-                      value={technologyInput}
-                      onChange={(event) => setTechnologyInput(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key !== 'Enter') return
-                        event.preventDefault()
-                        addTaxonomyTextValue('technologies', technologyInput)
-                        setTechnologyInput('')
-                      }}
-                      list="project-taxonomy-tech-options"
-                      className="flex-1 px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                      style={inputStyle}
-                      placeholder="Ajouter une techno puis Entree"
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => {
-                        addTaxonomyTextValue('technologies', technologyInput)
-                        setTechnologyInput('')
-                      }}
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                    </Button>
-                    <datalist id="project-taxonomy-tech-options">
-                      {PROJECT_TAXONOMY_OPTIONS.technologies.map((option) => (
-                        <option key={option} value={option} />
-                      ))}
-                    </datalist>
-                  </div>
-                  {projectTaxonomy.technologies.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {projectTaxonomy.technologies.map((technology) => (
-                        <span key={technology} className="inline-flex items-center gap-1">
-                          <Badge>{technology}</Badge>
-                          <button
-                            type="button"
-                            onClick={() => removeTaxonomyValue('technologies', technology)}
-                            className="text-xs focus:outline-none"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                            aria-label={`Supprimer la technologie ${technology}`}
-                          >
-                            <XMarkIcon className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <p className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    Domaines
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {PROJECT_TAXONOMY_OPTIONS.domains.map((option) => {
-                      const selected = projectTaxonomy.domains.includes(option)
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => toggleTaxonomyAxis('domains', option)}
-                          className="px-3 py-1.5 text-xs rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                          style={{
-                            borderColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
-                            color: selected ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
-                            backgroundColor: selected
-                              ? 'color-mix(in srgb, var(--color-accent) 18%, transparent)'
-                              : 'var(--color-bg-primary)',
-                          }}
-                        >
-                          {option}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="pf-label" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    Labels libres
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="pf-label"
-                      type="text"
-                      value={labelInput}
-                      onChange={(event) => setLabelInput(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key !== 'Enter') return
-                        event.preventDefault()
-                        addTaxonomyTextValue('labels', labelInput)
-                        setLabelInput('')
-                      }}
-                      className="flex-1 px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                      style={inputStyle}
-                      placeholder="Ex: performance, accessibilite"
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => {
-                        addTaxonomyTextValue('labels', labelInput)
-                        setLabelInput('')
-                      }}
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {projectTaxonomy.labels.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {projectTaxonomy.labels.map((label) => (
-                        <span key={label} className="inline-flex items-center gap-1">
-                          <Badge>{label}</Badge>
-                          <button
-                            type="button"
-                            onClick={() => removeTaxonomyValue('labels', label)}
-                            className="text-xs focus:outline-none"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                            aria-label={`Supprimer le label ${label}`}
-                          >
-                            <XMarkIcon className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ProjectTaxonomyEditor
+                taxonomy={projectTaxonomy}
+                onChange={handleTaxonomyChange}
+                inputStyle={inputStyle}
+              />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

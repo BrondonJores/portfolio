@@ -101,7 +101,32 @@ async function main() {
     assert.equal(result.pagination.total, 0)
     assert.equal(capturedWhere.published, true)
     assert.equal(capturedWhere.featured, true)
-    assert.equal(capturedWhere.tags[fakeLike], '%"react"%')
+    const andSymbol = Object.getOwnPropertySymbols(capturedWhere).find((symbol) =>
+      String(symbol).includes('and')
+    )
+    assert.ok(andSymbol)
+    assert.ok(Array.isArray(capturedWhere[andSymbol]))
+    assert.equal(capturedWhere[andSymbol][0].tags[fakeLike], '%"react"%')
+    assert.equal(result.facets, undefined)
+  })
+
+  await runCase('getAllPublicProjects includes facets only when requested', async () => {
+    let facetCallCount = 0
+    const fakeProjectModel = {
+      findAndCountAll: async () => ({ count: 1, rows: [{ id: 1, title: 'A', tags: ['React'], taxonomy: {} }] }),
+      findAll: async () => {
+        facetCallCount += 1
+        return [{ taxonomy: {}, tags: ['React'] }]
+      },
+    }
+
+    const service = createProjectService({ projectModel: fakeProjectModel })
+    const withoutFacets = await service.getAllPublicProjects({ page: '1', limit: '10' })
+    const withFacets = await service.getAllPublicProjects({ page: '1', limit: '10', includeFacets: 'true' })
+
+    assert.equal(withoutFacets.facets, undefined)
+    assert.ok(withFacets.facets)
+    assert.equal(facetCallCount, 1)
   })
 
   await runCase('importProjects creates valid rows and skips invalid ones', async () => {
@@ -198,6 +223,47 @@ async function main() {
     assert.equal(result.created, 0)
     assert.equal(result.updated, 1)
     assert.equal(storage[0].description, 'Description importee')
+  })
+
+  await runCase('updateProject taxonomy-only update does not reintroduce removed legacy tags', async () => {
+    const persisted = {
+      id: 12,
+      title: 'Projet Taxonomy',
+      slug: 'projet-taxonomy',
+      tags: ['Java', 'Spring'],
+      taxonomy: {
+        type: 'API backend',
+        stack: ['Monolithe'],
+        technologies: ['Java', 'Spring'],
+        domains: [],
+        labels: [],
+      },
+      async update(patch) {
+        Object.assign(this, patch)
+        return this
+      },
+    }
+
+    const service = createProjectService({
+      projectModel: {
+        findByPk: async () => persisted,
+      },
+      slugify: (value) => String(value || '').toLowerCase().replace(/\s+/g, '-'),
+    })
+
+    await service.updateProject(12, {
+      taxonomy: {
+        type: 'API backend',
+        stack: ['Microservices'],
+        technologies: ['Python'],
+        domains: [],
+        labels: [],
+      },
+    })
+
+    assert.deepEqual(persisted.taxonomy.technologies, ['Python'])
+    assert.ok(persisted.tags.includes('Python'))
+    assert.equal(persisted.tags.includes('Spring'), false)
   })
 
   if (failures > 0) {
