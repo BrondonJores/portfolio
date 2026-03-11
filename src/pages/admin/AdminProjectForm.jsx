@@ -26,6 +26,12 @@ import {
   updateProject,
 } from '../../services/projectService.js'
 import { deleteCurrentVisualBuilderDraft } from '../../services/adminVisualBuilderService.js'
+import {
+  PROJECT_TAXONOMY_OPTIONS,
+  createEmptyProjectTaxonomy,
+  normalizeProjectTaxonomy,
+  taxonomyToLegacyTags,
+} from '../../utils/projectTaxonomy.js'
 
 const EMPTY = {
   title: '',
@@ -37,6 +43,7 @@ const EMPTY = {
   featured: false,
   published: true,
   tags: [],
+  taxonomy: createEmptyProjectTaxonomy(),
 }
 
 const AUTOSAVE_DEBOUNCE_MS = 800
@@ -90,15 +97,35 @@ function getLocalDraftKey(isEdit, projectId) {
   return isEdit ? `${LOCAL_DRAFT_PREFIX}_edit_${projectId}` : `${LOCAL_DRAFT_PREFIX}_new`
 }
 
+/**
+ * Indique si la taxonomie contient deja des valeurs.
+ * @param {{type?:string,stack?:Array<string>,technologies?:Array<string>,domains?:Array<string>,labels?:Array<string>} | undefined} taxonomy Taxonomie.
+ * @returns {boolean} True si non vide.
+ */
+function hasTaxonomyValues(taxonomy) {
+  if (!taxonomy) return false
+  return Boolean(
+    (taxonomy.type && String(taxonomy.type).trim()) ||
+    (Array.isArray(taxonomy.stack) && taxonomy.stack.length > 0) ||
+    (Array.isArray(taxonomy.technologies) && taxonomy.technologies.length > 0) ||
+    (Array.isArray(taxonomy.domains) && taxonomy.domains.length > 0) ||
+    (Array.isArray(taxonomy.labels) && taxonomy.labels.length > 0)
+  )
+}
+
 export default function AdminProjectForm() {
   const { id } = useParams()
   const navigate = useNavigate()
   const addToast = useAdminToast()
   const isEdit = Boolean(id)
 
-  const [form, setForm] = useState(EMPTY)
+  const [form, setForm] = useState(() => ({
+    ...EMPTY,
+    taxonomy: createEmptyProjectTaxonomy(),
+  }))
   const [blocks, setBlocks] = useState([])
-  const [tagInput, setTagInput] = useState('')
+  const [technologyInput, setTechnologyInput] = useState('')
+  const [labelInput, setLabelInput] = useState('')
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const builderChannel = useMemo(() => createBuilderChannel('project', id || 'new'), [id])
@@ -114,9 +141,10 @@ export default function AdminProjectForm() {
         form.github_url ||
         form.demo_url ||
         (form.tags || []).length > 0 ||
+        hasTaxonomyValues(form.taxonomy) ||
         blocks.length > 0
       ),
-    [form.title, form.description, form.image_url, form.github_url, form.demo_url, form.tags, blocks]
+    [form.title, form.description, form.image_url, form.github_url, form.demo_url, form.tags, form.taxonomy, blocks]
   )
   const draftData = useMemo(
     () => ({
@@ -128,6 +156,7 @@ export default function AdminProjectForm() {
       featured: form.featured,
       published: form.published,
       tags: form.tags || [],
+      taxonomy: form.taxonomy || createEmptyProjectTaxonomy(),
       blocks,
     }),
     [
@@ -139,6 +168,7 @@ export default function AdminProjectForm() {
       form.featured,
       form.published,
       form.tags,
+      form.taxonomy,
       blocks,
     ]
   )
@@ -150,6 +180,8 @@ export default function AdminProjectForm() {
    */
   const handleRestoreDraft = useCallback((draft) => {
     const restoredBlocks = Array.isArray(draft?.blocks) ? draft.blocks : []
+    const restoredTaxonomy = normalizeProjectTaxonomy(draft?.taxonomy, draft?.tags)
+    const restoredTags = taxonomyToLegacyTags(restoredTaxonomy, [])
     setBlocks(restoredBlocks)
     setForm((prev) => ({
       ...prev,
@@ -160,7 +192,8 @@ export default function AdminProjectForm() {
       demo_url: typeof draft?.demo_url === 'string' ? draft.demo_url : '',
       featured: Boolean(draft?.featured),
       published: typeof draft?.published === 'boolean' ? draft.published : true,
-      tags: Array.isArray(draft?.tags) ? draft.tags : [],
+      tags: restoredTags,
+      taxonomy: restoredTaxonomy,
       content: JSON.stringify({ blocks: restoredBlocks }),
     }))
     addToast('Brouillon local projet restaure.', 'info')
@@ -224,7 +257,8 @@ export default function AdminProjectForm() {
           image_url: project.image_url || '',
           featured: project.featured || false,
           published: project.published !== false,
-          tags: project.tags || [],
+          taxonomy: normalizeProjectTaxonomy(project.taxonomy, project.tags),
+          tags: taxonomyToLegacyTags(normalizeProjectTaxonomy(project.taxonomy, project.tags), []),
         }
 
         setForm(loadedForm)
@@ -277,35 +311,99 @@ export default function AdminProjectForm() {
   }
 
   /**
-   * Ajoute un tag unique.
+   * Met a jour le type de projet.
+   * @param {React.ChangeEvent<HTMLSelectElement>} event Evenement select.
    * @returns {void}
    */
-  const addTag = () => {
-    const tag = tagInput.trim()
-    if (tag && !form.tags.includes(tag)) {
-      setForm((prev) => ({ ...prev, tags: [...prev.tags, tag] }))
-    }
-    setTagInput('')
+  const handleTypeChange = (event) => {
+    const nextType = event.target.value
+    setForm((prev) => {
+      const nextTaxonomy = normalizeProjectTaxonomy(
+        { ...(prev.taxonomy || createEmptyProjectTaxonomy()), type: nextType },
+        []
+      )
+      return {
+        ...prev,
+        taxonomy: nextTaxonomy,
+        tags: taxonomyToLegacyTags(nextTaxonomy, []),
+      }
+    })
   }
 
   /**
-   * Supprime un tag.
-   * @param {string} tag Tag a supprimer.
+   * Ajoute/retire une valeur multi-select sur un axe taxonomy.
+   * @param {'stack'|'domains'} axis Axe taxonomy.
+   * @param {string} value Valeur cible.
    * @returns {void}
    */
-  const removeTag = (tag) => {
-    setForm((prev) => ({ ...prev, tags: prev.tags.filter((entry) => entry !== tag) }))
+  const toggleTaxonomyAxis = (axis, value) => {
+    setForm((prev) => {
+      const currentTaxonomy = normalizeProjectTaxonomy(prev.taxonomy, [])
+      const axisValues = Array.isArray(currentTaxonomy[axis]) ? currentTaxonomy[axis] : []
+      const alreadySelected = axisValues.includes(value)
+      const nextAxisValues = alreadySelected
+        ? axisValues.filter((entry) => entry !== value)
+        : [...axisValues, value]
+      const nextTaxonomy = normalizeProjectTaxonomy({ ...currentTaxonomy, [axis]: nextAxisValues }, [])
+      return {
+        ...prev,
+        taxonomy: nextTaxonomy,
+        tags: taxonomyToLegacyTags(nextTaxonomy, []),
+      }
+    })
   }
 
   /**
-   * Gere la saisie des tags au clavier.
-   * @param {React.KeyboardEvent<HTMLInputElement>} event Evenement clavier.
+   * Ajoute une valeur sur technologies ou labels.
+   * @param {'technologies'|'labels'} axis Axe cible.
+   * @param {string} value Valeur a injecter.
    * @returns {void}
    */
-  const handleTagKeyDown = (event) => {
-    if (event.key !== 'Enter') return
-    event.preventDefault()
-    addTag()
+  const addTaxonomyTextValue = (axis, value) => {
+    const cleanedValue = value.trim()
+    if (!cleanedValue) return
+
+    setForm((prev) => {
+      const currentTaxonomy = normalizeProjectTaxonomy(prev.taxonomy, [])
+      const axisValues = Array.isArray(currentTaxonomy[axis]) ? currentTaxonomy[axis] : []
+      const nextTaxonomy = normalizeProjectTaxonomy(
+        {
+          ...currentTaxonomy,
+          [axis]: [...axisValues, cleanedValue],
+        },
+        []
+      )
+      return {
+        ...prev,
+        taxonomy: nextTaxonomy,
+        tags: taxonomyToLegacyTags(nextTaxonomy, []),
+      }
+    })
+  }
+
+  /**
+   * Supprime une valeur taxonomy.
+   * @param {'stack'|'technologies'|'domains'|'labels'} axis Axe taxonomy.
+   * @param {string} value Valeur a retirer.
+   * @returns {void}
+   */
+  const removeTaxonomyValue = (axis, value) => {
+    setForm((prev) => {
+      const currentTaxonomy = normalizeProjectTaxonomy(prev.taxonomy, [])
+      const axisValues = Array.isArray(currentTaxonomy[axis]) ? currentTaxonomy[axis] : []
+      const nextTaxonomy = normalizeProjectTaxonomy(
+        {
+          ...currentTaxonomy,
+          [axis]: axisValues.filter((entry) => entry !== value),
+        },
+        []
+      )
+      return {
+        ...prev,
+        taxonomy: nextTaxonomy,
+        tags: taxonomyToLegacyTags(nextTaxonomy, []),
+      }
+    })
   }
 
   /**
@@ -320,13 +418,20 @@ export default function AdminProjectForm() {
       return
     }
 
+    const normalizedTaxonomy = normalizeProjectTaxonomy(form.taxonomy, [])
+    const payload = {
+      ...form,
+      taxonomy: normalizedTaxonomy,
+      tags: taxonomyToLegacyTags(normalizedTaxonomy, []),
+    }
+
     setSaving(true)
     try {
       if (isEdit) {
-        await updateProject(id, form)
+        await updateProject(id, payload)
         addToast('Projet mis a jour.', 'success')
       } else {
-        await createProject(form)
+        await createProject(payload)
         addToast('Projet cree avec succes.', 'success')
       }
 
@@ -353,6 +458,8 @@ export default function AdminProjectForm() {
   }
 
   const slug = toSlug(form.title)
+  const projectTaxonomy = normalizeProjectTaxonomy(form.taxonomy, [])
+  const previewTags = taxonomyToLegacyTags(projectTaxonomy, [])
 
   return (
     <>
@@ -420,43 +527,190 @@ export default function AdminProjectForm() {
                 />
               </div>
 
-              <div>
-                <label htmlFor="pf-tag" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                  Tags
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="pf-tag"
-                    type="text"
-                    value={tagInput}
-                    onChange={(event) => setTagInput(event.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    className="flex-1 px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="pf-type" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    Type de projet
+                  </label>
+                  <select
+                    id="pf-type"
+                    value={projectTaxonomy.type}
+                    onChange={handleTypeChange}
+                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
                     style={inputStyle}
-                    placeholder="Appuyer sur Entree pour ajouter"
-                  />
-                  <Button type="button" variant="secondary" onClick={addTag}>
-                    <PlusIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-                {form.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {form.tags.map((tag) => (
-                      <span key={tag} className="inline-flex items-center gap-1">
-                        <Badge>{tag}</Badge>
-                        <button
-                          type="button"
-                          onClick={() => removeTag(tag)}
-                          className="text-xs focus:outline-none"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                          aria-label={`Supprimer le tag ${tag}`}
-                        >
-                          <XMarkIcon className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
+                  >
+                    <option value="">Selectionner un type</option>
+                    {PROJECT_TAXONOMY_OPTIONS.type.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
                     ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    Stack
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {PROJECT_TAXONOMY_OPTIONS.stack.map((option) => {
+                      const selected = projectTaxonomy.stack.includes(option)
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => toggleTaxonomyAxis('stack', option)}
+                          className="px-3 py-1.5 text-xs rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          style={{
+                            borderColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
+                            color: selected ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
+                            backgroundColor: selected
+                              ? 'color-mix(in srgb, var(--color-accent) 18%, transparent)'
+                              : 'var(--color-bg-primary)',
+                          }}
+                        >
+                          {option}
+                        </button>
+                      )
+                    })}
                   </div>
-                )}
+                </div>
+
+                <div>
+                  <label htmlFor="pf-tech" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    Technologies
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="pf-tech"
+                      type="text"
+                      value={technologyInput}
+                      onChange={(event) => setTechnologyInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        addTaxonomyTextValue('technologies', technologyInput)
+                        setTechnologyInput('')
+                      }}
+                      list="project-taxonomy-tech-options"
+                      className="flex-1 px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+                      style={inputStyle}
+                      placeholder="Ajouter une techno puis Entree"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        addTaxonomyTextValue('technologies', technologyInput)
+                        setTechnologyInput('')
+                      }}
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                    </Button>
+                    <datalist id="project-taxonomy-tech-options">
+                      {PROJECT_TAXONOMY_OPTIONS.technologies.map((option) => (
+                        <option key={option} value={option} />
+                      ))}
+                    </datalist>
+                  </div>
+                  {projectTaxonomy.technologies.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {projectTaxonomy.technologies.map((technology) => (
+                        <span key={technology} className="inline-flex items-center gap-1">
+                          <Badge>{technology}</Badge>
+                          <button
+                            type="button"
+                            onClick={() => removeTaxonomyValue('technologies', technology)}
+                            className="text-xs focus:outline-none"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                            aria-label={`Supprimer la technologie ${technology}`}
+                          >
+                            <XMarkIcon className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <p className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    Domaines
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {PROJECT_TAXONOMY_OPTIONS.domains.map((option) => {
+                      const selected = projectTaxonomy.domains.includes(option)
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => toggleTaxonomyAxis('domains', option)}
+                          className="px-3 py-1.5 text-xs rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          style={{
+                            borderColor: selected ? 'var(--color-accent)' : 'var(--color-border)',
+                            color: selected ? 'var(--color-accent-light)' : 'var(--color-text-secondary)',
+                            backgroundColor: selected
+                              ? 'color-mix(in srgb, var(--color-accent) 18%, transparent)'
+                              : 'var(--color-bg-primary)',
+                          }}
+                        >
+                          {option}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="pf-label" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    Labels libres
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="pf-label"
+                      type="text"
+                      value={labelInput}
+                      onChange={(event) => setLabelInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter') return
+                        event.preventDefault()
+                        addTaxonomyTextValue('labels', labelInput)
+                        setLabelInput('')
+                      }}
+                      className="flex-1 px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+                      style={inputStyle}
+                      placeholder="Ex: performance, accessibilite"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        addTaxonomyTextValue('labels', labelInput)
+                        setLabelInput('')
+                      }}
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {projectTaxonomy.labels.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {projectTaxonomy.labels.map((label) => (
+                        <span key={label} className="inline-flex items-center gap-1">
+                          <Badge>{label}</Badge>
+                          <button
+                            type="button"
+                            onClick={() => removeTaxonomyValue('labels', label)}
+                            className="text-xs focus:outline-none"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                            aria-label={`Supprimer le label ${label}`}
+                          >
+                            <XMarkIcon className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -596,9 +850,9 @@ export default function AdminProjectForm() {
                     )}
                   </section>
 
-                  {form.tags.length > 0 && (
+                  {previewTags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      {form.tags.map((tag) => (
+                      {previewTags.map((tag) => (
                         <Badge key={`preview-${tag}`}>{tag}</Badge>
                       ))}
                     </div>

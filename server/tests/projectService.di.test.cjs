@@ -83,6 +83,7 @@ async function main() {
         capturedWhere = where
         return { count: 0, rows: [] }
       },
+      findAll: async () => [],
     }
 
     const service = createProjectService({
@@ -150,7 +151,7 @@ async function main() {
     assert.equal(result.updated, 0)
     assert.equal(result.skippedCount, 1)
     assert.equal(storage[0].slug, 'projet-alpha')
-    assert.deepEqual(storage[0].tags, ['react'])
+    assert.deepEqual(storage[0].tags, ['React'])
   })
 
   await runCase('importProjects updates duplicates when replaceExisting=true', async () => {

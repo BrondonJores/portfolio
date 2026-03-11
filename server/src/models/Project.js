@@ -25,6 +25,10 @@ const Project = sequelize.define(
     content: {
       type: DataTypes.TEXT('long'),
     },
+    taxonomy: {
+      type: DataTypes.JSON,
+      defaultValue: {},
+    },
     tags: {
       type: DataTypes.JSON,
       defaultValue: [],

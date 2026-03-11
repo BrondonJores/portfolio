@@ -23,6 +23,11 @@ async function getAllPublic(req, res, next) {
       page: req.query.page,
       limit: req.query.limit,
       tag: req.query.tag,
+      type: req.query.type,
+      stack: req.query.stack,
+      technology: req.query.technology,
+      domain: req.query.domain,
+      label: req.query.label,
       featured: req.query.featured,
     })
 

@@ -20,6 +20,7 @@ import { getProjects } from '../../services/projectService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
+import { getProjectDisplayTags, getProjectTaxonomy } from '../../utils/projectTaxonomy.js'
 
 /**
  * Nettoie un texte pour affichage court.
@@ -54,15 +55,13 @@ function getShortSentence(value, maxLength, fallback) {
 }
 
 /**
- * Retire les doublons de tags et les nettoie.
- * @param {unknown} tags Liste brute.
- * @returns {Array<string>} Liste de tags unique.
+ * Retourne les chips de presentation d'un projet.
+ * @param {object} project Projet.
+ * @param {number} limit Limite max.
+ * @returns {Array<string>} Liste de chips.
  */
-function resolveTags(tags) {
-  if (!Array.isArray(tags)) {
-    return []
-  }
-  return Array.from(new Set(tags.map((tag) => normalizeText(tag)).filter(Boolean)))
+function resolveProjectChips(project, limit) {
+  return getProjectDisplayTags(project, limit).map((tag) => normalizeText(tag)).filter(Boolean)
 }
 
 /**
@@ -72,14 +71,14 @@ function resolveTags(tags) {
  * @returns {Array<{label:string,value:string}>} Lignes de contexte.
  */
 function buildProjectSnapshot(project, labels) {
-  const tags = resolveTags(project?.tags)
+  const taxonomy = getProjectTaxonomy(project)
   const summary = getShortSentence(
     project?.description,
     140,
     'Projet produit pour livrer une solution claire, testable et maintenable.'
   )
-  const stack = tags.length > 0
-    ? tags.slice(0, 3).join(' | ')
+  const stack = taxonomy.stack.length > 0
+    ? taxonomy.stack.slice(0, 3).join(' | ')
     : 'Stack non renseignee'
   const proof = [
     project?.demo_url ? labels.demoLive : null,
@@ -143,12 +142,14 @@ export default function Projects() {
   const showcaseStats = useMemo(() => {
     const demosCount = projects.filter((project) => Boolean(project.demo_url)).length
     const reposCount = projects.filter((project) => Boolean(project.github_url)).length
-    const tagsCount = new Set(projects.flatMap((project) => resolveTags(project.tags))).size
+    const technologiesCount = new Set(
+      projects.flatMap((project) => getProjectTaxonomy(project).technologies || [])
+    ).size
 
     return [
       { key: 'demos', label: projectsStatDemos, value: demosCount, Icon: ArrowTopRightOnSquareIcon },
       { key: 'repos', label: projectsStatRepos, value: reposCount, Icon: CodeBracketIcon },
-      { key: 'tech', label: projectsStatTech, value: tagsCount, Icon: SparklesIcon },
+      { key: 'tech', label: projectsStatTech, value: technologiesCount, Icon: SparklesIcon },
     ]
   }, [projects, projectsStatDemos, projectsStatRepos, projectsStatTech])
 
@@ -252,7 +253,7 @@ export default function Projects() {
                 <article className="flex h-full flex-col">
                   {heroProject.image_url ? (
                     <div
-                      className="relative h-64 md:h-80 lg:h-[28rem] overflow-hidden"
+                      className="relative h-56 md:h-72 lg:h-[24rem] overflow-hidden"
                       style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 72%, transparent)' }}
                     >
                       <img
@@ -267,7 +268,7 @@ export default function Projects() {
                     </div>
                   ) : (
                     <div
-                      className="h-64 md:h-80 lg:h-[28rem] flex items-center justify-center"
+                      className="h-56 md:h-72 lg:h-[24rem] flex items-center justify-center"
                       style={{
                         background:
                           'linear-gradient(135deg, color-mix(in srgb, var(--color-bg-card) 90%, transparent), color-mix(in srgb, var(--color-accent-glow) 42%, transparent))',
@@ -334,9 +335,9 @@ export default function Projects() {
                       ))}
                     </dl>
 
-                    {resolveTags(heroProject.tags).length > 0 && (
+                    {resolveProjectChips(heroProject, 6).length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {resolveTags(heroProject.tags).slice(0, 6).map((tag) => (
+                        {resolveProjectChips(heroProject, 6).map((tag) => (
                           <span
                             key={`${heroProject.id}-${tag}`}
                             className="text-xs font-mono px-2 py-1 rounded border"
@@ -406,7 +407,7 @@ export default function Projects() {
 
           <div className="xl:col-span-2 grid grid-cols-1 gap-6">
             {secondaryProjects.map((project) => {
-              const tags = resolveTags(project.tags)
+              const tags = resolveProjectChips(project, 4)
               const snapshot = buildProjectSnapshot(project, {
                 objective: snapshotObjective,
                 stack: snapshotStack,
@@ -425,7 +426,7 @@ export default function Projects() {
                   <Card className="h-full flex flex-col overflow-hidden !p-0">
                     {project.image_url ? (
                       <div
-                        className="w-full h-48 md:h-52 overflow-hidden flex-shrink-0"
+                        className="w-full h-44 md:h-48 overflow-hidden flex-shrink-0"
                         style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 72%, transparent)' }}
                       >
                         <img
@@ -440,7 +441,7 @@ export default function Projects() {
                       </div>
                     ) : (
                       <div
-                        className="w-full h-48 md:h-52 flex items-center justify-center flex-shrink-0"
+                        className="w-full h-44 md:h-48 flex items-center justify-center flex-shrink-0"
                         style={{
                           background:
                             'linear-gradient(150deg, color-mix(in srgb, var(--color-bg-primary) 92%, transparent), color-mix(in srgb, var(--color-accent-glow) 32%, transparent))',
@@ -549,4 +550,3 @@ export default function Projects() {
     </AnimatedSection>
   )
 }
-

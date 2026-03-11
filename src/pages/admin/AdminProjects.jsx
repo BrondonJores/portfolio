@@ -12,6 +12,7 @@ import Button from '../../components/ui/Button.jsx'
 import { getAdminProjects, deleteProject, importAdminProjects } from '../../services/projectService.js'
 import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPagination.js'
 import { notifyAdminEditorSaved, openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/adminEditorWindow.js'
+import { getProjectTaxonomy, getProjectDisplayTags } from '../../utils/projectTaxonomy.js'
 
 const PAGE_LIMIT = 12
 
@@ -248,7 +249,7 @@ export default function AdminProjects() {
               >
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">Titre</th>
-                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Tags</th>
+                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Stack / Tech</th>
                   <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Publie</th>
                   <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Date</th>
                   <th className="text-right px-4 py-3 font-medium">Actions</th>
@@ -271,11 +272,21 @@ export default function AdminProjects() {
                       {project.title}
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <div className="flex flex-wrap gap-1">
-                        {(project.tags || []).slice(0, 2).map((t) => (
-                          <Badge key={t}>{t}</Badge>
-                        ))}
-                      </div>
+                      {(() => {
+                        const taxonomy = getProjectTaxonomy(project)
+                        const highlights = [
+                          ...taxonomy.stack.slice(0, 1),
+                          ...taxonomy.technologies.slice(0, 2),
+                        ]
+                        const chips = highlights.length > 0 ? highlights : getProjectDisplayTags(project, 2)
+                        return (
+                          <div className="flex flex-wrap gap-1">
+                            {chips.map((chip) => (
+                              <Badge key={`${project.id}-${chip}`}>{chip}</Badge>
+                            ))}
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       <span

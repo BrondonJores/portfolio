@@ -4,6 +4,12 @@ const slugifyLib = require('slugify')
 const { Project } = require('../models')
 const { createHttpError } = require('../utils/httpError')
 const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../utils/pagination')
+const {
+  normalizeProjectTaxonomy,
+  buildProjectTagsFromTaxonomy,
+  matchesProjectFilters,
+  buildProjectFacets,
+} = require('../utils/projectTaxonomy')
 
 const MAX_IMPORT_ITEMS = 200
 
@@ -49,20 +55,38 @@ function sanitizeText(value, maxLength, fallback = '') {
 }
 
 /**
- * Normalise une liste de tags.
+ * Nettoie une liste de tags legacy.
  * @param {unknown} value Valeur source.
  * @returns {Array<string>} Liste nettoyee.
  */
-function sanitizeTags(value) {
+function sanitizeLegacyTags(value) {
   if (!Array.isArray(value)) return []
 
   return Array.from(
     new Set(
       value
-        .map((tag) => sanitizeText(tag, 40))
+        .map((tag) => sanitizeText(tag, 80))
         .filter(Boolean)
     )
-  ).slice(0, 30)
+  ).slice(0, 40)
+}
+
+/**
+ * Rehydrate un projet avec taxonomy + tags normalises.
+ * @param {unknown} project Projet modele ou plain object.
+ * @returns {object} Payload normalise.
+ */
+function toProjectPayload(project) {
+  const source = project && typeof project.toJSON === 'function' ? project.toJSON() : project || {}
+  const legacyTags = sanitizeLegacyTags(source.tags)
+  const taxonomy = normalizeProjectTaxonomy(source.taxonomy, legacyTags)
+  const tags = buildProjectTagsFromTaxonomy(taxonomy, legacyTags)
+
+  return {
+    ...source,
+    taxonomy,
+    tags,
+  }
 }
 
 /**
@@ -115,39 +139,84 @@ function createProjectService(deps = {}) {
    * @param {object} params Parametres de recherche.
    * @param {string|number|undefined} params.page Numero de page.
    * @param {string|number|undefined} params.limit Taille de page.
-   * @param {string|undefined} params.tag Filtre tag.
+   * @param {string|undefined} params.tag Filtre tag legacy.
+   * @param {string|undefined} params.type Filtre type.
+   * @param {string|undefined} params.stack Filtre stack.
+   * @param {string|undefined} params.technology Filtre technologie.
+   * @param {string|undefined} params.domain Filtre domaine.
+   * @param {string|undefined} params.label Filtre label.
    * @param {string|undefined} params.featured Filtre featured.
-   * @returns {Promise<{data:Array,pagination:{total:number,page:number,limit:number,pages:number}}>} Resultat pagine.
+   * @returns {Promise<{data:Array,pagination:{total:number,page:number,limit:number,pages:number},facets:object}>} Resultat pagine.
    */
-  async function getAllPublicProjects({ page, limit, tag, featured }) {
+  async function getAllPublicProjects({ page, limit, tag, type, stack, technology, domain, label, featured }) {
     const safePage = parsePositiveInt(page, 1)
     const safeLimit = parsePositiveInt(limit, 10)
     const offset = (safePage - 1) * safeLimit
-    const where = { published: true }
-
-    if (tag) {
-      where.tags = { [likeOperator]: `%"${tag}"%` }
-    }
+    const baseWhere = { published: true }
 
     if (featured === 'true') {
-      where.featured = true
+      baseWhere.featured = true
     }
 
-    const { count, rows } = await projectModel.findAndCountAll({
-      where,
-      limit: safeLimit,
-      offset,
-      order: [['created_at', 'DESC']],
+    const hasStructuredFilters = Boolean(type || stack || technology || domain || label)
+    const hasTagFilter = Boolean(sanitizeText(tag, 80))
+    let count = 0
+    let rows = []
+
+    if (hasTagFilter && !hasStructuredFilters) {
+      const safeTag = sanitizeText(tag, 80)
+      const where = {
+        ...baseWhere,
+        tags: { [likeOperator]: `%"${safeTag}"%` },
+      }
+
+      const result = await projectModel.findAndCountAll({
+        where,
+        limit: safeLimit,
+        offset,
+        order: [['created_at', 'DESC']],
+      })
+
+      count = result.count
+      rows = result.rows
+    } else if (hasTagFilter || hasStructuredFilters) {
+      const candidates = await projectModel.findAll({
+        where: baseWhere,
+        order: [['created_at', 'DESC']],
+      })
+
+      const filtered = candidates.filter((project) =>
+        matchesProjectFilters(project, { tag, type, stack, technology, domain, label })
+      )
+
+      count = filtered.length
+      rows = filtered.slice(offset, offset + safeLimit)
+    } else {
+      const result = await projectModel.findAndCountAll({
+        where: baseWhere,
+        limit: safeLimit,
+        offset,
+        order: [['created_at', 'DESC']],
+      })
+
+      count = result.count
+      rows = result.rows
+    }
+
+    const facetRows = await projectModel.findAll({
+      where: { published: true },
+      attributes: ['taxonomy', 'tags'],
     })
 
     return {
-      data: rows,
+      data: rows.map(toProjectPayload),
       pagination: {
         total: count,
         page: safePage,
         limit: safeLimit,
         pages: Math.ceil(count / safeLimit),
       },
+      facets: buildProjectFacets(facetRows),
     }
   }
 
@@ -166,12 +235,12 @@ function createProjectService(deps = {}) {
       throw createHttpError(404, 'Projet introuvable.')
     }
 
-    return project
+    return toProjectPayload(project)
   }
 
   /**
    * Liste tous les projets (admin).
-   * @returns {Promise<Array>} Liste complete.
+   * @returns {Promise<object>} Liste paginee.
    */
   async function getAllAdminProjects(params = {}) {
     const { limit, offset } = resolveLimitOffsetPagination(params, {
@@ -185,12 +254,17 @@ function createProjectService(deps = {}) {
       offset,
     })
 
-    return buildPaginatedPayload({
+    const payload = buildPaginatedPayload({
       items: result.rows,
       total: result.count,
       limit,
       offset,
     })
+
+    return {
+      ...payload,
+      items: payload.items.map(toProjectPayload),
+    }
   }
 
   /**
@@ -204,7 +278,7 @@ function createProjectService(deps = {}) {
     if (!project) {
       throw createHttpError(404, 'Projet introuvable.')
     }
-    return project
+    return toProjectPayload(project)
   }
 
   /**
@@ -213,21 +287,31 @@ function createProjectService(deps = {}) {
    * @returns {Promise<object>} Projet cree.
    */
   async function createProject(payload) {
-    const { title, description, content, tags, github_url, demo_url, image_url, featured, published } = payload
+    const title = sanitizeText(payload?.title, 150)
+    if (!title) {
+      throw createHttpError(422, 'Le titre est obligatoire.')
+    }
+
+    const legacyTags = sanitizeLegacyTags(payload?.tags)
+    const taxonomy = normalizeProjectTaxonomy(payload?.taxonomy, legacyTags)
+    const tags = buildProjectTagsFromTaxonomy(taxonomy, legacyTags)
     const slug = slugify(title, { lower: true, strict: true })
 
-    return projectModel.create({
+    const createdProject = await projectModel.create({
       title,
       slug,
-      description,
-      content,
-      tags: tags || [],
-      github_url,
-      demo_url,
-      image_url,
-      featured: featured || false,
-      published: published !== undefined ? published : true,
+      description: sanitizeText(payload?.description, 20000, ''),
+      content: sanitizeText(payload?.content, 200000, ''),
+      taxonomy,
+      tags,
+      github_url: sanitizeText(payload?.github_url, 255, ''),
+      demo_url: sanitizeText(payload?.demo_url, 255, ''),
+      image_url: sanitizeText(payload?.image_url, 255, ''),
+      featured: toBoolean(payload?.featured, false),
+      published: payload?.published !== undefined ? toBoolean(payload?.published, true) : true,
     })
+
+    return toProjectPayload(createdProject)
   }
 
   /**
@@ -245,12 +329,53 @@ function createProjectService(deps = {}) {
     }
 
     const updates = { ...payload }
+    if (updates.title !== undefined) {
+      updates.title = sanitizeText(updates.title, 150)
+      if (!updates.title) {
+        throw createHttpError(422, 'Le titre est obligatoire.')
+      }
+    }
+    if (updates.description !== undefined) {
+      updates.description = sanitizeText(updates.description, 20000, '')
+    }
+    if (updates.content !== undefined) {
+      updates.content = sanitizeText(updates.content, 200000, '')
+    }
+    if (updates.github_url !== undefined) {
+      updates.github_url = sanitizeText(updates.github_url, 255, '')
+    }
+    if (updates.demo_url !== undefined) {
+      updates.demo_url = sanitizeText(updates.demo_url, 255, '')
+    }
+    if (updates.image_url !== undefined) {
+      updates.image_url = sanitizeText(updates.image_url, 255, '')
+    }
+    if (updates.featured !== undefined) {
+      updates.featured = toBoolean(updates.featured, Boolean(project.featured))
+    }
+    if (updates.published !== undefined) {
+      updates.published = toBoolean(updates.published, Boolean(project.published))
+    }
+
+    const hasTaxonomyUpdate = Object.prototype.hasOwnProperty.call(payload || {}, 'taxonomy')
+    const hasTagsUpdate = Object.prototype.hasOwnProperty.call(payload || {}, 'tags')
+    if (hasTaxonomyUpdate || hasTagsUpdate) {
+      const sourceTags = hasTagsUpdate ? sanitizeLegacyTags(payload?.tags) : sanitizeLegacyTags(project.tags)
+      const sourceTaxonomy = hasTaxonomyUpdate ? payload?.taxonomy : project.taxonomy
+      const taxonomy = normalizeProjectTaxonomy(sourceTaxonomy, sourceTags)
+      updates.taxonomy = taxonomy
+      updates.tags = buildProjectTagsFromTaxonomy(taxonomy, sourceTags)
+    } else {
+      delete updates.taxonomy
+      delete updates.tags
+    }
+
     if (updates.title && updates.title !== project.title) {
       updates.slug = slugify(updates.title, { lower: true, strict: true })
     }
 
     await project.update(updates)
-    return project
+    return toProjectPayload(project)
   }
 
   /**
@@ -306,12 +431,17 @@ function createProjectService(deps = {}) {
         continue
       }
 
+      const legacyTags = sanitizeLegacyTags(candidate?.tags)
+      const taxonomy = normalizeProjectTaxonomy(candidate?.taxonomy, legacyTags)
+      const tags = buildProjectTagsFromTaxonomy(taxonomy, legacyTags)
+
       const normalizedProject = {
         title,
         slug: slugCandidate,
         description: sanitizeText(candidate?.description, 20000, ''),
         content: sanitizeText(candidate?.content, 200000, ''),
-        tags: sanitizeTags(candidate?.tags),
+        taxonomy,
+        tags,
         github_url: sanitizeText(candidate?.github_url, 255, ''),
         demo_url: sanitizeText(candidate?.demo_url, 255, ''),
         image_url: sanitizeText(candidate?.image_url, 255, ''),
@@ -336,6 +466,7 @@ function createProjectService(deps = {}) {
           title: normalizedProject.title,
           description: normalizedProject.description,
           content: normalizedProject.content,
+          taxonomy: normalizedProject.taxonomy,
           tags: normalizedProject.tags,
           github_url: normalizedProject.github_url,
           demo_url: normalizedProject.demo_url,
@@ -361,13 +492,13 @@ function createProjectService(deps = {}) {
 
         await existing.update(updates)
         updated += 1
-        items.push(existing)
+        items.push(toProjectPayload(existing))
         continue
       }
 
       const createdProject = await projectModel.create(normalizedProject)
       created += 1
-      items.push(createdProject)
+      items.push(toProjectPayload(createdProject))
     }
 
     if (created === 0 && updated === 0) {

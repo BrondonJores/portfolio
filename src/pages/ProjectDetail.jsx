@@ -12,6 +12,7 @@ import BlockRenderer from '../components/ui/BlockRenderer.jsx'
 import { getProjectBySlug } from '../services/projectService.js'
 import { useSettings } from '../context/SettingsContext.jsx'
 import { buildPageTitle } from '../utils/seoSettings.js'
+import { getProjectTaxonomy } from '../utils/projectTaxonomy.js'
 
 export default function ProjectDetail() {
   const { slug } = useParams()
@@ -64,6 +65,8 @@ export default function ProjectDetail() {
     )
   }
 
+  const taxonomy = getProjectTaxonomy(project)
+
   return (
     <>
       <Helmet>
@@ -91,7 +94,7 @@ export default function ProjectDetail() {
               <img
                 src={project.image_url}
                 alt={project.title}
-                className="w-full max-h-[36rem] object-contain rounded-xl mb-6 p-2"
+                className="w-full max-h-[30rem] object-contain rounded-xl mb-6 p-2"
                 style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 72%, transparent)' }}
                 loading="lazy"
                 decoding="async"
@@ -105,10 +108,27 @@ export default function ProjectDetail() {
             >
               {project.title}
             </h1>
-            {Array.isArray(project.tags) && project.tags.length > 0 && (
+            {taxonomy.type && (
+              <p className="text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                Type: <span style={{ color: 'var(--color-text-primary)' }}>{taxonomy.type}</span>
+              </p>
+            )}
+            {taxonomy.stack.length > 0 && (
+              <p className="text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                Stack: <span style={{ color: 'var(--color-text-primary)' }}>{taxonomy.stack.join(' | ')}</span>
+              </p>
+            )}
+            {taxonomy.technologies.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {taxonomy.technologies.map((technology) => (
+                  <Badge key={technology}>{technology}</Badge>
+                ))}
+              </div>
+            )}
+            {(taxonomy.domains.length > 0 || taxonomy.labels.length > 0) && (
               <div className="flex flex-wrap gap-2 mb-4">
-                {project.tags.map((tag) => (
-                  <Badge key={tag}>{tag}</Badge>
+                {[...taxonomy.domains, ...taxonomy.labels].map((item) => (
+                  <Badge key={item}>{item}</Badge>
                 ))}
               </div>
             )}

@@ -1,5 +1,5 @@
-/* Page liste de tous les projets avec filtres et pagination */
-import { useState, useEffect } from 'react'
+/* Page liste de tous les projets avec filtres structures et pagination */
+import { useMemo, useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { FolderOpenIcon, CodeBracketIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
@@ -14,11 +14,14 @@ import Footer from '../components/sections/Footer.jsx'
 import { getProjects } from '../services/projectService.js'
 import { useSettings } from '../context/SettingsContext.jsx'
 import { buildPageTitle } from '../utils/seoSettings.js'
+import { getFacetAxis, getProjectDisplayTags, getProjectTaxonomy } from '../utils/projectTaxonomy.js'
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState([])
-  const [allTags, setAllTags] = useState([])
-  const [activeTag, setActiveTag] = useState(null)
+  const [facets, setFacets] = useState({})
+  const [activeType, setActiveType] = useState('')
+  const [activeStack, setActiveStack] = useState('')
+  const [activeTechnology, setActiveTechnology] = useState('')
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState(null)
@@ -33,23 +36,31 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     const params = { page, limit: 9 }
-    if (activeTag) params.tag = activeTag
+    if (activeType) params.type = activeType
+    if (activeStack) params.stack = activeStack
+    if (activeTechnology) params.technology = activeTechnology
 
     setLoading(true)
     getProjects(params)
       .then((res) => {
         setProjects(res?.data || [])
         setPagination(res?.pagination || null)
-        /* Collecte de tous les tags uniques */
-        const tags = [...new Set((res?.data || []).flatMap((p) => p.tags || []))]
-        if (page === 1) setAllTags(tags)
+        setFacets(res?.facets || {})
       })
       .catch(() => setProjects([]))
       .finally(() => setLoading(false))
-  }, [page, activeTag])
+  }, [page, activeType, activeStack, activeTechnology])
 
-  const handleTagFilter = (tag) => {
-    setActiveTag((prev) => (prev === tag ? null : tag))
+  const typeFacets = useMemo(() => getFacetAxis(facets, 'type'), [facets])
+  const stackFacets = useMemo(() => getFacetAxis(facets, 'stack'), [facets])
+  const technologyFacets = useMemo(() => getFacetAxis(facets, 'technologies'), [facets])
+
+  const hasActiveFilters = Boolean(activeType || activeStack || activeTechnology)
+
+  const clearFilters = () => {
+    setActiveType('')
+    setActiveStack('')
+    setActiveTechnology('')
     setPage(1)
   }
 
@@ -66,21 +77,102 @@ export default function ProjectsPage() {
             subtitle={projectsPageSubtitle}
           />
 
-          {/* Filtres par tag */}
-          {allTags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-8">
-              {allTags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => handleTagFilter(tag)}
-                  className="transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] rounded-full"
-                >
-                  <Badge variant={activeTag === tag ? 'solid' : 'default'}>
-                    {tag}
-                  </Badge>
-                </button>
-              ))}
-            </div>
+          {(typeFacets.length > 0 || stackFacets.length > 0 || technologyFacets.length > 0) && (
+            <section
+              className="rounded-xl border p-4 sm:p-5 mb-8 space-y-4"
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                  Filtres structures
+                </p>
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="text-xs underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] rounded"
+                    style={{ color: 'var(--color-accent)' }}
+                  >
+                    Reinitialiser
+                  </button>
+                )}
+              </div>
+
+              {typeFacets.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+                    Type
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {typeFacets.map((facet) => (
+                      <button
+                        key={facet.value}
+                        type="button"
+                        onClick={() => {
+                          setActiveType((prev) => (prev === facet.value ? '' : facet.value))
+                          setPage(1)
+                        }}
+                        className="transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] rounded-full"
+                      >
+                        <Badge variant={activeType === facet.value ? 'solid' : 'default'}>
+                          {facet.value}
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {stackFacets.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+                    Stack
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {stackFacets.map((facet) => (
+                      <button
+                        key={facet.value}
+                        type="button"
+                        onClick={() => {
+                          setActiveStack((prev) => (prev === facet.value ? '' : facet.value))
+                          setPage(1)
+                        }}
+                        className="transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] rounded-full"
+                      >
+                        <Badge variant={activeStack === facet.value ? 'solid' : 'default'}>
+                          {facet.value}
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {technologyFacets.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+                    Technologies
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {technologyFacets.slice(0, 18).map((facet) => (
+                      <button
+                        key={facet.value}
+                        type="button"
+                        onClick={() => {
+                          setActiveTechnology((prev) => (prev === facet.value ? '' : facet.value))
+                          setPage(1)
+                        }}
+                        className="transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] rounded-full"
+                      >
+                        <Badge variant={activeTechnology === facet.value ? 'solid' : 'default'}>
+                          {facet.value}
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
           )}
 
           {/* Grille des projets */}
@@ -91,107 +183,126 @@ export default function ProjectsPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projects.map((project, i) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: i * 0.05, ease: 'easeOut' }}
-                  >
-                    <Card className="h-full flex flex-col overflow-hidden !p-0">
-                      {/* Image du projet */}
-                      {project.image_url ? (
-                        <div
-                          className="w-full h-52 md:h-56 overflow-hidden flex-shrink-0"
-                          style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 74%, transparent)' }}
-                        >
-                          <img
-                            src={project.image_url}
-                            alt={project.title}
-                            className="w-full h-full object-contain p-2 transition-transform duration-300 hover:scale-[1.02]"
-                            loading="lazy"
-                            decoding="async"
-                            width="1200"
-                            height="675"
-                          />
-                        </div>
-                      ) : (
-                        <div
-                          className="w-full h-52 md:h-56 flex items-center justify-center flex-shrink-0"
-                          style={{ backgroundColor: 'var(--color-bg-secondary)' }}
-                        >
-                          <FolderOpenIcon
-                            className="h-10 w-10"
-                            style={{ color: 'var(--color-accent)', opacity: 0.3 }}
-                            aria-hidden="true"
-                          />
-                        </div>
-                      )}
+                {projects.map((project, i) => {
+                  const taxonomy = getProjectTaxonomy(project)
+                  const displayTags = getProjectDisplayTags(project, 5)
 
-                      {/* Contenu de la carte */}
-                      <div className="flex flex-col flex-grow p-5">
-                        <div className="flex items-start justify-between mb-3">
-                          {!project.image_url && (
+                  return (
+                    <motion.div
+                      key={project.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: i * 0.05, ease: 'easeOut' }}
+                    >
+                      <Card className="h-full flex flex-col overflow-hidden !p-0">
+                        {/* Image du projet */}
+                        {project.image_url ? (
+                          <div
+                            className="w-full h-44 md:h-48 overflow-hidden flex-shrink-0"
+                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 74%, transparent)' }}
+                          >
+                            <img
+                              src={project.image_url}
+                              alt={project.title}
+                              className="w-full h-full object-contain p-2 transition-transform duration-300 hover:scale-[1.02]"
+                              loading="lazy"
+                              decoding="async"
+                              width="1200"
+                              height="675"
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className="w-full h-44 md:h-48 flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: 'var(--color-bg-secondary)' }}
+                          >
                             <FolderOpenIcon
-                              className="h-7 w-7"
-                              style={{ color: 'var(--color-accent)' }}
+                              className="h-10 w-10"
+                              style={{ color: 'var(--color-accent)', opacity: 0.3 }}
                               aria-hidden="true"
                             />
-                          )}
-                          {project.featured && (
-                            <Badge className="ml-auto">{projectsBadgeFeatured}</Badge>
-                          )}
-                        </div>
-                        <h2
-                          className="text-base font-bold mb-2"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          <Link
-                            to={`/projets/${project.slug}`}
-                            className="hover:text-[var(--color-accent)] transition-colors"
-                          >
-                            {project.title}
-                          </Link>
-                        </h2>
-                        <p
-                          className="text-sm leading-relaxed mb-4 flex-grow line-clamp-3"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                        >
-                          {project.description}
-                        </p>
-                        {Array.isArray(project.tags) && project.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mb-4">
-                            {project.tags.map((tag) => (
-                              <Badge key={tag}>{tag}</Badge>
-                            ))}
                           </div>
                         )}
-                        <div className="flex items-center gap-3 mt-auto">
-                          {project.github_url && (
-                            <Button
-                              variant="ghost"
-                              href={project.github_url}
-                              aria-label={`${projectsActionGithub} - ${project.title}`}
+
+                        {/* Contenu de la carte */}
+                        <div className="flex flex-col flex-grow p-5">
+                          <div className="flex items-start justify-between mb-3">
+                            {!project.image_url && (
+                              <FolderOpenIcon
+                                className="h-7 w-7"
+                                style={{ color: 'var(--color-accent)' }}
+                                aria-hidden="true"
+                              />
+                            )}
+                            {project.featured && (
+                              <Badge className="ml-auto">{projectsBadgeFeatured}</Badge>
+                            )}
+                          </div>
+                          <h2
+                            className="text-base font-bold mb-2"
+                            style={{ color: 'var(--color-text-primary)' }}
+                          >
+                            <Link
+                              to={`/projets/${project.slug}`}
+                              className="hover:text-[var(--color-accent)] transition-colors"
                             >
-                              <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
-                              {projectsActionGithub}
-                            </Button>
+                              {project.title}
+                            </Link>
+                          </h2>
+                          <p
+                            className="text-sm leading-relaxed mb-3 flex-grow line-clamp-3"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                          >
+                            {project.description}
+                          </p>
+                          {(taxonomy.type || taxonomy.stack.length > 0) && (
+                            <div className="mb-3 space-y-1">
+                              {taxonomy.type && (
+                                <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                  Type: <span style={{ color: 'var(--color-text-primary)' }}>{taxonomy.type}</span>
+                                </p>
+                              )}
+                              {taxonomy.stack.length > 0 && (
+                                <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                  Stack: <span style={{ color: 'var(--color-text-primary)' }}>{taxonomy.stack.slice(0, 2).join(' | ')}</span>
+                                </p>
+                              )}
+                            </div>
                           )}
-                          {project.demo_url && (
-                            <Button
-                              variant="secondary"
-                              href={project.demo_url}
-                              aria-label={`${projectsActionDemo} - ${project.title}`}
-                            >
-                              <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
-                              {projectsActionDemo}
-                            </Button>
+                          {displayTags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-4">
+                              {displayTags.map((tag) => (
+                                <Badge key={`${project.id}-${tag}`}>{tag}</Badge>
+                              ))}
+                            </div>
                           )}
+                          <div className="flex items-center gap-3 mt-auto">
+                            {project.github_url && (
+                              <Button
+                                variant="ghost"
+                                href={project.github_url}
+                                aria-label={`${projectsActionGithub} - ${project.title}`}
+                              >
+                                <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
+                                {projectsActionGithub}
+                              </Button>
+                            )}
+                            {project.demo_url && (
+                              <Button
+                                variant="secondary"
+                                href={project.demo_url}
+                                aria-label={`${projectsActionDemo} - ${project.title}`}
+                              >
+                                <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
+                                {projectsActionDemo}
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </Card>
-                  </motion.div>
-                ))}
+                      </Card>
+                    </motion.div>
+                  )
+                })}
               </div>
 
               {/* Pagination */}
