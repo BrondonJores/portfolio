@@ -23,6 +23,7 @@ const TEST_FILES = [
   'themeMarketplaceService.di.test.cjs',
   'statsService.di.test.cjs',
   'securityEventService.di.test.cjs',
+  'solid.architecture.test.cjs',
   'visualBuilderDraftService.di.test.cjs',
   'cmsPageService.di.test.cjs',
   'sitemapService.di.test.cjs',

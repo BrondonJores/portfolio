@@ -36,6 +36,7 @@ async function main() {
         },
       },
       sequelizeFns: { Op: {}, fn: () => {}, col: () => {}, literal: () => {} },
+      env: {},
     })
 
     const result = await service.logSecurityEvent({
@@ -61,6 +62,7 @@ async function main() {
         },
       },
       sequelizeFns: { Op: {}, fn: () => {}, col: () => {}, literal: () => {} },
+      env: {},
     })
 
     const result = await service.logSecurityEvent({
@@ -68,6 +70,47 @@ async function main() {
       message: 'Rate limit.',
     })
     assert.equal(result, null)
+  })
+
+  await runCase('logSecurityEventFromRequest redacts sensitive tokens from request path', async () => {
+    const created = []
+    const service = createSecurityEventService({
+      securityEventModel: {
+        create: async (payload) => {
+          created.push(payload)
+          return payload
+        },
+      },
+      sequelizeFns: { Op: {}, fn: () => {}, col: () => {}, literal: () => {} },
+      env: {},
+    })
+
+    const req = {
+      originalUrl: '/api/unsubscribe/abcdef123456?token=abc123&setup_token=secret',
+      path: '/api/unsubscribe/abcdef123456',
+      method: 'GET',
+      ip: '127.0.0.1',
+      user: { id: 7 },
+      get(headerName) {
+        const key = String(headerName || '').toLowerCase()
+        if (key === 'user-agent') return 'unit-test-agent'
+        if (key === 'origin') return 'https://example.com'
+        if (key === 'x-forwarded-for') return '203.0.113.10'
+        return undefined
+      },
+    }
+
+    await service.logSecurityEventFromRequest(req, {
+      eventType: 'request.test_redaction',
+      source: 'unit_test',
+      message: 'Redaction verification',
+    })
+
+    assert.equal(created.length, 1)
+    assert.equal(
+      created[0].request_path,
+      '/api/unsubscribe/[REDACTED]?token=[REDACTED]&setup_token=[REDACTED]'
+    )
   })
 
   await runCase('getSecurityEvents returns paginated payload and applies window filter', async () => {
@@ -86,6 +129,7 @@ async function main() {
       },
       sequelizeFns: { Op: { gte: 'gte' }, fn: () => {}, col: () => {}, literal: () => {} },
       now: () => new Date('2026-03-08T12:00:00.000Z'),
+      env: {},
     })
 
     const page = await service.getSecurityEvents({
@@ -168,6 +212,7 @@ async function main() {
         literal: (value) => value,
       },
       now: () => new Date('2026-03-07T10:00:00.000Z'),
+      env: {},
     })
 
     const summary = await service.getSecuritySummary({ windowHours: 24 })
@@ -189,6 +234,50 @@ async function main() {
     assert.equal(summary.topEventTypes[0].eventType, 'auth.login_failed')
     assert.equal(summary.topEventTypes[0].count, 9)
     assert.equal(summary.recentEvents.length, 1)
+    assert.equal(Array.isArray(summary.alerts), true)
+    assert.equal(summary.hasActiveAlerts, summary.alerts.length > 0)
+  })
+
+  await runCase('getSecuritySummary raises alerts when thresholds are exceeded', async () => {
+    const Op = { gte: 'gte', in: 'in', ne: 'ne' }
+    const service = createSecurityEventService({
+      securityEventModel: {
+        count: async (options = {}) => {
+          const where = options.where || {}
+          if (where.severity === 'critical') return 4
+          if (where.severity === 'warning') return 2
+          if (where.event_type === 'request.untrusted_origin') return 6
+
+          const eventType = where.event_type
+          const inValues = Array.isArray(eventType?.[Op.in]) ? eventType[Op.in] : []
+          if (inValues.includes('auth.login_failed')) return 12
+          if (inValues.includes('request.rate_limited')) return 35
+          return 1
+        },
+        findAll: async () => [],
+      },
+      sequelizeFns: {
+        Op,
+        fn: () => 'fn',
+        col: (value) => value,
+        literal: (value) => value,
+      },
+      env: {
+        SECURITY_ALERT_CRITICAL_EVENTS_MIN: '3',
+        SECURITY_ALERT_AUTH_FAILURES_MIN: '10',
+        SECURITY_ALERT_BLOCKED_ORIGINS_MIN: '5',
+        SECURITY_ALERT_RATE_LIMIT_HITS_MIN: '30',
+      },
+      now: () => new Date('2026-03-07T10:00:00.000Z'),
+    })
+
+    const summary = await service.getSecuritySummary({ windowHours: 24 })
+    assert.equal(summary.hasActiveAlerts, true)
+    assert.equal(summary.alerts.length >= 4, true)
+    assert.equal(summary.alerts.some((entry) => entry.id === 'critical_events_spike'), true)
+    assert.equal(summary.alerts.some((entry) => entry.id === 'auth_failures_spike'), true)
+    assert.equal(summary.alerts.some((entry) => entry.id === 'blocked_origins_spike'), true)
+    assert.equal(summary.alerts.some((entry) => entry.id === 'rate_limit_hits_spike'), true)
   })
 
   if (failures > 0) {

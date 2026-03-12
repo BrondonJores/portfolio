@@ -11,6 +11,21 @@ const RATE_LIMIT_EVENT_TYPES = Object.freeze([
   'request.rate_limited.auth',
 ])
 const MAX_WINDOW_HOURS = 24 * 30
+const REDACTED_VALUE = '[REDACTED]'
+const SENSITIVE_QUERY_KEYS = Object.freeze([
+  'token',
+  'mfa_token',
+  'setup_token',
+  'captcha_token',
+  'recovery_code',
+  'access_token',
+  'refresh_token',
+  'password',
+])
+const SENSITIVE_QUERY_PATTERN = new RegExp(
+  `([?&](?:${SENSITIVE_QUERY_KEYS.join('|')})=)[^&#]*`,
+  'gi'
+)
 
 /**
  * Tronque une chaine a une longueur maximale.
@@ -90,21 +105,98 @@ function extractClientIp(req) {
 }
 
 /**
+ * Supprime les valeurs sensibles d'un chemin/requete URL.
+ * @param {unknown} value Chemin ou URL brute.
+ * @returns {string} Valeur redigee.
+ */
+function redactSensitiveRequestPath(value) {
+  let normalized = String(value || '').trim()
+  if (!normalized) {
+    return ''
+  }
+
+  normalized = normalized.replace(/\/unsubscribe\/[^/?#]+/gi, `/unsubscribe/${REDACTED_VALUE}`)
+  normalized = normalized.replace(SENSITIVE_QUERY_PATTERN, `$1${REDACTED_VALUE}`)
+  return normalized
+}
+
+/**
  * Construit le service securite avec dependances injectables.
  * @param {object} [deps={}] Dependances externes.
  * @param {object} [deps.securityEventModel] Modele SecurityEvent.
  * @param {object} [deps.sequelizeFns] Helpers Sequelize.
+ * @param {NodeJS.ProcessEnv|object} [deps.env] Variables d'environnement.
  * @param {Function} [deps.now] Fabrique date courante.
  * @returns {object} API metier securite.
  */
 function createSecurityEventService(deps = {}) {
   const securityEventModel = deps.securityEventModel || SecurityEvent
   const sequelizeFns = deps.sequelizeFns || sequelizeLib
+  const env = deps.env || process.env
   const now = deps.now || (() => new Date())
   const { Op, fn, col, literal } = sequelizeFns
   const gteOperator = Op?.gte || 'gte'
   const inOperator = Op?.in || 'in'
   const notEqualOperator = Op?.ne || 'ne'
+
+  /**
+   * Construit la liste des alertes actives selon des seuils configurables.
+   * @param {object} summary Resume securite.
+   * @returns {Array<object>} Liste d'alertes normalisees.
+   */
+  function buildSecurityAlerts(summary) {
+    const criticalEventsThreshold = parsePositiveInteger(env.SECURITY_ALERT_CRITICAL_EVENTS_MIN, 3)
+    const authFailuresThreshold = parsePositiveInteger(env.SECURITY_ALERT_AUTH_FAILURES_MIN, 10)
+    const blockedOriginsThreshold = parsePositiveInteger(env.SECURITY_ALERT_BLOCKED_ORIGINS_MIN, 5)
+    const rateLimitHitsThreshold = parsePositiveInteger(env.SECURITY_ALERT_RATE_LIMIT_HITS_MIN, 30)
+    const alerts = []
+
+    if (summary.criticalEvents >= criticalEventsThreshold) {
+      alerts.push({
+        id: 'critical_events_spike',
+        severity: 'critical',
+        metric: 'criticalEvents',
+        value: summary.criticalEvents,
+        threshold: criticalEventsThreshold,
+        message: `Pic d'evenements critiques detecte (${summary.criticalEvents}).`,
+      })
+    }
+
+    if (summary.authFailures >= authFailuresThreshold) {
+      alerts.push({
+        id: 'auth_failures_spike',
+        severity: 'warning',
+        metric: 'authFailures',
+        value: summary.authFailures,
+        threshold: authFailuresThreshold,
+        message: `Tentatives d'authentification suspectes en hausse (${summary.authFailures}).`,
+      })
+    }
+
+    if (summary.blockedOrigins >= blockedOriginsThreshold) {
+      alerts.push({
+        id: 'blocked_origins_spike',
+        severity: 'warning',
+        metric: 'blockedOrigins',
+        value: summary.blockedOrigins,
+        threshold: blockedOriginsThreshold,
+        message: `Nombre eleve d'origines bloquees (${summary.blockedOrigins}).`,
+      })
+    }
+
+    if (summary.rateLimitHits >= rateLimitHitsThreshold) {
+      alerts.push({
+        id: 'rate_limit_hits_spike',
+        severity: 'info',
+        metric: 'rateLimitHits',
+        value: summary.rateLimitHits,
+        threshold: rateLimitHitsThreshold,
+        message: `Volume de rate-limit inhabituel (${summary.rateLimitHits}).`,
+      })
+    }
+
+    return alerts
+  }
 
   /**
    * Journalise un evenement de securite (operation safe: ne jette jamais).
@@ -125,7 +217,7 @@ function createSecurityEventService(deps = {}) {
         message: toTrimmedString(payload?.message, 2000) || 'Evenement de securite.',
         ip_address: toTrimmedString(payload?.ipAddress, 64) || null,
         user_agent: toTrimmedString(payload?.userAgent, 1500) || null,
-        request_path: toTrimmedString(payload?.requestPath, 255) || null,
+        request_path: toTrimmedString(redactSensitiveRequestPath(payload?.requestPath), 255) || null,
         http_method: toTrimmedString(payload?.httpMethod, 16) || null,
         origin: toTrimmedString(payload?.origin, 255) || null,
         email: toTrimmedString(payload?.email, 160) || null,
@@ -308,7 +400,7 @@ function createSecurityEventService(deps = {}) {
         }),
       ])
 
-    return {
+    const summary = {
       windowHours,
       totalEvents: Number(total || 0),
       criticalEvents: Number(critical || 0),
@@ -330,6 +422,13 @@ function createSecurityEventService(deps = {}) {
         count: Number(entry.count || 0),
       })),
       recentEvents: recentEvents || [],
+    }
+
+    const alerts = buildSecurityAlerts(summary)
+    return {
+      ...summary,
+      alerts,
+      hasActiveAlerts: alerts.length > 0,
     }
   }
 

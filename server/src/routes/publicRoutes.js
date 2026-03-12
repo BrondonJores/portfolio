@@ -90,7 +90,5 @@ router.get('/pages/:slug', validate(cmsPageSlugParamValidator), getCmsPageBySlug
 router.post('/subscribe', subscribeLimiter, validate(subscribeValidator), verifySubscribeCaptcha, subscribe)
 router.get('/unsubscribe', unsubscribeLimiter, showUnsubscribeConfirmation)
 router.post('/unsubscribe', unsubscribeLimiter, unsubscribe)
-router.get('/unsubscribe/:token', unsubscribeLimiter, showUnsubscribeConfirmation)
-router.post('/unsubscribe/:token', unsubscribeLimiter, unsubscribe)
 
 module.exports = router

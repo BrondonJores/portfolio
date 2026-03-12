@@ -10,7 +10,10 @@
     "lint:frontend": "node scripts/lint-frontend.cjs",
     "lint": "npm run lint:frontend && npm --prefix server run lint",
     "test": "npm --prefix server run test",
-    "test:smoke": "npm --prefix server run test:smoke"
+    "test:smoke": "npm --prefix server run test:smoke",
+    "security:solid": "npm --prefix server run security:solid",
+    "security:audit": "npm --prefix server run security:audit",
+    "security:check": "npm run security:solid && npm run test && npm run lint"
   },
   "dependencies": {
     "@fontsource-variable/inter": "latest",

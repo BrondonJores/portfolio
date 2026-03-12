@@ -10,6 +10,8 @@
     "test:smoke": "node tests/smoke.api.test.cjs",
     "test:scale": "node tests/scalability.api.test.cjs",
     "test:profile:projects": "node tests/projects.profile.cjs",
+    "security:solid": "node tests/solid.architecture.test.cjs",
+    "security:audit": "npm audit --omit=dev --audit-level=high",
     "migrate": "sequelize-cli db:migrate",
     "seed": "sequelize-cli db:seed:all"
   },
