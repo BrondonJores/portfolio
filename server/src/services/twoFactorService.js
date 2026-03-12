@@ -64,10 +64,7 @@ function createTwoFactorService(deps = {}) {
    * @throws {Error} Erreur 500 si la configuration est invalide.
    */
   function getEncryptionKey() {
-    const raw =
-      String(env.MFA_ENCRYPTION_KEY || '').trim() ||
-      String(env.JWT_REFRESH_SECRET || '').trim() ||
-      String(env.JWT_ACCESS_SECRET || '').trim()
+    const raw = String(env.MFA_ENCRYPTION_KEY || '').trim()
 
     if (!raw) {
       throw createHttpError(500, 'Configuration de chiffrement MFA manquante.')
@@ -81,11 +78,11 @@ function createTwoFactorService(deps = {}) {
    * @returns {string} Pepper de hash.
    */
   function getRecoveryPepper() {
-    return (
-      String(env.MFA_RECOVERY_PEPPER || '').trim() ||
-      String(env.MFA_ENCRYPTION_KEY || '').trim() ||
-      getTwoFactorJwtSecret()
-    )
+    const pepper = String(env.MFA_RECOVERY_PEPPER || '').trim()
+    if (!pepper) {
+      throw createHttpError(500, 'Configuration du pepper MFA manquante.')
+    }
+    return pepper
   }
 
   /**

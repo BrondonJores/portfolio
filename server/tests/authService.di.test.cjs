@@ -84,6 +84,7 @@ async function main() {
     assert.equal(session.user.id, 1)
     assert.equal(signCalls.length, 2)
     assert.equal(signCalls[0].typ, 'access')
+    assert.equal(signCalls[0].rtv, 7)
     assert.equal(signCalls[1].rtv, 7)
     assert.equal(signCalls[1].typ, 'refresh')
   })
@@ -151,6 +152,7 @@ async function main() {
     assert.equal(fakeAdmin.refresh_token_version, 3)
     assert.equal(signCalls.length, 2)
     assert.equal(signCalls[0].typ, 'access')
+    assert.equal(signCalls[0].rtv, 3)
     assert.equal(signCalls[1].rtv, 3)
     assert.equal(signCalls[1].typ, 'refresh')
   })
@@ -327,6 +329,7 @@ async function main() {
     assert.equal(result.user.id, 1)
     assert.equal(signCalls.length, 2)
     assert.equal(signCalls[0].typ, 'access')
+    assert.equal(signCalls[0].rtv, 4)
     assert.equal(signCalls[1].typ, 'refresh')
   })
 

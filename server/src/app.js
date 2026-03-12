@@ -175,6 +175,7 @@ app.use(
           'https://recaptcha.google.com',
           'https://www.recaptcha.net',
         ],
+        frameAncestors: ["'none'"],
         connectSrc: [
           "'self'",
           'https://www.google.com',

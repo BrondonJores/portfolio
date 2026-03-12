@@ -38,10 +38,18 @@ function createAuthService(deps = {}) {
    * @param {object} payload Donnees utilisateur.
    * @returns {string} Token JWT court.
    */
-  function generateAccessToken(payload) {
-    return jwt.sign({ ...payload, typ: 'access' }, env.JWT_ACCESS_SECRET, {
+  function generateAccessToken(payload, tokenVersion) {
+    return jwt.sign(
+      {
+        ...payload,
+        rtv: parseTokenVersion(tokenVersion, 0),
+        typ: 'access',
+      },
+      env.JWT_ACCESS_SECRET,
+      {
       expiresIn: env.JWT_ACCESS_EXPIRES || '15m',
-    })
+      }
+    )
   }
 
   /**
@@ -176,7 +184,7 @@ function createAuthService(deps = {}) {
   function issueSessionForAdmin(admin) {
     const user = toPublicUser(admin)
     const tokenVersion = parseTokenVersion(admin.refresh_token_version, 0)
-    const accessToken = generateAccessToken(user)
+    const accessToken = generateAccessToken(user, tokenVersion)
     const refreshToken = generateRefreshToken(toRefreshPayload(user, tokenVersion))
 
     return {
@@ -485,7 +493,7 @@ function createAuthService(deps = {}) {
 
     const nextVersion = await bumpRefreshTokenVersion(admin)
     const user = toPublicUser(admin)
-    const accessToken = generateAccessToken(user)
+    const accessToken = generateAccessToken(user, nextVersion)
     const nextRefreshToken = generateRefreshToken(toRefreshPayload(user, nextVersion))
 
     return {

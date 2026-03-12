@@ -174,6 +174,40 @@ runCase('JWT_MFA_SECRET is mandatory for signing MFA tokens', () => {
   )
 })
 
+runCase('MFA_ENCRYPTION_KEY is mandatory for encrypting TOTP secrets', () => {
+  const service = createService({
+    env: {
+      MFA_ENCRYPTION_KEY: '',
+    },
+  })
+
+  assert.throws(
+    () => service.encryptTotpSecret('JBSWY3DPEHPK3PXP'),
+    (err) => {
+      assert.equal(err.statusCode, 500)
+      assert.equal(err.message, 'Configuration de chiffrement MFA manquante.')
+      return true
+    }
+  )
+})
+
+runCase('MFA_RECOVERY_PEPPER is mandatory when recovery codes are hashed', () => {
+  const service = createService({
+    env: {
+      MFA_RECOVERY_PEPPER: '',
+    },
+  })
+
+  assert.throws(
+    () => service.hashRecoveryCodes(['ABCDE-12345']),
+    (err) => {
+      assert.equal(err.statusCode, 500)
+      assert.equal(err.message, 'Configuration du pepper MFA manquante.')
+      return true
+    }
+  )
+})
+
 if (failures > 0) {
   console.error(`\nDI unit tests failed: ${failures}`)
   process.exit(1)

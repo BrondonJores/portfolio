@@ -7,7 +7,7 @@ let initialized = false
 let redisClient = null
 let redisEnabled = false
 let basePrefix = 'rate-limit:'
-let passOnStoreError = true
+let passOnStoreError = false
 const storesByNamespace = new Map()
 
 /**
@@ -50,7 +50,7 @@ function initializeRedisIfNeeded(env, logger) {
 
   initialized = true
   basePrefix = String(env.RATE_LIMIT_REDIS_PREFIX || 'rate-limit:').trim() || 'rate-limit:'
-  passOnStoreError = parseBooleanEnv(env.RATE_LIMIT_PASS_ON_STORE_ERROR, true)
+  passOnStoreError = parseBooleanEnv(env.RATE_LIMIT_PASS_ON_STORE_ERROR, false)
 
   const redisUrl = String(env.RATE_LIMIT_REDIS_URL || env.REDIS_URL || '').trim()
   if (!redisUrl) {

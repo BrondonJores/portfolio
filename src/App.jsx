@@ -244,7 +244,7 @@ export default function App() {
   return (
     <>
       <Helmet>
-        <meta httpEquiv="Content-Security-Policy" content={cspPolicy} />
+        {!import.meta.env.PROD && <meta httpEquiv="Content-Security-Policy" content={cspPolicy} />}
         <title>{seoTitle}</title>
         <meta name="description" content={seoDescription} />
         {seoKeywords && <meta name="keywords" content={seoKeywords} />}
