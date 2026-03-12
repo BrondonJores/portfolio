@@ -5,6 +5,7 @@ const path = require('node:path')
 const TEST_FILES = [
   'mailerService.test.cjs',
   'authService.di.test.cjs',
+  'authController.test.cjs',
   'authMiddleware.test.cjs',
   'rateLimitSecurityMiddleware.test.cjs',
   'totpService.di.test.cjs',

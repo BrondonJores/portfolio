@@ -195,9 +195,9 @@ async function twoFactorStatus(req, res, next) {
  */
 async function refresh(req, res, next) {
   try {
-    const { accessToken, refreshToken } = await refreshAdminSession(req.cookies.refresh_token)
+    const { accessToken, refreshToken, user } = await refreshAdminSession(req.cookies.refresh_token)
     res.cookie('refresh_token', refreshToken, getRefreshCookieOptions())
-    return res.json({ accessToken })
+    return res.json({ accessToken, user })
   } catch (err) {
     next(err)
   }

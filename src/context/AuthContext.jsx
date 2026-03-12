@@ -10,6 +10,54 @@ import {
 
 const AuthContext = createContext(null)
 
+/**
+ * Decode un segment JWT base64url.
+ * @param {string} value Segment JWT.
+ * @returns {string} Texte decode.
+ */
+function decodeBase64Url(value) {
+  const normalized = String(value || '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+  const padding = normalized.length % 4
+  const padded = padding > 0 ? normalized.padEnd(normalized.length + (4 - padding), '=') : normalized
+  return atob(padded)
+}
+
+/**
+ * Reconstruit le profil utilisateur a partir du payload du JWT access.
+ * Sert de filet de securite si le backend ne renvoie pas encore `user` sur /auth/refresh.
+ * @param {string | null | undefined} token JWT access.
+ * @returns {{id:number,username:string,email:string,twoFactorEnabled:boolean} | null} Profil reconstruit.
+ */
+function deriveUserFromAccessToken(token) {
+  if (typeof token !== 'string' || !token.trim()) {
+    return null
+  }
+
+  try {
+    const [, payloadSegment] = token.split('.')
+    if (!payloadSegment) {
+      return null
+    }
+
+    const payload = JSON.parse(decodeBase64Url(payloadSegment))
+    const id = Number(payload?.id)
+    if (!Number.isInteger(id) || id <= 0) {
+      return null
+    }
+
+    return {
+      id,
+      username: String(payload?.username || ''),
+      email: String(payload?.email || ''),
+      twoFactorEnabled: payload?.twoFactorEnabled === true,
+    }
+  } catch {
+    return null
+  }
+}
+
 /* Fournisseur du contexte d'authentification */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -31,10 +79,9 @@ export function AuthProvider({ children }) {
   /* Rafraichissement du token d'acces */
   const refreshToken = useCallback(async () => {
     const data = await refreshRequest()
+    const derivedUser = data?.user || deriveUserFromAccessToken(data?.accessToken)
     setAccessToken(data.accessToken)
-    if (data?.user) {
-      setUser(data.user)
-    }
+    setUser((currentUser) => derivedUser || currentUser || null)
     return data.accessToken
   }, [])
 
@@ -43,9 +90,10 @@ export function AuthProvider({ children }) {
     const restore = async () => {
       try {
         const data = await refreshRequest()
+        const derivedUser = data?.user || deriveUserFromAccessToken(data?.accessToken)
         if (data?.accessToken) {
           setAccessToken(data.accessToken)
-          setUser(data.user || null)
+          setUser(derivedUser || null)
         }
       } catch {
         /* Echec silencieux : l'utilisateur n'est pas connecte */
