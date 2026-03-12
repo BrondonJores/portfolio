@@ -1,12 +1,5 @@
-/* Pied de page premium pilote par les reglages admin */
+/* Pied de page classique pilote par les reglages admin */
 import { Link } from 'react-router-dom'
-import {
-  ArrowTopRightOnSquareIcon,
-  ArrowUpIcon,
-  EnvelopeIcon,
-  MapPinIcon,
-  PaperAirplaneIcon,
-} from '@heroicons/react/24/outline'
 import { useSettings } from '../../context/SettingsContext.jsx'
 
 function normalizeText(value) {
@@ -16,25 +9,12 @@ function normalizeText(value) {
   return value.trim()
 }
 
-function getInitials(name) {
-  return String(name || '')
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0] || '')
-    .join('')
-    .slice(0, 2)
-    .toUpperCase() || 'PF'
-}
-
 export default function Footer() {
   const year = new Date().getFullYear()
   const { settings } = useSettings()
 
   const siteName = normalizeText(settings.site_name) || normalizeText(settings.hero_name) || 'Portfolio'
   const siteTagline = normalizeText(settings.tagline) || normalizeText(settings.hero_title) || 'Portfolio personnel'
-  const logoUrl = normalizeText(settings.logo_url)
-  const contactAvailability = normalizeText(settings.contact_availability) || 'Disponible pour collaborer sur des produits utiles.'
-  const contactCtaLabel = settings.ui_hero_cta_contact || 'Discutons'
   const footerText = normalizeText(settings.footer_text) || `(c) ${year} ${siteName}. Tous droits reserves.`
   const footerCredits = normalizeText(settings.footer_credits) || 'Construit avec React, Tailwind CSS et Heroicons'
   const contactEmail = normalizeText(settings.contact_email)
@@ -56,101 +36,37 @@ export default function Footer() {
     { label: 'Instagram', href: normalizeText(settings.instagram_url) },
   ].filter((item) => Boolean(item.href))
 
-  function handleScrollToTop() {
-    if (typeof window === 'undefined') {
-      return
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
   return (
     <footer
-      className="relative overflow-hidden border-t"
+      className="border-t"
       style={{
         borderColor: 'var(--color-border)',
         backgroundColor: 'var(--color-bg-secondary)',
       }}
     >
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(circle at 12% -12%, color-mix(in srgb, var(--color-accent-glow) 34%, transparent), transparent 48%), radial-gradient(circle at 88% 112%, color-mix(in srgb, var(--color-accent-glow) 26%, transparent), transparent 52%)',
-        }}
-        aria-hidden="true"
-      />
-
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div
-          className="rounded-2xl border p-5 sm:p-7"
-          style={{
-            borderColor: 'color-mix(in srgb, var(--color-border) 80%, transparent)',
-            background:
-              'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-card) 88%, transparent), color-mix(in srgb, var(--color-accent-glow) 16%, transparent))',
-          }}
-        >
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
-              <span
-                className="inline-flex h-12 w-12 items-center justify-center rounded-xl border text-sm font-bold"
-                style={{
-                  borderColor: 'color-mix(in srgb, var(--color-accent) 42%, var(--color-border))',
-                  backgroundColor: 'color-mix(in srgb, var(--color-accent) 16%, transparent)',
-                  color: 'var(--color-text-primary)',
-                  fontFamily: 'JetBrains Mono Variable, monospace',
-                }}
-              >
-                {logoUrl ? (
-                  <img src={logoUrl} alt={`Logo ${siteName}`} className="h-8 w-8 object-contain" />
-                ) : (
-                  getInitials(siteName)
-                )}
-              </span>
-
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--color-accent)' }}>
-                  {siteName}
-                </p>
-                <p className="mt-1 text-sm sm:text-base" style={{ color: 'var(--color-text-primary)' }}>
-                  {siteTagline}
-                </p>
-                <p className="mt-2 text-xs sm:text-sm leading-relaxed max-w-xl" style={{ color: 'var(--color-text-secondary)' }}>
-                  {contactAvailability}
-                </p>
-              </div>
-            </div>
-
-            <Link
-              to="/contact"
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-opacity duration-200 hover:opacity-90"
-              style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
-            >
-              <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
-              {contactCtaLabel}
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <section
-            className="rounded-2xl border p-5"
-            style={{
-              borderColor: 'var(--color-border)',
-              backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 80%, transparent)',
-            }}
-          >
-            <p
-              className="text-[11px] font-semibold uppercase tracking-[0.18em]"
-              style={{ color: 'var(--color-accent)' }}
-            >
-              Navigation
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+          <div className="max-w-sm">
+            <p className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              {siteName}
             </p>
-            <ul className="mt-4 grid grid-cols-2 gap-2">
+            <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              {siteTagline}
+            </p>
+            {(contactEmail || contactLocation) && (
+              <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                {[contactEmail, contactLocation].filter(Boolean).join(' | ')}
+              </p>
+            )}
+          </div>
+
+          <nav aria-label="Navigation pied de page">
+            <ul className="flex flex-wrap gap-x-5 gap-y-2">
               {quickLinks.map((link) => (
                 <li key={link.to}>
                   <Link
                     to={link.to}
-                    className="text-sm transition-opacity duration-200 hover:opacity-100 opacity-85"
+                    className="text-sm transition-opacity duration-200 hover:opacity-75"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
                     {link.label}
@@ -158,119 +74,34 @@ export default function Footer() {
                 </li>
               ))}
             </ul>
-          </section>
+          </nav>
 
-          <section
-            className="rounded-2xl border p-5"
-            style={{
-              borderColor: 'var(--color-border)',
-              backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 80%, transparent)',
-            }}
-          >
-            <p
-              className="text-[11px] font-semibold uppercase tracking-[0.18em]"
-              style={{ color: 'var(--color-accent)' }}
-            >
-              Contact
-            </p>
-
-            <div className="mt-4 space-y-3">
-              {contactEmail && (
+          {socialLinks.length > 0 && (
+            <div className="flex flex-wrap gap-x-4 gap-y-2 md:justify-end">
+              {socialLinks.map((social) => (
                 <a
-                  href={`mailto:${contactEmail}`}
-                  className="inline-flex items-center gap-2 text-sm transition-opacity duration-200 hover:opacity-100 opacity-85"
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm transition-opacity duration-200 hover:opacity-75"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
-                  <span>{contactEmail}</span>
+                  {social.label}
                 </a>
-              )}
-
-              {contactLocation && (
-                <p className="inline-flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                  <MapPinIcon className="h-4 w-4" aria-hidden="true" />
-                  <span>{contactLocation}</span>
-                </p>
-              )}
+              ))}
             </div>
-
-            {socialLinks.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {socialLinks.map((social) => (
-                  <a
-                    key={social.label}
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-opacity duration-200 hover:opacity-100 opacity-85"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                      borderColor: 'var(--color-border)',
-                      backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 78%, transparent)',
-                    }}
-                  >
-                    <span>{social.label}</span>
-                    <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                  </a>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section
-            className="rounded-2xl border p-5"
-            style={{
-              borderColor: 'var(--color-border)',
-              backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 80%, transparent)',
-            }}
-          >
-            <p
-              className="text-[11px] font-semibold uppercase tracking-[0.18em]"
-              style={{ color: 'var(--color-accent)' }}
-            >
-              Build
-            </p>
-            <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-              {footerCredits}
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link
-                to="/projets"
-                className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs transition-opacity duration-200 hover:opacity-100 opacity-85"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text-secondary)',
-                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 85%, transparent)',
-                }}
-              >
-                Voir les projets
-              </Link>
-              <button
-                type="button"
-                onClick={handleScrollToTop}
-                className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs transition-opacity duration-200 hover:opacity-100 opacity-85"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text-secondary)',
-                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 85%, transparent)',
-                }}
-              >
-                Retour en haut
-                <ArrowUpIcon className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-            </div>
-          </section>
+          )}
         </div>
 
         <div
-          className="mt-7 pt-4 border-t flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+          className="mt-6 pt-4 border-t flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
           style={{ borderColor: 'var(--color-border)' }}
         >
           <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
             {footerText}
           </p>
-          <p className="text-xs sm:text-right" style={{ color: 'var(--color-text-secondary)', opacity: 0.78 }}>
+          <p className="text-xs md:text-right" style={{ color: 'var(--color-text-secondary)', opacity: 0.78 }}>
             {footerCredits}
           </p>
         </div>
