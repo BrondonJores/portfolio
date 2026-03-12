@@ -6,11 +6,99 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import App from './App.jsx'
 import AdminLayout from './components/admin/AdminLayout.jsx'
 import ProtectedRoute from './components/admin/ProtectedRoute.jsx'
+import AppRouteErrorBoundary from './components/ui/AppRouteErrorBoundary.jsx'
 import Spinner from './components/ui/Spinner.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { SettingsProvider } from './context/SettingsContext.jsx'
 import './index.css'
+
+const CHUNK_RELOAD_MARK_KEY = 'portfolio:chunk-reload-ts'
+const CHUNK_RELOAD_COOLDOWN_MS = 45_000
+const CHUNK_RELOAD_QUERY_PARAM = '__chunk_reload'
+
+function getErrorMessage(error) {
+  if (typeof error === 'string') {
+    return error
+  }
+  if (error && typeof error.message === 'string') {
+    return error.message
+  }
+  return ''
+}
+
+function isDynamicImportError(error) {
+  const message = getErrorMessage(error)
+  return (
+    /Failed to fetch dynamically imported module/i.test(message)
+    || /Importing a module script failed/i.test(message)
+    || /ChunkLoadError/i.test(message)
+  )
+}
+
+function clearChunkReloadQueryParam() {
+  if (typeof window === 'undefined') {
+    return
+  }
+  const url = new URL(window.location.href)
+  if (!url.searchParams.has(CHUNK_RELOAD_QUERY_PARAM)) {
+    return
+  }
+  url.searchParams.delete(CHUNK_RELOAD_QUERY_PARAM)
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+function shouldReloadForChunkError() {
+  try {
+    const now = Date.now()
+    const previous = Number(window.sessionStorage.getItem(CHUNK_RELOAD_MARK_KEY) || '0')
+    if (previous > 0 && now - previous < CHUNK_RELOAD_COOLDOWN_MS) {
+      return false
+    }
+    window.sessionStorage.setItem(CHUNK_RELOAD_MARK_KEY, String(now))
+    return true
+  } catch {
+    return true
+  }
+}
+
+function triggerChunkRecoveryReload() {
+  if (typeof window === 'undefined') {
+    return
+  }
+  if (!shouldReloadForChunkError()) {
+    return
+  }
+  const url = new URL(window.location.href)
+  url.searchParams.set(CHUNK_RELOAD_QUERY_PARAM, String(Date.now()))
+  window.location.replace(url.toString())
+}
+
+function installChunkRecoveryHandlers() {
+  if (typeof window === 'undefined') {
+    return
+  }
+  if (window.__portfolioChunkRecoveryInstalled) {
+    return
+  }
+  window.__portfolioChunkRecoveryInstalled = true
+  clearChunkReloadQueryParam()
+
+  window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault()
+    triggerChunkRecoveryReload()
+  })
+
+  window.addEventListener('unhandledrejection', (event) => {
+    if (!isDynamicImportError(event.reason)) {
+      return
+    }
+    event.preventDefault()
+    triggerChunkRecoveryReload()
+  })
+}
+
+installChunkRecoveryHandlers()
 
 /* Chargement paresseux de toutes les pages pour le code splitting */
 const Home = lazy(() => import('./pages/Home.jsx'))
@@ -69,6 +157,7 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
+    errorElement: <AppRouteErrorBoundary />,
     children: [
       { index: true, element: <Suspense fallback={<LoadingFallback />}><Home /></Suspense> },
       { path: 'competences', element: <Suspense fallback={<LoadingFallback />}><SkillsPage /></Suspense> },
@@ -86,6 +175,7 @@ const router = createBrowserRouter([
   {
     path: '/admin/login',
     element: <Suspense fallback={<LoadingFallback />}><AdminLogin /></Suspense>,
+    errorElement: <AppRouteErrorBoundary />,
   },
   /* Builder visuel admin plein ecran (protege, hors layout lateral). */
   {
@@ -95,6 +185,7 @@ const router = createBrowserRouter([
         <Suspense fallback={<LoadingFallback />}><AdminVisualBuilder /></Suspense>
       </Protected>
     ),
+    errorElement: <AppRouteErrorBoundary />,
   },
   /* Routes admin protegees */
   {
@@ -104,6 +195,7 @@ const router = createBrowserRouter([
         <AdminLayout />
       </Protected>
     ),
+    errorElement: <AppRouteErrorBoundary />,
     children: [
       { index: true, element: <Suspense fallback={<LoadingFallback />}><AdminDashboard /></Suspense> },
       { path: 'projets', element: <Suspense fallback={<LoadingFallback />}><AdminProjects /></Suspense> },

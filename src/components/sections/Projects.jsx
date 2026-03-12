@@ -46,8 +46,10 @@ function getShortSentence(value, maxLength, fallback) {
   if (!normalized) {
     return fallback
   }
-  const [firstChunk] = normalized.split(/(?<=[.!?])\s+/)
-  const sentence = firstChunk || normalized
+
+  // Compatible Safari iOS ancien: evite le lookbehind `(?<=...)`.
+  const sentenceMatch = normalized.match(/^.*?[.!?](?:\s+|$)/)
+  const sentence = (sentenceMatch?.[0] || normalized).trim()
   if (sentence.length <= maxLength) {
     return sentence
   }
