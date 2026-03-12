@@ -230,6 +230,8 @@ app.use(cookieParser())
 
 /* Parseur JSON limite a 10 Mo */
 app.use(express.json({ limit: '10mb' }))
+/* Parseur formulaires URL-encoded (utilise pour confirmations unsubscribe HTML). */
+app.use(express.urlencoded({ extended: false, limit: '10mb' }))
 
 /* Journalisation HTTP en developpement */
 if (process.env.NODE_ENV !== 'production') {

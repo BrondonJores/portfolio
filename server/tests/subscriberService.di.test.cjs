@@ -99,6 +99,21 @@ async function main() {
     )
   })
 
+  await runCase('unsubscribeFromNewsletter ignores invalid token formats', async () => {
+    let called = false
+
+    const service = createSubscriberService({
+      subscriberModel: {
+        destroy: async () => {
+          called = true
+        },
+      },
+    })
+
+    await service.unsubscribeFromNewsletter('not-a-valid-token')
+    assert.equal(called, false)
+  })
+
   await runCase('prepareSubscribersForNewsletter rotates token and returns raw token for mail payload', async () => {
     const rawToken = 'e'.repeat(64)
     const hashValue = 'f'.repeat(64)
@@ -143,4 +158,3 @@ main().catch((err) => {
   console.error(err.stack || err.message || err)
   process.exit(1)
 })
-

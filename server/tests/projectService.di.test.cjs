@@ -129,6 +129,23 @@ async function main() {
     assert.equal(facetCallCount, 1)
   })
 
+  await runCase('getAllPublicProjects caps public limit to 24', async () => {
+    let capturedLimit = 0
+    const fakeProjectModel = {
+      findAndCountAll: async ({ limit }) => {
+        capturedLimit = limit
+        return { count: 0, rows: [] }
+      },
+      findAll: async () => [],
+    }
+
+    const service = createProjectService({ projectModel: fakeProjectModel })
+    const result = await service.getAllPublicProjects({ page: '1', limit: '9999' })
+
+    assert.equal(capturedLimit, 24)
+    assert.equal(result.pagination.limit, 24)
+  })
+
   await runCase('importProjects creates valid rows and skips invalid ones', async () => {
     const storage = []
 

@@ -58,6 +58,13 @@ const likeLimiter = rateLimit({
   message: { error: 'Trop de likes envoyes. Reessayez dans 15 minutes.' },
 })
 
+const unsubscribeLimiter = rateLimit({
+  ...getRateLimitCommonOptions('public_unsubscribe'),
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  message: { error: 'Trop de tentatives de desinscription. Reessayez dans 15 minutes.' },
+})
+
 const verifyMessageCaptcha = createRecaptchaGuard({ action: 'contact_message' })
 const verifyCommentCaptcha = createRecaptchaGuard({ action: 'comment_create' })
 const verifySubscribeCaptcha = createRecaptchaGuard({ action: 'newsletter_subscribe' })
@@ -81,7 +88,9 @@ router.get('/theme-marketplace', validate(marketplaceListValidator), getThemeMar
 router.get('/pages', validate(listPublicCmsPagesValidator), getAllCmsPagesPublic)
 router.get('/pages/:slug', validate(cmsPageSlugParamValidator), getCmsPageBySlugPublic)
 router.post('/subscribe', subscribeLimiter, validate(subscribeValidator), verifySubscribeCaptcha, subscribe)
-router.get('/unsubscribe/:token', showUnsubscribeConfirmation)
-router.post('/unsubscribe/:token', unsubscribe)
+router.get('/unsubscribe', unsubscribeLimiter, showUnsubscribeConfirmation)
+router.post('/unsubscribe', unsubscribeLimiter, unsubscribe)
+router.get('/unsubscribe/:token', unsubscribeLimiter, showUnsubscribeConfirmation)
+router.post('/unsubscribe/:token', unsubscribeLimiter, unsubscribe)
 
 module.exports = router

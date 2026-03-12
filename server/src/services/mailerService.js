@@ -270,6 +270,7 @@ function createMailerService(deps = {}) {
   async function sendNewsletter({ campaign, subscribers, fromName, fromEmail, settings = {} }) {
     const mode = resolveDeliveryMode()
     const appUrl = settings.site_url || env.APP_URL || ''
+    const normalizedAppUrl = String(appUrl || '').trim().replace(/\/+$/, '')
     const defaultSender = resolveDefaultSender(mode)
 
     const senderName = fromName || settings.newsletter_from_name || defaultSender.name
@@ -296,7 +297,7 @@ function createMailerService(deps = {}) {
         const index = cursor
         cursor += 1
         const subscriber = safeSubscribers[index]
-        const unsubscribeLink = `${appUrl}/api/unsubscribe/${subscriber.unsubscribe_token}`
+        const unsubscribeLink = `${normalizedAppUrl}/api/unsubscribe#${encodeURIComponent(String(subscriber.unsubscribe_token || '').trim())}`
 
         const templatePayload = {
           subject: campaign.subject,

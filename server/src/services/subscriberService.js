@@ -4,6 +4,7 @@ const sequelizeLib = require('sequelize')
 const { Subscriber } = require('../models')
 const { createHttpError } = require('../utils/httpError')
 const { resolveLimitOffsetPagination, buildPaginatedPayload } = require('../utils/pagination')
+const UNSUBSCRIBE_TOKEN_REGEX = /^[a-f0-9]{64}$/i
 
 /**
  * Construit le service abonne avec dependances injectables.
@@ -88,7 +89,8 @@ function createSubscriberService(deps = {}) {
    * @returns {string} Token normalise.
    */
   function normalizeIncomingToken(token) {
-    return String(token || '').trim()
+    const normalized = String(token || '').trim().toLowerCase()
+    return UNSUBSCRIBE_TOKEN_REGEX.test(normalized) ? normalized : ''
   }
 
   /**

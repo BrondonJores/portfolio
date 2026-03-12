@@ -11,6 +11,7 @@ const {
 } = require('../utils/projectTaxonomy')
 
 const MAX_IMPORT_ITEMS = 200
+const MAX_PUBLIC_PROJECT_LIMIT = 24
 const FACETS_CACHE_DEFAULT_TTL_MS = 2 * 60 * 1000
 const PUBLIC_PROJECT_LIST_ATTRIBUTES = Object.freeze([
   'id',
@@ -234,7 +235,7 @@ function createProjectService(deps = {}) {
     featured,
   }) {
     const safePage = parsePositiveInt(page, 1)
-    const safeLimit = parsePositiveInt(limit, 10)
+    const safeLimit = Math.min(parsePositiveInt(limit, 10), MAX_PUBLIC_PROJECT_LIMIT)
     const offset = (safePage - 1) * safeLimit
     const baseWhere = { published: true }
 
