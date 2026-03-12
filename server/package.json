@@ -6,6 +6,8 @@
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "lint": "node scripts/lint.cjs",
+    "db:encoding:check": "node scripts/fix-db-encoding.cjs",
+    "db:encoding:apply": "node scripts/fix-db-encoding.cjs --apply",
     "test": "node tests/run-all.cjs",
     "test:smoke": "node tests/smoke.api.test.cjs",
     "test:scale": "node tests/scalability.api.test.cjs",

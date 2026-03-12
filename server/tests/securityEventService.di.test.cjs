@@ -72,6 +72,69 @@ async function main() {
     assert.equal(result, null)
   })
 
+  await runCase('logSecurityEvent skips localhost rate-limited events in development by default', async () => {
+    const created = []
+    const service = createSecurityEventService({
+      securityEventModel: {
+        create: async (payload) => {
+          created.push(payload)
+          return payload
+        },
+      },
+      sequelizeFns: { Op: {}, fn: () => {}, col: () => {}, literal: () => {} },
+      env: { NODE_ENV: 'development' },
+    })
+
+    const result = await service.logSecurityEvent({
+      eventType: 'auth.login_rate_limited',
+      severity: 'warning',
+      source: 'auth_limiter',
+      message: 'Rate-limit localhost.',
+      ipAddress: '::ffff:127.0.0.1',
+      requestPath: '/api/auth/login',
+    })
+
+    assert.equal(result, null)
+    assert.equal(created.length, 0)
+  })
+
+  await runCase('logSecurityEvent deduplicates repeated rate-limited events in configured window', async () => {
+    const created = []
+    const nowRef = { value: new Date('2026-03-07T10:00:00.000Z') }
+    const service = createSecurityEventService({
+      securityEventModel: {
+        create: async (payload) => {
+          created.push(payload)
+          return payload
+        },
+      },
+      sequelizeFns: { Op: {}, fn: () => {}, col: () => {}, literal: () => {} },
+      now: () => nowRef.value,
+      env: {
+        NODE_ENV: 'production',
+        SECURITY_LOG_LOCAL_RATE_LIMIT_EVENTS: 'true',
+        SECURITY_EVENT_DEDUP_WINDOW_MS: '60000',
+      },
+    })
+
+    const payload = {
+      eventType: 'auth.login_rate_limited',
+      severity: 'warning',
+      source: 'auth_limiter',
+      message: 'Rate-limit repeated.',
+      ipAddress: '203.0.113.10',
+      requestPath: '/api/auth/login',
+    }
+
+    const first = await service.logSecurityEvent(payload)
+    nowRef.value = new Date('2026-03-07T10:00:05.000Z')
+    const second = await service.logSecurityEvent(payload)
+
+    assert.notEqual(first, null)
+    assert.equal(second, null)
+    assert.equal(created.length, 1)
+  })
+
   await runCase('logSecurityEventFromRequest redacts sensitive tokens from request path', async () => {
     const created = []
     const service = createSecurityEventService({

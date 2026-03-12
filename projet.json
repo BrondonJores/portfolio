@@ -1,0 +1,46 @@
+{
+  "projects": [
+    {
+      "title": "Portfolio Full Stack React + Express",
+      "slug": "portfolio-full-stack-react-express",
+      "description": "Portfolio full stack avec site public, blog, formulaire de contact et espace admin securise. Le projet met l accent sur la performance, la securite et la maintenabilite.",
+      "content": "{\"blocks\":[{\"type\":\"heading\",\"level\":2,\"content\":\"Portfolio Full Stack (React + Express + PostgreSQL)\",\"id\":\"pf-rd-001\"},{\"type\":\"paragraph\",\"content\":\"Application portfolio complete avec site public, blog, formulaire de contact, espace administrateur protege, moteur de theming dynamique et systeme d animations configurable depuis l admin.\",\"id\":\"pf-rd-002\"},{\"type\":\"heading\",\"level\":2,\"content\":\"Fonctionnalites site public\",\"id\":\"pf-rd-003\"},{\"type\":\"list\",\"items\":[\"Page d accueil composee de sections: Hero, A propos, Competences, Projets, Blog, Contact\",\"Pages liste + detail pour projets et articles\",\"Rendu des articles par blocs (paragraphes, titres, images, code, citations, listes)\",\"Commentaires moderes, partage, copie de lien et newsletter inline\",\"Page competences et page contact avec envoi de message\"],\"id\":\"pf-rd-004\"},{\"type\":\"heading\",\"level\":2,\"content\":\"Espace admin\",\"id\":\"pf-rd-005\"},{\"type\":\"list\",\"items\":[\"Dashboard avec KPI et graphiques\",\"CRUD complets pour projets, articles, competences, temoignages, commentaires et messages\",\"Gestion newsletter (campagnes, abonnes, envoi)\",\"Parametrage global du contenu, apparence et animations\",\"Upload image avec compression client et stockage cloud\"],\"id\":\"pf-rd-006\"},{\"type\":\"heading\",\"level\":2,\"content\":\"Securite\",\"id\":\"pf-rd-007\"},{\"type\":\"list\",\"items\":[\"JWT access token + refresh token en cookie HTTP-only\",\"Rotation et revocation des refresh tokens\",\"2FA TOTP (Authenticator) avec recovery codes\",\"reCAPTCHA v3 sur endpoints publics sensibles\",\"Rate limiting, validation serveur, sanitisation, Helmet + CORS\"],\"id\":\"pf-rd-008\"},{\"type\":\"heading\",\"level\":2,\"content\":\"Stack technique\",\"id\":\"pf-rd-009\"},{\"type\":\"list\",\"items\":[\"Frontend: React 19, Vite 6, Tailwind CSS v4, React Router DOM v7, Framer Motion, Heroicons\",\"Backend: Node.js, Express 4, Sequelize 6, PostgreSQL\",\"Securite: JWT, bcryptjs, express-rate-limit, express-validator\",\"Ecosysteme: DOMPurify, react-helmet-async, Recharts\"],\"id\":\"pf-rd-010\"},{\"type\":\"heading\",\"level\":2,\"content\":\"Architecture\",\"id\":\"pf-rd-011\"},{\"type\":\"code\",\"language\":\"text\",\"content\":\"portfolio/\\n  src/                 # frontend React\\n  server/\\n    src/\\n      controllers/     # logique metier\\n      routes/          # endpoints API\\n      models/          # modeles Sequelize\\n      middleware/      # auth, validation, erreurs\\n      services/        # mail, etc.\\n      templates/       # templates newsletter\\n    migrations/        # schema DB\\n    seeders/           # donnees initiales\",\"id\":\"pf-rd-012\"},{\"type\":\"heading\",\"level\":2,\"content\":\"Qualite et delivery\",\"id\":\"pf-rd-013\"},{\"type\":\"list\",\"items\":[\"Scripts lint, tests unitaires et smoke tests API\",\"Workflow CI GitHub Actions sur push et pull request\",\"Migrations + seed automatisables pour l environnement local et CI\"],\"id\":\"pf-rd-014\"},{\"type\":\"heading\",\"level\":2,\"content\":\"Impact\",\"id\":\"pf-rd-015\"},{\"type\":\"paragraph\",\"content\":\"Le projet fournit une base robuste, securisee et evolutive pour publier du contenu technique rapidement, tout en gardant un controle complet via l interface d administration.\",\"id\":\"pf-rd-016\"}]}",
+      "taxonomy": {
+        "type": "Application web",
+        "stack": [
+          "Full-stack",
+          "Frontend SPA",
+          "Backend API"
+        ],
+        "technologies": [
+          "React",
+          "PostgreSQL"
+        ],
+        "domains": [
+          "Open source"
+        ],
+        "labels": [
+          "Portfolio",
+          "Admin",
+          "Blog",
+          "SEO"
+        ]
+      },
+      "tags": [
+        "react",
+        "node.js",
+        "express",
+        "postgresql",
+        "tailwind-css",
+        "portfolio",
+        "admin"
+      ],
+      "github_url": "https://github.com/BrondonJores/portfolio",
+      "demo_url": "https://brondonjores.me",
+      "image_url": "",
+      "featured": true,
+      "published": true
+    }
+  ],
+  "replaceExisting": false
+}

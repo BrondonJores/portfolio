@@ -26,6 +26,8 @@ const SENSITIVE_QUERY_PATTERN = new RegExp(
   `([?&](?:${SENSITIVE_QUERY_KEYS.join('|')})=)[^&#]*`,
   'gi'
 )
+const RATE_LIMIT_EVENT_PATTERN = /rate_limited/i
+const RATE_LIMIT_EVENT_CACHE_MAX = 5000
 
 /**
  * Tronque une chaine a une longueur maximale.
@@ -61,6 +63,17 @@ function normalizeSeverity(value) {
 function parsePositiveInteger(value, fallback) {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+/**
+ * Parse une valeur booleenne permissive.
+ * @param {unknown} value Valeur brute.
+ * @param {boolean} fallback Valeur de repli.
+ * @returns {boolean} Booleen normalise.
+ */
+function parseBoolean(value, fallback) {
+  if (value === undefined || value === null || value === '') return fallback
+  return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase())
 }
 
 /**
@@ -121,6 +134,28 @@ function redactSensitiveRequestPath(value) {
 }
 
 /**
+ * Indique si une IP correspond a la boucle locale.
+ * @param {unknown} ip Adresse IP brute.
+ * @returns {boolean} True si loopback.
+ */
+function isLoopbackIp(ip) {
+  const raw = String(ip || '').trim().toLowerCase()
+  if (!raw) return false
+  if (raw === '::1' || raw === '127.0.0.1') return true
+  if (raw.startsWith('::ffff:127.')) return true
+  return raw.startsWith('127.')
+}
+
+/**
+ * Indique si un type d'evenement est associe au rate-limit.
+ * @param {unknown} value Type brut.
+ * @returns {boolean} True si evenement rate-limit.
+ */
+function isRateLimitedEventType(value) {
+  return RATE_LIMIT_EVENT_PATTERN.test(String(value || ''))
+}
+
+/**
  * Construit le service securite avec dependances injectables.
  * @param {object} [deps={}] Dependances externes.
  * @param {object} [deps.securityEventModel] Modele SecurityEvent.
@@ -138,6 +173,59 @@ function createSecurityEventService(deps = {}) {
   const gteOperator = Op?.gte || 'gte'
   const inOperator = Op?.in || 'in'
   const notEqualOperator = Op?.ne || 'ne'
+  const dedupeWindowMs = parsePositiveInteger(env.SECURITY_EVENT_DEDUP_WINDOW_MS, 15000)
+  const logLocalRateLimitedEvents = parseBoolean(
+    env.SECURITY_LOG_LOCAL_RATE_LIMIT_EVENTS,
+    String(env.NODE_ENV || '').toLowerCase() === 'production'
+  )
+  const recentRateLimitEvents = new Map()
+
+  /**
+   * Nettoie les cles expirees du cache de deduplication.
+   * @param {number} nowMs Timestamp courant.
+   * @returns {void}
+   */
+  function pruneRateLimitCache(nowMs) {
+    if (recentRateLimitEvents.size <= RATE_LIMIT_EVENT_CACHE_MAX) return
+
+    for (const [cacheKey, ts] of recentRateLimitEvents) {
+      if (nowMs - ts >= dedupeWindowMs) {
+        recentRateLimitEvents.delete(cacheKey)
+      }
+      if (recentRateLimitEvents.size <= RATE_LIMIT_EVENT_CACHE_MAX) break
+    }
+  }
+
+  /**
+   * Decide si un evenement rate-limit doit etre ignore (dedupe/local dev).
+   * @param {object} payload Payload event.
+   * @returns {boolean} True si l'evenement doit etre ignore.
+   */
+  function shouldSkipRateLimitEvent(payload) {
+    const eventType = toTrimmedString(payload?.eventType, 120)
+    if (!isRateLimitedEventType(eventType)) return false
+
+    const ipAddress = toTrimmedString(payload?.ipAddress, 64)
+    if (!logLocalRateLimitedEvents && isLoopbackIp(ipAddress)) {
+      return true
+    }
+
+    if (dedupeWindowMs <= 0) return false
+
+    const requestPath = toTrimmedString(redactSensitiveRequestPath(payload?.requestPath), 255)
+    const source = toTrimmedString(payload?.source, 60)
+    const nowMs = now().getTime()
+    const cacheKey = `${eventType}|${ipAddress}|${requestPath}|${source}`
+    const previousTs = recentRateLimitEvents.get(cacheKey)
+
+    if (Number.isFinite(previousTs) && nowMs - previousTs < dedupeWindowMs) {
+      return true
+    }
+
+    recentRateLimitEvents.set(cacheKey, nowMs)
+    pruneRateLimitCache(nowMs)
+    return false
+  }
 
   /**
    * Construit la liste des alertes actives selon des seuils configurables.
@@ -205,6 +293,10 @@ function createSecurityEventService(deps = {}) {
    */
   async function logSecurityEvent(payload) {
     try {
+      if (shouldSkipRateLimitEvent(payload)) {
+        return null
+      }
+
       const metadataValue =
         payload?.metadata && typeof payload.metadata === 'object'
           ? payload.metadata

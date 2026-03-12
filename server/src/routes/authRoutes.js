@@ -37,7 +37,7 @@ const authLimiter = rateLimit({
   handler(req, res) {
     void logSecurityEventFromRequest(req, {
       eventType: 'auth.login_rate_limited',
-      severity: 'critical',
+      severity: 'warning',
       source: 'auth_limiter',
       email: req.body?.email,
       message: 'Blocage anti-bruteforce sur /auth/login.',
@@ -63,7 +63,7 @@ const verifyTwoFactorLimiter = rateLimit({
   handler(req, res) {
     void logSecurityEventFromRequest(req, {
       eventType: 'auth.2fa_rate_limited',
-      severity: 'critical',
+      severity: 'warning',
       source: 'auth_limiter',
       message: 'Blocage anti-bruteforce sur /auth/verify-2fa.',
     })

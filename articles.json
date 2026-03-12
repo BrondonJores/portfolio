@@ -1,0 +1,1403 @@
+{
+  "articles": [
+    {
+      "title": "Audit sécurité Express: checklist production 2026",
+      "slug": "audit-securite-express-checklist-production-2026",
+      "excerpt": "Mon playbook sécurité Express 2026: une méthode orientée terrain pour protéger une application sans ralentir la livraison produit.",
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Mon angle perso sur la sécurité applicative",
+          "id": "a1-001"
+        },
+        {
+          "type": "paragraph",
+          "content": "Je vois souvent des audits sécurité transformés en opération cosmétique: on corrige deux failles visibles, puis on passe a autre chose. Mon approche est différente. Je traite la sécurité comme un système de fiabilité produit, avec des contrôles répétables que l'équipe peut exécuter sans héroïsme.",
+          "id": "a1-002"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand je durcis une application, mon objectif n'est pas de cocher une checklist pour faire joli. Mon objectif est simple: éviter les surprises critiques en production, protéger les données, et garder un rythme de livraison propre même quand la pression monte.",
+          "id": "a1-003"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Le terrain avant la théorie",
+          "id": "a1-004"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand on parle sécurité, on imagine souvent des attaques très sophistiquées. En réalité, la plupart des incidents commencent par des détails banals: une route oubliée, une limite absente, un cookie mal configuré après un déploiement rapide. C'est exactement ce qui rend la sécurité difficile: ce n'est pas un sujet spectaculaire, c'est un sujet de rigueur quotidienne.",
+          "id": "a1-005"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Pourquoi les audits sécurité échouent en production",
+          "id": "a1-006"
+        },
+        {
+          "type": "paragraph",
+          "content": "Sur beaucoup de projets, l'audit sécurité arrive trop tard. L'équipe est déjà focalisée sur la date de livraison, les correctifs sont faits en urgence, et les choix sont guidés par ce qui est visible rapidement plutôt que par les risques les plus probables. Le résultat est une sécurité cosmétique: quelques protections activées, mais peu de défense en profondeur. Pour éviter ce piège, il faut traiter la sécurité comme un système complet qui relie architecture, code, configuration, monitoring et opérations. C'est cette approche globale qui transforme un audit en véritable réduction de risque.",
+          "id": "a1-007"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un autre facteur d'échec est l'absence de priorisation. Toutes les failles ne se valent pas, et toutes les routes n'ont pas le même impact métier. Quand on met la même énergie sur une route de lecture publique et sur un endpoint admin d'import massif, on depense beaucoup pour un gain faible. Le bon réflexe est de classer les surfaces d'attaque selon la gravité potentielle et la probabilité d'exploitation. Ce tri permet d'agir vite sur ce qui peut vraiment casser ton service, ta réputation et tes données.",
+          "id": "a1-008"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "modéliser la menace avant de patcher",
+          "id": "a1-009"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Lister routes publiques, routes admin, endpoints auth, uploads et imports.",
+            "Identifier les actifs sensibles: comptes admin, contenu public, settings, secrets.",
+            "Associer à chaque actif les vecteurs d'attaque realistes.",
+            "Noter impact business, impact legal, et impact operationnel.",
+            "Definir un ordre de correction base sur risque et coût de mitigation."
+          ],
+          "id": "a1-010"
+        },
+        {
+          "type": "paragraph",
+          "content": "Cette modelisation te donne une carte claire: ou un attaquant essaiera d'entrer, quel dommage il peut provoquer, et quelle défense doit etre priorisée. Sans carte, l'audit devient reactif et incomplet. Avec carte, il devient pilotable et mesurable. même dans un petit portfolio, cette etape evite des oublis critiques comme un import non borne, un endpoint commentaire mal filtre, ou une route admin exposee a un bruteforce non contrôle.",
+          "id": "a1-011"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Couche transport et perimeter HTTP",
+          "id": "a1-012"
+        },
+        {
+          "type": "list",
+          "items": [
+            "HTTPS strict de bout en bout, y compris derriere proxy.",
+            "CORS limite aux origines legitimes, jamais wildcard avec credentials.",
+            "Helmet avec politique explicite et cohérent entre environnements.",
+            "Body size limits strictes sur les routes publiques sensibles.",
+            "Differencier cache index.html et cache assets hashes.",
+            "Messages d'erreur neutres pour éviter la fuite d'informations."
+          ],
+          "id": "a1-013"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le perimeter HTTP est la premiere ligne de défense. Si cette couche est faible, la sécurité applicative est forcee de compenser des erreurs structurelles et finit par se fragiliser. En pratique, tu veux un comportement strict, previsible et facile a verifier en tests automatises. Un simple smoke test sécurité qui contrôle en tetes, statut et cookies sur quelques routes critiques t'aide a detecter une regression juste après deploy, avant qu'un attaquant ne la detecte en premier.",
+          "id": "a1-014"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Auth admin, sessions et MFA: protéger le coeur du risque",
+          "id": "a1-015"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le compte admin concentre la valeur et le risque. Tu dois donc supposer qu'un mot de passe peut etre vole et limiter la fenêtre d'exploitation. Access token court, refresh token en cookie HTTP-only, rotation et revocation cote serveur: ce triptyque reduit fortement l'impact d'une fuite. Ensuite, le 2FA TOTP ajoute une barriere de possession qui stoppe la majorite des tentatives opportunistes. Le login, la verification MFA et les routes sensibles doivent avoir un rate limit spécifique, separe du global, pour rendre le bruteforce economiquement couteux.",
+          "id": "a1-016"
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "content": "Access token: 10-15 min\nRefresh token: HTTP-only, secure, sameSite adapte\nRotation refresh: active\nRevocation refresh: obligatoire\n2FA admin: TOTP + recovery codes hashes\nRate limit login/MFA: strict et observe",
+          "id": "a1-017"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Validation, sanitation et hygiene des données",
+          "id": "a1-018"
+        },
+        {
+          "type": "paragraph",
+          "content": "Chaque payload entrant est non fiable par definition. Les validateurs doivent imposer types, longueurs, formats et cardinalites claires sur toutes les routes d'ecriture. Sur les contenus riches, la sanitation de rendu evite qu'un contenu malicieux transforme une page publique en vecteur XSS. Sur les imports JSON, normaliser slug, tags, booleens et dates protege non seulement la sécurité, mais aussi la stabilité fonctionnelle du CMS. Une base de données propre est une défense silencieuse: moins de cas limites, moins de contournements, moins d'erreurs d'interpretation cote front.",
+          "id": "a1-019"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Observabilite sécurité et reponse incident",
+          "id": "a1-020"
+        },
+        {
+          "type": "paragraph",
+          "content": "Une sécurité sans traces est aveugle. Tu dois journaliser les evenements sensibles de maniere structuree: tentatives de login, echecs MFA, depassements rate limit, imports admin, suppressions de contenu, changements de settings critiques. Ces logs doivent etre corrélables via un identifiant de requete pour reconstruire un incident rapidement. Cote alertes, commence simple: pics de 401, 429 et 5xx sur routes critiques. Ce socle suffit déjà pour detecter un comportement anormal avant que l'incident ne devienne visible pour les visiteurs.",
+          "id": "a1-021"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Logs JSON horodates, avec route et contexte minimal utile.",
+            "Dashboard sécurité avec tendance par heure et par endpoint.",
+            "Alertes sur anomalies de login et hausse brutale des 429.",
+            "Runbook court: containment, rotation secrets, verification post incident.",
+            "Exercice trimestriel de simulation pour tester la reponse équipe."
+          ],
+          "id": "a1-022"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Plan 30-60-90 jours pour industrialiser la sécurité",
+          "id": "a1-023"
+        },
+        {
+          "type": "paragraph",
+          "content": "Sur 30 jours, vise les contrôles essentiels: perimeter HTTP, auth robuste, validation stricte et logs minimum. Sur 60 jours, ajoute durcissement des flux admin, alerting operationnel et tests d'abus automatises. Sur 90 jours, stabilise les procedures: revues de configuration, exercices incident, suivi des métriques de sécurité et documentation executable. Cette progression evite le syndrome du grand chantier jamais fini. Tu avances par couches, chaque couche apportant un gain concret sans bloquer la livraison produit.",
+          "id": "a1-024"
+        },
+        {
+          "type": "quote",
+          "content": "La sécurité durable est un système d'execution, pas une opération de communication.",
+          "author": "Security engineering",
+          "id": "a1-025"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand tu traites l'audit comme un processus vivant, ton application devient plus difficile a attaquer et plus simple a operer. Le benefice est double: réduction du risque technique et augmentation de la confiance utilisateur. C'est exactement ce qui fait la difference entre un site qui subit les agressions et un site qui continue de servir correctement même quand la pression augmente.",
+          "id": "a1-026"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Ce que cette approche change dans la vraie vie",
+          "id": "a1-027"
+        },
+        {
+          "type": "paragraph",
+          "content": "Avec une sécurité structuree, les releases deviennent plus sereines. On ne deploie plus en croisant les doigts, on deploie avec des contrôles verifiables. Les regressions sont detectees plus vite, les incidents sont mieux traces, et les decisions d'urgence deviennent plus rares.",
+          "id": "a1-028"
+        },
+        {
+          "type": "paragraph",
+          "content": "Surtout, la sécurité cesse d'etre un frein. Quand les contrôles sont clairs et integres au flux de travail, l'équipe livre plus vite et plus proprement. C'est ce paradoxe positif: plus de discipline technique, moins de stress operationnel.",
+          "id": "a1-029"
+        },
+        {
+          "type": "quote",
+          "content": "Une sécurité mature se reconnait au calme de l'équipe pendant les moments tendus.",
+          "author": "Retour terrain",
+          "id": "a1-030"
+        },
+        {
+          "type": "paragraph",
+          "content": "Si tu gardes ce rythme d'execution dans le temps, ton application gagne quelque chose de precieux: la confiance. Confiance de tes utilisateurs, confiance de ton équipe, et confiance dans ta capacite a encaisser les imprévus.",
+          "id": "a1-031"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Ce que j'applique concrètement en mission",
+          "id": "a1-032"
+        },
+        {
+          "type": "paragraph",
+          "content": "Je commence toujours par cartographier les surfaces exposees et les risques a impact reel. Ensuite, je verrouille les couches essentielles: transport, auth admin, validation stricte, rate limiting par contexte, puis observabilite sécurité. Cette sequence donne des gains visibles rapidement.",
+          "id": "a1-033"
+        },
+        {
+          "type": "paragraph",
+          "content": "La difference se voit vite: moins de comportements inattendus, moins de debug sous stress, et des deploiements plus sereins. La sécurité devient un levier de confiance, pas un frein.",
+          "id": "a1-034"
+        },
+        {
+          "type": "quote",
+          "content": "Ma règle: pas de sécurité theatrale, uniquement de la sécurité qui tient quand ca chauffe.",
+          "author": "Brondon Jores",
+          "id": "a1-035"
+        },
+        {
+          "type": "paragraph",
+          "content": "Si tu appliques cette logique de facon continue, ton application devient plus robuste à chaque release. C'est ce niveau de constance qui construit une vraie credibilite technique.",
+          "id": "a1-036"
+        }
+      ],
+      "tags": [
+        "sécurité",
+        "express",
+        "api",
+        "jwt",
+        "checklist"
+      ],
+      "cover_image": "",
+      "likes": 0,
+      "published": true,
+      "published_at": "2026-03-12T09:00:00.000Z"
+    },
+    {
+      "title": "Rate limiting distribue avec Redis sans casser l'existant",
+      "slug": "rate-limiting-distribue-redis-sans-casser-existant",
+      "excerpt": "Ma méthode pour migrer un rate limit vers Redis sans casser la prod: cohérence globale, fallback propre et rollout progressif pilote par la mesure.",
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Pourquoi je prends ce sujet très au serieux",
+          "id": "a2-001"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le rate limit distribue est un de ces sujets qu'on reporte, jusqu'au jour ou le trafic monte et ou les limites locales montrent leurs trous. Je prefere le traiter tot, parce qu'un contrôle incoherent donne une fausse impression de sécurité.",
+          "id": "a2-002"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand je passe une API en mode distribue, je vise deux choses en même temps: stopper les abus de maniere cohérente et protéger l'expérience des utilisateurs legitimes. Redis est un moyen, pas une fin.",
+          "id": "a2-003"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Pourquoi ce sujet devient critique quand ton trafic monte",
+          "id": "a2-004"
+        },
+        {
+          "type": "paragraph",
+          "content": "Au debut, tout marche bien avec un simple store memoire. Puis la charge augmente, l'app scale, et les limites deviennent incoherentes d'une instance a l'autre. C'est souvent a ce moment la qu'on se rend compte que la protection etait plus apparente que réelle.",
+          "id": "a2-005"
+        },
+        {
+          "type": "paragraph",
+          "content": "Passer sur Redis n'est pas juste un choix technique élégant. C'est un choix de fiabilité produit: offrir une règle claire pour tout le monde, et éviter que la protection anti-abus ne se transforme en loterie selon le serveur touche.",
+          "id": "a2-006"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Le probleme cache des architectures multi instance",
+          "id": "a2-007"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un rate limiter local en memoire fonctionne parfaitement tant que l'API tourne sur une seule instance. Des que tu passes en horizontal scaling, chaque instance maintient ses propres compteurs. Cela cree une illusion de protection: tu bloques localement, mais globalement un client malicieux peut contourner la limite en repartissant ses requetes. Ce decouplage est souvent invisible en test basique et n'apparait qu'en charge réelle. Redis corrige ce point en centralisant les compteurs, ce qui restaure une politique unique et cohérente sur tout le cluster.",
+          "id": "a2-008"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le but d'une migration Redis n'est pas seulement d'etre plus strict. Le but est d'etre plus juste: un utilisateur legitime doit avoir une expérience stable, tandis que les abus doivent etre ralentis de facon uniforme. Sans cohérence globale, les seuils deviennent arbitraires, les blocages imprevisibles, et l'exploitation des routes sensibles reste possible. C'est pourquoi le passage a un store distribue est une etape de maturite des que ton service commence a scaler.",
+          "id": "a2-009"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Architecture cible: centraliser sans fragiliser",
+          "id": "a2-010"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Store Redis comme source de verite des compteurs.",
+            "Namespaces explicites par environnement et par type de limite.",
+            "Limites differenciees: global, auth, endpoints sensibles.",
+            "Fallback memoire local si Redis indisponible.",
+            "Tracing pour observer latence et erreurs du middleware."
+          ],
+          "id": "a2-011"
+        },
+        {
+          "type": "paragraph",
+          "content": "La priorite absolue reste la disponibilite de l'application. Si Redis tombe, ta plateforme ne doit pas tomber avec lui. Un design fail-soft est donc essentiel: tu passes temporairement en memoire locale, tu logs la bascule, tu alertes l'exploitation, puis tu reviens sur Redis automatiquement quand la connexion est stable. Cette approche protege ton uptime et evite de transformer le composant anti-abus en point de panne unique.",
+          "id": "a2-012"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Configuration pratique et conventions de cles",
+          "id": "a2-013"
+        },
+        {
+          "type": "code",
+          "language": "bash",
+          "content": "REDIS_URL=redis://user:pass@host:6379\nRATE_LIMIT_REDIS_ENABLED=true\nRATE_LIMIT_REDIS_PREFIX=portfolio:rate-limit:\nRATE_LIMIT_GLOBAL_WINDOW_MS=900000\nRATE_LIMIT_GLOBAL_MAX=300\nRATE_LIMIT_AUTH_WINDOW_MS=900000\nRATE_LIMIT_AUTH_MAX=20",
+          "id": "a2-014"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le prefix `portfolio:rate-limit:` est un excellent choix. Il te donne un namespace clair pour debugger, purger et auditer les cles sans toucher d'autres données applicatives. En production, ajoute aussi un prefix environnement, par exemple `prod:portfolio:rate-limit:`. Cette discipline evite les collisions entre staging et prod, surtout si tu mutualises un cluster Redis. Une convention de nommage propre simplifie enormement les opérations quand la plateforme grandit.",
+          "id": "a2-015"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "stratégie de rollout sans casser le trafic",
+          "id": "a2-016"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Phase 1: shadow mode, observation sans blocage dur.",
+            "Phase 2: comparaison Redis vs memoire sur trafic reel.",
+            "Phase 3: activation sur login et routes critiques.",
+            "Phase 4: extension au global et ajustement des seuils.",
+            "Phase 5: revue post-déploiement avec KPIs de blocage."
+          ],
+          "id": "a2-017"
+        },
+        {
+          "type": "paragraph",
+          "content": "Ce déploiement progressif permet de valider le comportement en conditions réelles avant de generaliser. Tu evites ainsi les faux positifs massifs qui peuvent frustrer les utilisateurs legitimes. L'approche incremental te donne aussi des données pour calibrer finement les fenetres et les seuils selon chaque endpoint, plutôt que d'appliquer une politique uniforme souvent inefficace.",
+          "id": "a2-018"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Observabilite: ce qu'il faut absolument mesurer",
+          "id": "a2-019"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Taux de 429 par route et par segment de client.",
+            "Latence p95 et p99 du middleware de limitation.",
+            "Nombre de bascules fallback Redis -> memoire.",
+            "Erreurs de connexion Redis et temps de reconnexion.",
+            "Top clients bloques pour identifier scripts abusifs."
+          ],
+          "id": "a2-020"
+        },
+        {
+          "type": "paragraph",
+          "content": "Une couche rate limit non observee devient très vite opaque. Si tu ne mesures pas, tu ne sais pas si tu proteges vraiment ou si tu penalises juste tes utilisateurs. Les métriques de blocage doivent etre corrélées avec les retours support et les performances API. Cette lecture croisee te permet d'ajuster les seuils de facon rationnelle, route par route, et de conserver un bon equilibre entre sécurité et expérience.",
+          "id": "a2-021"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Erreurs frequentes et garde-fous",
+          "id": "a2-022"
+        },
+        {
+          "type": "paragraph",
+          "content": "Les erreurs classiques sont connues: utiliser une limite unique pour toutes les routes, oublier les endpoints internes, ignorer les clients legitimes a fort volume, et ne pas traiter les pannes Redis comme un scenario normal. Les garde-fous sont simples: policies par catégorie de route, fallback automatique, messages 429 explicites, et alerting operationnel. Quand ces bases sont en place, la limitation de debit devient un outil de protection fiable, pas une source de regressions recurrentes.",
+          "id": "a2-023"
+        },
+        {
+          "type": "quote",
+          "content": "Un bon rate limiter distribue protege sans devenir lui même un risque d'indisponibilite.",
+          "author": "SRE guideline",
+          "id": "a2-024"
+        },
+        {
+          "type": "paragraph",
+          "content": "En resume, Redis pour le rate limiting n'est pas un luxe technique. C'est une condition de cohérence des que ton application se distribue sur plusieurs instances. Avec un rollout progressif, un fallback propre et de bonnes métriques, tu obtiens une défense plus forte tout en conservant une expérience stable pour les visiteurs legitimes.",
+          "id": "a2-025"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un point souvent oublie est la justice de la limitation entre clients derriere une même IP partagee. Dans certains contextes mobile ou corporate, plusieurs utilisateurs legitimes sortent avec la même adresse publique. Si la politique ne tient pas compte de ce scenario, tu peux penaliser des visiteurs normaux. Une bonne approche consiste a combiner plusieurs signaux (IP, route, comportement, eventuel fingerprint non intrusif) et a ajuster les seuils par catégorie de route. Cette finesse permet de conserver une protection forte contre les scripts agressifs sans degrader inutilement les usages humains.",
+          "id": "a2-026"
+        },
+        {
+          "type": "paragraph",
+          "content": "Enfin, pense au cycle de vie des cles Redis et a la capacite memoire en charge. Une politique trop fine avec beaucoup de dimensions peut exploser le nombre de cles actives. Il faut donc monitorer cardinalite, TTL moyens et empreinte memoire du namespace de rate limit. Cette hygiene operationnelle te permet de garder un système soutenable même lors de pics de trafic ou de campagnes malicieuses.",
+          "id": "a2-027"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Le vrai objectif: protéger sans punir les utilisateurs legitimes",
+          "id": "a2-028"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un rate limit efficace ne doit pas bloquer aveuglement. Il doit filtrer les comportements abusifs tout en preservant l'expérience normale, même en forte charge. C'est pour ca que la phase de mesure et d'ajustement est aussi importante que l'activation elle-même.",
+          "id": "a2-029"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand tu combines des seuils bien calibres, un fallback propre et des métriques lisibles, tu obtiens un système stable qui defend ton service sans creer de friction inutile.",
+          "id": "a2-030"
+        },
+        {
+          "type": "quote",
+          "content": "Le meilleur rate limit est celui que les visiteurs legitimes ne remarquent pas.",
+          "author": "Principe d'exploitation",
+          "id": "a2-031"
+        },
+        {
+          "type": "paragraph",
+          "content": "En pratique, cette migration te donne un double gain: plus de cohérence sécurité et plus de sérénité operationnelle. C'est typiquement le genre d'investissement qui se rentabilise le jour ou le trafic devient imprévisible.",
+          "id": "a2-032"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Mon approche de déploiement sans risque inutile",
+          "id": "a2-033"
+        },
+        {
+          "type": "paragraph",
+          "content": "Je ne fais jamais ce switch en mode big-bang. Je passe par des phases: observation, comparaison, activation ciblee, puis generalisation. Ce rythme permet de corriger finement les seuils sans provoquer des blocages brutaux en production.",
+          "id": "a2-034"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le fallback memoire reste une assurance indispensable. Si Redis tousse, le service doit continuer de repondre. Cette logique fail-soft fait la difference entre une architecture elegante et une architecture operable.",
+          "id": "a2-035"
+        },
+        {
+          "type": "quote",
+          "content": "Un bon rate limit protege ta plateforme sans devenir lui-même un incident.",
+          "author": "Brondon Jores",
+          "id": "a2-036"
+        },
+        {
+          "type": "paragraph",
+          "content": "Avec ce cadre, tu gagnes en sécurité et en stabilité operationnelle. Et surtout, tu gardes le contrôle quand la charge devient imprévisible.",
+          "id": "a2-037"
+        }
+      ],
+      "tags": [
+        "redis",
+        "rate-limit",
+        "scalabilite",
+        "backend",
+        "ops"
+      ],
+      "cover_image": "",
+      "likes": 0,
+      "published": true,
+      "published_at": "2026-03-11T09:00:00.000Z"
+    },
+    {
+      "title": "React 19 + Vite: architecture SOLID pour un portfolio évolutif",
+      "slug": "react-19-vite-architecture-solid-portfolio-evolutif",
+      "excerpt": "Ma vision SOLID pour React + Vite: une architecture propre qui permet de scaler le produit sans sacrifier la lisibilité ni la vitesse de livraison.",
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Mon retour direct sur les architectures frontend",
+          "id": "a3-001"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le probleme que je vois le plus souvent sur les fronts modernes, ce n'est pas un manque de features. C'est un manque de structure qui finit par ralentir chaque evolution. Plus le produit grossit, plus la dette cognitive explose.",
+          "id": "a3-002"
+        },
+        {
+          "type": "paragraph",
+          "content": "SOLID m'aide a garder une base saine: composants lisibles, logique métier dans des hooks clairs, services dedies pour l'I/O, et contrats stables entre couches. C'est cette discipline qui garde le projet évolutif.",
+          "id": "a3-003"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Le moment ou un front propre peut basculer dans le chaos",
+          "id": "a3-004"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un portfolio commence souvent avec peu de code, donc tout semble simple. Puis les demandes arrivent: nouveaux blocs, nouvelles pages, plus d'animations, plus d'interactions admin. Sans structure, chaque ajout devient un pari et la fatigue technique s'installe vite.",
+          "id": "a3-005"
+        },
+        {
+          "type": "paragraph",
+          "content": "SOLID est utile ici parce qu'il redonne des limites saines: qui fait quoi, ou placer la logique, et comment faire evoluer sans casser ce qui marche déjà. Ce n'est pas une religion, c'est une hygiene de construction.",
+          "id": "a3-006"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Pourquoi un front simple devient vite fragile",
+          "id": "a3-007"
+        },
+        {
+          "type": "paragraph",
+          "content": "Beaucoup de portfolios commencent avec une page unique et quelques composants. Puis arrivent les sections dynamiques, les effets visuels, le blog, les pages detail, le dashboard admin, les imports et les integrations. Sans architecture claire, chaque ajout augmente la complexite locale et cree des couplages inattendus. Les regressions apparaissent sur des zones qui semblaient independantes. C'est exactement dans ce contexte que les principes SOLID apportent de la valeur: ils reduisent la dette structurelle et maintiennent la vitesse d'execution sur la duree.",
+          "id": "a3-008"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le point important est de comprendre que SOLID ne signifie pas sur-ingenierie. Il s'agit d'une discipline de separation des roles, de contrats explicites et d'abstractions stables. Quand ces bases sont posees, le projet reste lisible même quand l'équipe change et quand le nombre de features double. Tu evites le scenario ou chaque modification devient risquee parce que le code ne sait plus delimite clairement presentation, logique métier et acces données.",
+          "id": "a3-009"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Single Responsibility sur un frontend moderne",
+          "id": "a3-010"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Composants UI: affichage et interactions locales uniquement.",
+            "Hooks métier: orchestration des cas d'usage et etats async.",
+            "Services API: détails transport, erreurs et mapping payload.",
+            "Utils purs: transformations deterministes et re-utilisables."
+          ],
+          "id": "a3-011"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand un composant React fetch, transforme, valide, render et gere des effets complexes en même temps, il devient difficile a relire et presque impossible a tester correctement. Decouper ces responsabilites te donne des unites plus petites, plus robustes et plus remplaçables. Cette granularite facilite aussi l'onboarding: un nouveau développeur comprend plus vite le role de chaque brique et peut contribuer sans craindre de casser des dependances cachees.",
+          "id": "a3-012"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Open/Closed et extensibilite du rendu contenu",
+          "id": "a3-013"
+        },
+        {
+          "type": "paragraph",
+          "content": "Ton renderer par blocs est un bon exemple d'application du principe Open/Closed. Tu veux pouvoir ajouter un nouveau type de bloc sans toucher les comportements stabilises des types existants. Cela passe par un contrat de schema clair et une logique de dispatch previsible. Quand tu respectes ce principe, les evolutions editoriales deviennent incrementales et peu risquées. Tu n'es plus force de retoucher le coeur à chaque variation de contenu, ce qui diminue fortement le risque de regression visuelle et fonctionnelle.",
+          "id": "a3-014"
+        },
+        {
+          "type": "code",
+          "language": "js",
+          "content": "function renderBlock(block) {\n  switch (block.type) {\n    case 'paragraph': return <Paragraph block={block} />\n    case 'heading': return <Heading block={block} />\n    case 'list': return <List block={block} />\n    // extension future sans casser l'existant\n    default: return null\n  }\n}",
+          "id": "a3-015"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "LSP, ISP et contrats de composants",
+          "id": "a3-016"
+        },
+        {
+          "type": "paragraph",
+          "content": "Dans le front, le principe de substitution se traduit par des composants qui respectent des attentes stables. Si une variante de carte remplace une autre, elle doit conserver les comportements essentiels: acces clavier, gestion loading/error, semantics HTML. La segregation des interfaces, elle, evite les props geantes et confuses. Un composant avec 25 props optionnelles est souvent le symptome d'un contrat mal decoupe. En preferant des interfaces courtes et specialisees, tu reduis les cas limites et tu simplifies les tests unitaires.",
+          "id": "a3-017"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Dependency Inversion: la page ne doit pas parler HTTP",
+          "id": "a3-018"
+        },
+        {
+          "type": "paragraph",
+          "content": "Une page doit dependre de cas d'usage, pas de détails de transport. concrètement, la page consomme un hook métier (`useArticles`) qui lui renvoie un etat propre. Le hook depend d'un service (`articleService`) qui encapsule API base URL, retry, normalisation et erreurs. Cette inversion te donne un levier très fort: tu peux changer le backend, ajouter un cache, mocker les appels en test, ou introduire une couche offline sans retoucher le rendu de la page.",
+          "id": "a3-019"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Resilience runtime et erreurs de chunks",
+          "id": "a3-020"
+        },
+        {
+          "type": "paragraph",
+          "content": "Dans les applications Vite avec lazy loading, les erreurs de dynamic import sont inevitables après certains deploys. Une architecture solide prevoit ce scenario: capture de l'erreur, fallback lisible, proposition de refresh, et eventuellement telemetrie pour mesurer la frequence. Ignorer ces erreurs, c'est laisser l'utilisateur face a un ecran casse. Les traiter proprement, c'est transformer un incident technique en expérience contrôlée. Cette couche de resilience fait partie de la qualité produit autant que la performance ou l'accessibilite.",
+          "id": "a3-021"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Plan de refactor progressif sans freeze produit",
+          "id": "a3-022"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Identifier 3 composants a forte complexite et les decomposer.",
+            "Extraire services API et hooks métier pour ces zones.",
+            "Normaliser les contracts de props et etats async.",
+            "Ajouter tests ciblant logique métier et erreurs runtime.",
+            "Etendre progressivement le pattern au reste du code."
+          ],
+          "id": "a3-023"
+        },
+        {
+          "type": "paragraph",
+          "content": "Ce plan evite le grand refactor bloqueur. Tu avances en flux continu, zone par zone, tout en conservant la capacite de livrer. Chaque iteration doit laisser le code un peu plus clair que la precedente. Avec cette stratégie, SOLID cesse d'etre une théorie et devient une pratique quotidienne qui soutient directement la scalabilite de ton frontend.",
+          "id": "a3-024"
+        },
+        {
+          "type": "quote",
+          "content": "Une architecture front reussie se voit surtout après 30 iterations, pas a la premiere demo.",
+          "author": "Frontend architecture review",
+          "id": "a3-025"
+        },
+        {
+          "type": "paragraph",
+          "content": "Appliquer SOLID dans React 19 + Vite n'alourdit pas le projet. Au contraire, cela reduit la charge cognitive, diminue les regressions et ameliore la vitesse de livraison durable. Pour un portfolio qui evolue souvent, cette discipline est un avantage competitif reel: tu peux ajouter des fonctionnalités rapidement sans transformer ta base code en terrain instable.",
+          "id": "a3-026"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Ce que l'équipe ressent quand l'architecture est saine",
+          "id": "a3-027"
+        },
+        {
+          "type": "paragraph",
+          "content": "Les reviews deviennent plus fluides parce que les intentions sont lisibles. Les bugs sont plus faciles a isoler parce que les responsabilites sont separees. Et surtout, on ose refactor sans peur de toucher un domino invisible.",
+          "id": "a3-028"
+        },
+        {
+          "type": "paragraph",
+          "content": "Cette confiance collective est un accelerateur enorme. On passe moins de temps a gerer la dette et plus de temps a livrer de la valeur visible.",
+          "id": "a3-029"
+        },
+        {
+          "type": "quote",
+          "content": "Un bon frontend n'est pas seulement beau. Il est facile a faire evoluer sans drame.",
+          "author": "Engineering culture",
+          "id": "a3-030"
+        },
+        {
+          "type": "paragraph",
+          "content": "Si tu veux garder un portfolio vivant sur plusieurs mois, SOLID est moins une option qu'une assurance. C'est ce qui te permet d'avancer vite aujourd hui sans payer le prix fort demain.",
+          "id": "a3-031"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Ce que cette discipline change au quotidien",
+          "id": "a3-032"
+        },
+        {
+          "type": "paragraph",
+          "content": "En review, les intentions sont plus nettes. En debug, les causes sont plus localisables. En refactor, l'équipe avance avec moins de peur parce que les responsabilites sont mieux delimitees.",
+          "id": "a3-033"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand le code devient plus previsible, la vitesse remonte naturellement. On passe moins de temps a gerer les effets de bord et plus de temps a livrer du concret.",
+          "id": "a3-034"
+        },
+        {
+          "type": "quote",
+          "content": "Mon objectif n'est pas un code parfait. Mon objectif est un code qui reste évolutif sous pression.",
+          "author": "Brondon Jores",
+          "id": "a3-035"
+        },
+        {
+          "type": "paragraph",
+          "content": "Si ton portfolio est amene a bouger souvent, cette architecture n'est pas du luxe. C'est ton filet de sécurité pour continuer a livrer proprement.",
+          "id": "a3-036"
+        }
+      ],
+      "tags": [
+        "react",
+        "vite",
+        "solid",
+        "frontend",
+        "architecture"
+      ],
+      "cover_image": "",
+      "likes": 0,
+      "published": true,
+      "published_at": "2026-03-10T09:00:00.000Z"
+    },
+    {
+      "title": "Core Web Vitals: 12 optimisations concretes pour un site perso",
+      "slug": "core-web-vitals-12-optimisations-site-perso",
+      "excerpt": "Ma stratégie Web Vitals pour un site premium: prioriser la vitesse perçue, la stabilité visuelle et la réactivité sur les vrais appareils des visiteurs.",
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Comment je traite la performance en vrai",
+          "id": "a4-001"
+        },
+        {
+          "type": "paragraph",
+          "content": "Je ne travaille jamais la performance uniquement pour un score. Je la travaille pour la sensation utilisateur: la page doit s'ouvrir vite, rester stable, et repondre sans inertie.",
+          "id": "a4-002"
+        },
+        {
+          "type": "paragraph",
+          "content": "Sur un portfolio, c'est encore plus critique. La performance est un signal de maîtrise. Si l'expérience est lente ou instable, le visiteur doute avant même de lire ton contenu.",
+          "id": "a4-003"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "La performance telle que les gens la ressentent",
+          "id": "a4-004"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un utilisateur ne mesure pas ton site avec un tableau de bord. Il ressent immediatement si la page apparait vite, si elle bouge pendant la lecture, et si les boutons repondent au bon moment. Cette perception decide souvent s'il continue la visite ou s'il ferme l'onglet.",
+          "id": "a4-005"
+        },
+        {
+          "type": "paragraph",
+          "content": "C'est pour ca que la performance doit rester connectee a l'expérience réelle. Les métriques sont des repères, pas une fin en soi. Le but est de rendre le site agreable a utiliser dans les conditions imparfaites du quotidien.",
+          "id": "a4-006"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Arreter de courir après un score de labo unique",
+          "id": "a4-007"
+        },
+        {
+          "type": "paragraph",
+          "content": "Les Core Web Vitals sont utiles, mais le danger est de confondre score et expérience. Un bon score en environnement ideal ne garantit pas une bonne perception sur mobile ancien, reseau instable ou CPU limite. L'utilisateur juge ce qu'il ressent: le contenu principal arrive-t-il vite, la page bouge-t-elle pendant la lecture, les interactions repondent-elles immediatement. Pour progresser durablement, il faut combiner mesures de labo et données réelles, puis prioriser les corrections selon impact concret sur le parcours visiteur.",
+          "id": "a4-008"
+        },
+        {
+          "type": "paragraph",
+          "content": "La performance n'est pas une tâche ponctuelle de fin de sprint. C'est une pratique produit continue, au même titre que la sécurité et la qualité. Chaque nouvelle section, chaque animation, chaque script tiers consomme une partie du budget. Si ce budget n'est pas pilote, la dette se cumule silencieusement. En mettant des objectifs explicites sur LCP, CLS et INP, tu transformés la performance en critere de decision au moment du design et du développement, pas seulement au moment de l'audit.",
+          "id": "a4-009"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Optimiser LCP: livrer vite le contenu qui compte",
+          "id": "a4-010"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Identifier l'element LCP reel (hero image, titre, bloc principal).",
+            "Compresser et servir le media au bon format.",
+            "Preload uniquement la ressource critique du premier ecran.",
+            "Retarder scripts non essentiels qui competes avec le rendu.",
+            "éviter composants lourds au-dessus de la ligne de flottaison."
+          ],
+          "id": "a4-011"
+        },
+        {
+          "type": "paragraph",
+          "content": "Dans un portfolio, le LCP est souvent le visuel hero ou la premiere carte projet. Si cet element arrive tard, tout le site parait lent, même si le reste est bien optimise. Une correction LCP bien ciblee apporte souvent le gain perceptible le plus fort. La règle est simple: prioriser ce que l'utilisateur doit voir en premier, et reporter tout ce qui peut attendre quelques centaines de millisecondes sans degrader la comprehension de la page.",
+          "id": "a4-012"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Eliminer le CLS: stabilité visuelle avant sophistication",
+          "id": "a4-013"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Toujours definir width et height sur images et miniatures.",
+            "Reserver un espace pour widgets charges en asynchrone.",
+            "éviter l'insertion tardive de banniere sans placeholder.",
+            "Controler la stratégie de police pour limiter les sauts texte."
+          ],
+          "id": "a4-014"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le CLS est souvent sous-estime car il ne ressemble pas a une lenteur classique. Pourtant il detruit la confiance: l'utilisateur vise un bouton, le layout bouge, le clic part ailleurs. Sur mobile, cet effet est encore plus visible. Corriger CLS est souvent peu couteux techniquement et extremement rentable en UX. Le simple fait de dimensionner correctement les images projets et articles peut faire disparaitre la majeure partie de l'instabilite perçue.",
+          "id": "a4-015"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Ameliorer INP: fluidité interactionnelle sous charge réelle",
+          "id": "a4-016"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Decouper les taches JS longues sur le thread principal.",
+            "Reporter scripts tiers et analytics en idle.",
+            "Limiter rerenders inutiles des composants lourds.",
+            "Debouncer les interactions de recherche et filtrage.",
+            "Profiler les handlers de clic les plus frequents."
+          ],
+          "id": "a4-017"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un INP dégradé vient rarement d'une seule fonction catastrophique. C'est souvent l'accumulation de petits couts: listeners globaux, parsing massif, animations complexes, librairies chargees trop tot. Pour corriger, tu dois profiler les interactions critiques et eliminer les couts invisibles qui s'ajoutent. L'objectif est de conserver une sensation de reponse immediate, même quand la page contient beaucoup d'elements et de logique dynamique.",
+          "id": "a4-018"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "12 optimisations prioritaires pour un portfolio full stack",
+          "id": "a4-019"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Dimensions explicites sur toutes les images projects/blog.",
+            "Formats modernes et tailles adaptees au viewport.",
+            "Code splitting route-based et lazy sections lourdes.",
+            "Cache immutable sur assets hashes.",
+            "No-store sur index.html pour éviter chunks obsoletes.",
+            "Fallback UX propre pour erreurs dynamic import.",
+            "réduction scripts tiers et chargement differe.",
+            "Memoization des listes et cartes animees.",
+            "Preconnect vers origines critiques externes.",
+            "Compression stable en build CI.",
+            "Monitoring Web Vitals en production.",
+            "Revue performance à chaque release majeure."
+          ],
+          "id": "a4-020"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Rituel d'execution hebdomadaire qui tient dans la duree",
+          "id": "a4-021"
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "content": "Lundi: mesurer LCP/CLS/INP réelles\nMardi: choisir 1 priorite a fort impact\nMercredi: corriger la cause racine\nJeudi: déploiement progressif\nVendredi: validation post deploy + documentation",
+          "id": "a4-022"
+        },
+        {
+          "type": "paragraph",
+          "content": "Ce rituel t'empeche de disperser l'effort sur dix micro-corrections sans impact visible. Tu prends un irritant majeur, tu le traites jusqu'au bout, et tu verifies le résultat sur données réelles. Au fil des semaines, tu construis une culture performance concrètement utile. Le site reste rapide même quand le contenu grossit, ce qui est essentiel pour un portfolio vivant qui evolue continuellement.",
+          "id": "a4-023"
+        },
+        {
+          "type": "quote",
+          "content": "La meilleure optimisation est celle que l'utilisateur ressent sans effort conscient.",
+          "author": "Web performance engineering",
+          "id": "a4-024"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un site personnel performant donne immediatement une impression de maîtrise professionnelle. En combinant optimisation technique, priorisation produit et discipline de mesure, tu peux maintenir un niveau premium sur desktop et mobile sans sacrifier ton identite visuelle. C'est cette constance qui transforme la performance en avantage de credibilite.",
+          "id": "a4-025"
+        },
+        {
+          "type": "paragraph",
+          "content": "Les polices web meritent aussi une attention particuliere. Un mauvais chargement de fonts peut degrader simultanement LCP et CLS. La stratégie recommandee est de limiter le nombre de variantes, d'utiliser font-display adapte et de precharger seulement les ressources vraiment critiques. Sur un portfolio, une typographie premium reste possible sans sacrifier la vitesse, a condition de traiter les fonts comme des assets critiques et non comme un detail cosmétique.",
+          "id": "a4-026"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Transformer la perf en réflexe d'équipe",
+          "id": "a4-027"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le plus grand changement vient d'un rituel simple: mesurer, prioriser une douleur visible, corriger, puis re-mesurer. Cette boucle courte cree des progres constants sans immobiliser le projet.",
+          "id": "a4-028"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand cette pratique devient habituelle, le design et la technique avancent ensemble. Tu n'opposes plus esthétique et rapidite: tu construis une interface premium qui reste fluide.",
+          "id": "a4-029"
+        },
+        {
+          "type": "quote",
+          "content": "La performance est une promesse de respect du temps utilisateur.",
+          "author": "UX engineering",
+          "id": "a4-030"
+        },
+        {
+          "type": "paragraph",
+          "content": "Au final, un site rapide inspire confiance. Et sur un portfolio, cette confiance est decisive: elle parle de ton niveau avant même que le visiteur lise la premiere ligne de presentation.",
+          "id": "a4-031"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "La méthode que j'applique sprint après sprint",
+          "id": "a4-032"
+        },
+        {
+          "type": "paragraph",
+          "content": "Je mesure d'abord en conditions réelles, je choisis un irritant majeur, puis je corrige la cause racine. Cette boucle courte evite la dispersion et cree des gains visibles en continu.",
+          "id": "a4-033"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le vrai secret, ce n'est pas une astuce magique. C'est la constance. Chaque release doit respecter un budget perf clair, sinon la dette revient en silence.",
+          "id": "a4-034"
+        },
+        {
+          "type": "quote",
+          "content": "La performance n'est pas une option de finition. C'est une promesse d'expérience.",
+          "author": "Brondon Jores",
+          "id": "a4-035"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand tu maintiens cette exigence dans la duree, ton site reste rapide même en grandissant. Et c'est exactement ce que les utilisateurs retiennent.",
+          "id": "a4-036"
+        }
+      ],
+      "tags": [
+        "performance",
+        "core-web-vitals",
+        "frontend",
+        "ux",
+        "vite"
+      ],
+      "cover_image": "",
+      "likes": 0,
+      "published": true,
+      "published_at": "2026-03-09T09:00:00.000Z"
+    },
+    {
+      "title": "2FA TOTP pour admin: implementation propre et UX claire",
+      "slug": "2fa-totp-admin-implementation-propre-ux-claire",
+      "excerpt": "Mon guide 2FA admin: sécurité forte, parcours clair et procedures de recuperation qui tiennent dans des situations réelles.",
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Ma philosophie sur le MFA admin",
+          "id": "a5-001"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le 2FA ne sert pas a rassurer sur une slide. Il sert a encaisser un incident sans perdre le contrôle. C'est pour ca que je pense autant au flux de recuperation qu'au flux d'activation.",
+          "id": "a5-002"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un bon MFA, c'est un equilibre: strict pour l'attaquant, fluide pour l'utilisateur legitime. Si tu rates cet equilibre, tu auras soit des contournements, soit une expérience admin penible.",
+          "id": "a5-003"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "La sécurité qui tient le jour ou ca va mal",
+          "id": "a5-004"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le 2FA devient vraiment utile le jour ou un credential fuit, pas le jour de la demo. Dans ce moment la, ce qui compte n'est pas seulement l'algorithme, mais la qualité complete du système: activation, verification, recuperation et journalisation.",
+          "id": "a5-005"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un bon design MFA doit donc traiter autant l'humain que la technique. L'admin doit savoir quoi faire en quelques secondes, même sous stress. Sinon, la sécurité est forte sur le papier mais fragile en situation réelle.",
+          "id": "a5-006"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Pourquoi le 2FA admin est devenu obligatoire",
+          "id": "a5-007"
+        },
+        {
+          "type": "paragraph",
+          "content": "Un compte admin compromet peut modifier le contenu public, envoyer des campagnes non desirees, exposer des données et nuire durablement a la reputation du site. Dans ce contexte, le mot de passe seul n'est plus suffisant. Entre credential stuffing, phishing et fuites de secrets, la compromission d'un premier facteur reste probable. Le TOTP ajoute une preuve temporelle de possession qui bloque une grande partie des attaques opportunistes. Ce n'est pas une option de confort: c'est une exigence de base pour toute interface d'administration exposee sur internet.",
+          "id": "a5-008"
+        },
+        {
+          "type": "paragraph",
+          "content": "Mais activer un second facteur sans design UX clair peut produire l'effet inverse: erreurs frequentes, desactivation de sécurité et tickets support en hausse. L'enjeu est donc double: eleve le niveau de protection tout en gardant un parcours simple pour l'utilisateur legitime. Un bon système 2FA est invisible quand tout va bien, et decisif quand un incident survient. Cette alliance entre sécurité et ergonomie doit etre pensee des la conception.",
+          "id": "a5-009"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Parcours setup: precision et pedagogie",
+          "id": "a5-010"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Afficher QR code et secret manuel en fallback.",
+            "Demander une verification immediate du premier code TOTP.",
+            "Fournir des consignes courtes et actionnables à chaque etape.",
+            "Montrer les recovery codes une seule fois avec confirmation.",
+            "Journaliser activation avec timestamp et contexte de session."
+          ],
+          "id": "a5-011"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le setup est la phase la plus sensible car une mauvaise activation donne une fausse impression de sécurité. Sans verification immediate, l'admin peut quitter le flux avec un secret mal enregistre. Sans recovery codes fiables, la perte de telephone devient un blocage operationnel. Il faut donc un parcours court, explicite, et strict dans les verifications. L'objectif est simple: sortir du setup avec une protection active et testee, pas seulement configuree en apparence.",
+          "id": "a5-012"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Stockage securise: chiffrer, hacher, limiter",
+          "id": "a5-013"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Secret TOTP chiffre en base (pas en clair).",
+            "Recovery codes hashes avec pepper applicatif.",
+            "Token de challenge MFA a expiration courte.",
+            "Rotation des recovery codes avec invalidation des anciens.",
+            "Interdiction de logger secrets et codes sensibles."
+          ],
+          "id": "a5-014"
+        },
+        {
+          "type": "code",
+          "language": "text",
+          "content": "MFA_ENCRYPTION_KEY=...\nMFA_RECOVERY_PEPPER=...\nJWT_MFA_SECRET=...\nJWT_MFA_EXPIRES=5m\nTOTP_DIGITS=6\nTOTP_PERIOD=30\nTOTP_WINDOW=1",
+          "id": "a5-015"
+        },
+        {
+          "type": "paragraph",
+          "content": "La robustesse d'un système MFA ne repose pas uniquement sur l'algorithme TOTP. Elle repose aussi sur la maniere dont les secrets sont manipules dans toute la chaine technique. Si un secret est logge, si un recovery code est stocke en clair, ou si un challenge MFA vit trop longtemps, la surface d'attaque redevient importante. Les choix de stockage et de duree de vie doivent etre traites comme des contrôles critiques au même niveau que le login principal.",
+          "id": "a5-016"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Limiter les abus sans casser l'usage legitime",
+          "id": "a5-017"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le endpoint de verification MFA doit etre protege par un rate limit dedie pour ralentir les tentatives automatisees. En parallele, les messages d'erreur doivent rester utiles mais non revelateurs. Tu veux aider l'utilisateur legitime a corriger une erreur de saisie sans donner d'indices exploitables a un attaquant. Enfin, les opérations sensibles autour du 2FA (activation, desactivation, regeneration recovery codes) doivent exiger une preuve forte et laisser une trace auditable. C'est ce trio qui transforme une fonctionnalite en mecanisme de défense operationnel.",
+          "id": "a5-018"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Recuperation compte et support incident",
+          "id": "a5-019"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Procedure claire pour perte appareil avec recovery code.",
+            "Desactivation MFA uniquement après preuve forte.",
+            "Notification utilisateur sur tout changement MFA.",
+            "Audit trail consultable par administrateur autorise.",
+            "Exercice periodique de simulation perte appareil."
+          ],
+          "id": "a5-020"
+        },
+        {
+          "type": "paragraph",
+          "content": "La qualité d'un système MFA se voit le jour ou un incident arrive. Si le parcours de recuperation est improvise, l'équipe support prend des decisions a risque sous pression. Au contraire, une procedure preparee a l'avance permet de recuperer l'acces sans ouvrir une faille. L'architecture de sécurité doit donc inclure les opérations humaines: scripts support, checklist de verification, et journal d'actions pour garder une piste de confiance complete.",
+          "id": "a5-021"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Mesurer la maturite 2FA dans le temps",
+          "id": "a5-022"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quelques métriques suffisent pour piloter: taux d'activation 2FA admin, taux d'échec verification, utilisation recovery codes, et incidents d'acces bloques. Ces indicateurs doivent etre suivis avec des seuils simples pour declencher une revue. Si les echecs montent, le parcours UX est peut-etre confus. Si les recovery codes sont sur-utilises, les utilisateurs ne comprennent peut-etre pas la sauvegarde initiale. En reliant métriques techniques et feedback humain, tu fais evoluer le système sans affaiblir sa sécurité.",
+          "id": "a5-023"
+        },
+        {
+          "type": "quote",
+          "content": "Un 2FA solide protege l'organisation, un 2FA brouillon la ralentit.",
+          "author": "Identity security practice",
+          "id": "a5-024"
+        },
+        {
+          "type": "paragraph",
+          "content": "Deployer un vrai 2FA admin, c'est combiner cryptographie, ergonomie et opérations. Quand ces trois dimensions sont bien alignees, tu reduis fortement le risque de compromission tout en gardant une expérience admin fluide. C'est exactement ce niveau de maturite qui distingue une protection symbolique d'une protection fiable en conditions réelles.",
+          "id": "a5-025"
+        },
+        {
+          "type": "paragraph",
+          "content": "Il est aussi utile de definir des indicateurs de confiance autour du MFA: nombre de desactivations, delai moyen de resolution des pertes appareil, proportion de comptes admin sans 2FA, et motifs d'échec les plus frequents. Ces indicateurs aident a separer un probleme UX d'un probleme de sécurité. Si les echecs viennent surtout de saisie, il faut clarifier le parcours. Si les echecs ressemblent a des tentatives automatisees, il faut durcir la défense et les alertes.",
+          "id": "a5-026"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Pourquoi UX et sécurité doivent avancer ensemble",
+          "id": "a5-027"
+        },
+        {
+          "type": "paragraph",
+          "content": "Si le parcours est confus, les erreurs montent et les contournements apparaissent. Si le parcours est trop laxiste, la sécurité s'effondre. L'equilibre se trouve dans des etapes courtes, des messages clairs et des contrôles stricts sur les actions sensibles.",
+          "id": "a5-028"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand cet equilibre est bien tenu, l'équipe support respire mieux et les admins gardent confiance dans l'outil, même pendant un incident.",
+          "id": "a5-029"
+        },
+        {
+          "type": "quote",
+          "content": "Un MFA reussi est discret dans le quotidien, decisif dans la crise.",
+          "author": "Identity security",
+          "id": "a5-030"
+        },
+        {
+          "type": "paragraph",
+          "content": "Ce niveau de maturite te donne bien plus qu'une case cochee en sécurité: il te donne une capacite de reaction solide, sans improvisation dangereuse.",
+          "id": "a5-031"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Ce que je verrouille systematiquement",
+          "id": "a5-032"
+        },
+        {
+          "type": "paragraph",
+          "content": "Je securise les secrets, je hache les recovery codes, je limite les tentatives, et je trace toutes les opérations sensibles. Ensuite je teste les cas de perte appareil, pas seulement le happy path.",
+          "id": "a5-033"
+        },
+        {
+          "type": "paragraph",
+          "content": "C'est cette rigueur operationnelle qui evite les decisions d'urgence dangereuses quand un admin est bloque ou quand une activite suspecte apparait.",
+          "id": "a5-034"
+        },
+        {
+          "type": "quote",
+          "content": "Le vrai test du MFA, c'est le jour ou quelqu'un essaie vraiment de passer.",
+          "author": "Brondon Jores",
+          "id": "a5-035"
+        },
+        {
+          "type": "paragraph",
+          "content": "Avec cette approche, tu obtiens une sécurité qui tient en pratique, pas seulement en théorie. Et ca change totalement le niveau de confiance sur ton back-office.",
+          "id": "a5-036"
+        }
+      ],
+      "tags": [
+        "2fa",
+        "totp",
+        "sécurité",
+        "auth",
+        "admin"
+      ],
+      "cover_image": "",
+      "likes": 0,
+      "published": true,
+      "published_at": "2026-03-08T09:00:00.000Z"
+    },
+    {
+      "title": "Taxonomie de projets: sortir du chaos des tags libres",
+      "slug": "taxonomie-projets-sortir-chaos-tags-libres",
+      "excerpt": "Ma méthode de taxonomie projet pour scaler proprement: structure claire, normalisation automatique et publication rapide sans explosion de tags.",
+      "blocks": [
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Pourquoi je structure la taxonomie très tot",
+          "id": "a6-001"
+        },
+        {
+          "type": "paragraph",
+          "content": "J'ai vu trop de catalogues devenir ingouvernables parce que la structure est arrivee trop tard. Au debut, les tags libres paraissent pratiques. Puis le volume monte, et tout devient flou.",
+          "id": "a6-002"
+        },
+        {
+          "type": "paragraph",
+          "content": "Structurer des le depart, ce n'est pas bureaucratique. C'est un gain de vitesse a moyen terme. Tu publies plus vite, tu retrouves mieux, et tes filtres restent utiles.",
+          "id": "a6-003"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Quand la croissance du contenu commence a faire mal",
+          "id": "a6-004"
+        },
+        {
+          "type": "paragraph",
+          "content": "Au debut, les tags libres semblent accelerer la publication. Puis la base grossit et la confusion apparait: memes notions ecrites différemment, catégories qui se chevauchent, filtres qui n'aident plus personne. Ce qui devait simplifier finit par ralentir toute l'équipe.",
+          "id": "a6-005"
+        },
+        {
+          "type": "paragraph",
+          "content": "La taxonomie n'est pas une contrainte administrative. C'est une infrastructure de clarté. Elle rend le contenu retrouvable, comparable et exploitable, ce qui devient vital quand les projets se multiplient.",
+          "id": "a6-006"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Pourquoi les tags libres deviennent vite ingouvernables",
+          "id": "a6-007"
+        },
+        {
+          "type": "paragraph",
+          "content": "Au debut, les tags libres semblent pratiques: on ajoute ce qu'on veut, vite, sans friction. Mais des que le nombre de projets augmente, cette liberte produit du bruit: doublons, variantes orthographiques, synonymes non relies, confusion entre techno et métier. Les filtres perdent en pertinence, la recherche devient aleatoire, et l'admin passe plus de temps a nettoyer qu'a publier. Le probleme n'est pas le volume de contenu. Le probleme est l'absence de structure qui permet d'absorber ce volume proprement.",
+          "id": "a6-008"
+        },
+        {
+          "type": "paragraph",
+          "content": "Quand la taxonomie est floue, même les analyses internes deviennent trompeuses. Tu crois avoir 10 projets Java alors que 4 sont tagges `java`, 3 `jakarta-ee`, 2 `jakarta servlet` et 1 `jsp`. Sans règle de normalisation, les statistiques ne representent pas la réalité. Cette incoherence se propage ensuite au SEO, aux pages de filtre et aux recommandations d'articles similaires. Une taxonomie propre est donc un levier produit, technique et editorial en même temps.",
+          "id": "a6-009"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Option A: un modele a 5 axes lisible et évolutif",
+          "id": "a6-010"
+        },
+        {
+          "type": "list",
+          "items": [
+            "type: nature du livrable (site-vitrine, api, dashboard, cms).",
+            "stack: architecture dominante (full-stack, backend-api, frontend-spa).",
+            "technologies: outils techniques concrets (react, node, redis, mysql).",
+            "domains: contexte métier (association, juridique, education, sante).",
+            "labels: marqueurs editoriaux optionnels, limites en nombre."
+          ],
+          "id": "a6-011"
+        },
+        {
+          "type": "paragraph",
+          "content": "Ce decoupage evite les melanges conceptuels. Une technologie ne doit pas etre confondue avec un domaine. Un type de projet ne doit pas etre confondu avec une stack. Quand chaque axe a un role clair, les filtres sont compréhensibles, les facettes restent stables, et l'expérience utilisateur devient previsible. Tu peux alors faire grandir le catalogue sans perdre en qualité de navigation ni exploser le nombre de valeurs inutiles.",
+          "id": "a6-012"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Gouvernance et normalisation: le vrai moteur de scalabilite",
+          "id": "a6-013"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Dictionnaire canonique par axe, versionne dans le code.",
+            "Aliases mappe vers valeurs de reference (nodejs -> node).",
+            "Cardinalite limitee (ex: max 1 type, 1 stack, 8 technologies).",
+            "Validation stricte a l'import avec erreurs explicites.",
+            "Normalisation automatique lowercase + trim + dedup."
+          ],
+          "id": "a6-014"
+        },
+        {
+          "type": "paragraph",
+          "content": "Le schema doit etre enforce automatiquement. Une convention ecrite sans validation finit toujours par diverger. L'ideal est de centraliser la normalisation dans le backend d'import pour garantir la cohérence quelle que soit la source (form admin, import JSON, migration). Avec des erreurs claires et actionnables, l'équipe comprend vite comment corriger les valeurs et la qualité de données se stabilise durablement.",
+          "id": "a6-015"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Migration depuis un historique heterogene sans tout casser",
+          "id": "a6-016"
+        },
+        {
+          "type": "paragraph",
+          "content": "La migration doit etre progressive. D'abord, extraire toutes les valeurs existantes et construire une table de correspondance vers les valeurs canoniques. Ensuite, appliquer une migration retroactive avec journal des transformations. Puis activer une phase de compatibilite ou les anciens tags restent reconnus en lecture mais ne sont plus acceptes en ecriture. Enfin, supprimer la couche legacy quand les filtres, liens et parcours SEO sont confirmes stables. Cette approche minimise les regressions tout en assainissant durablement le catalogue.",
+          "id": "a6-017"
+        },
+        {
+          "type": "code",
+          "language": "json",
+          "content": "{\n  \"aliases\": {\n    \"nodejs\": \"node\",\n    \"postgres\": \"postgresql\",\n    \"site institutionnel\": \"site-institutionnel\"\n  },\n  \"limits\": {\n    \"type\": 1,\n    \"stack\": 1,\n    \"technologies\": 8,\n    \"domains\": 4,\n    \"labels\": 6\n  }\n}",
+          "id": "a6-018"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Impact produit: recherche, filtres, recommandations",
+          "id": "a6-019"
+        },
+        {
+          "type": "paragraph",
+          "content": "Une taxonomie propre ameliore directement l'expérience visiteur: filtres plus pertinents, pages de catégories plus coherentes, et navigation plus rapide vers les projets similaires. Cote admin, elle reduit la charge mentale au moment de publier un nouveau projet. Cote data, elle rend les statistiques exploitables pour prendre de vraies decisions: quelles stacks dominent, quels domaines progressent, quelles technos sont sur-representees ou absentes. Tu passes d'un catalogue decoratif a un catalogue pilotable.",
+          "id": "a6-020"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Rituel de maintenance qui evite le retour du chaos",
+          "id": "a6-021"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Revue mensuelle des nouveaux tags proposes.",
+            "Ajout d'aliases uniquement après validation équipe.",
+            "Deprecation explicite des valeurs obsoletes.",
+            "Tests d'import qui bloquent les valeurs hors schema.",
+            "Documentation courte et visible dans l'interface admin."
+          ],
+          "id": "a6-022"
+        },
+        {
+          "type": "paragraph",
+          "content": "La taxonomie n'est pas un chantier one-shot. C'est un contrat vivant qui doit evoluer avec le produit sans perdre sa lisibilité. Avec un rituel simple et des contrôles automatiques, tu maintiens cet equilibre dans la duree. C'est exactement ce qui evite l'effet exponentiel quand le nombre de projets, de technologies et de contextes métier continue de croitre.",
+          "id": "a6-023"
+        },
+        {
+          "type": "quote",
+          "content": "Une taxonomie utile n'est pas celle qui decrit tout, c'est celle qui reste exploitable quand le volume double.",
+          "author": "Content architecture practice",
+          "id": "a6-024"
+        },
+        {
+          "type": "paragraph",
+          "content": "En appliquant ce cadre, tu gardes une base propre, des filtres fiables et une administration fluide. Option A devient alors bien plus qu'une convention: c'est un socle de scalabilite editoriale qui t'evite de replatformer ton contenu dans six mois.",
+          "id": "a6-025"
+        },
+        {
+          "type": "paragraph",
+          "content": "Pour conserver une expérience admin fluide, le formulaire de projet peut proposer des suggestions automatiques basées sur la liste canonique et refuser les valeurs hors schema avec des messages explicites. Cette assistance UX reduit les erreurs de saisie et accelere la publication. Au lieu de corriger après coup, tu empeches la derive au moment ou la donnee est creee.",
+          "id": "a6-026"
+        },
+        {
+          "type": "paragraph",
+          "content": "La taxonomie peut aussi alimenter des facettes publiques stables: filtrage par type, stack, technologies et domaines avec comptages fiables. Cette structure renforce la navigation et augmente la decouvrabilite de ton portfolio. Plus le catalogue grossit, plus cette cohérence devient un avantage concret pour les visiteurs et pour ton propre pilotage editorial.",
+          "id": "a6-027"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Le gain concret pour l'admin et pour les visiteurs",
+          "id": "a6-028"
+        },
+        {
+          "type": "paragraph",
+          "content": "Cote admin, une structure claire reduit les hesitations au moment de publier. Cote public, elle rend la navigation plus intuitive et les resultats de filtres plus utiles. Les deux benefices arrivent en même temps quand le modele est bien pensé.",
+          "id": "a6-029"
+        },
+        {
+          "type": "paragraph",
+          "content": "Avec des règles simples, une normalisation automatique et une gouvernance legere, tu elimines la derive sans alourdir le workflow quotidien.",
+          "id": "a6-030"
+        },
+        {
+          "type": "quote",
+          "content": "Une bonne taxonomie, c'est une croissance du contenu sans croissance du chaos.",
+          "author": "Content architecture",
+          "id": "a6-031"
+        },
+        {
+          "type": "paragraph",
+          "content": "En gardant ce cadre, tu prepares ton portfolio a long terme. Tu peux ajouter des projets, des stacks et des domaines sans perdre la maîtrise de l'ensemble.",
+          "id": "a6-032"
+        },
+        {
+          "type": "heading",
+          "level": 2,
+          "content": "Mon principe: simple, strict, évolutif",
+          "id": "a6-033"
+        },
+        {
+          "type": "paragraph",
+          "content": "Je garde peu d'axes mais je les tiens fermement: type, stack, technologies, domains, labels. J'ajoute ensuite aliases et limites de cardinalite pour éviter la derive.",
+          "id": "a6-034"
+        },
+        {
+          "type": "paragraph",
+          "content": "Cette discipline rend les recherches plus pertinentes et les statistiques enfin exploitables. Le catalogue devient un actif produit, pas juste une liste decorative.",
+          "id": "a6-035"
+        },
+        {
+          "type": "quote",
+          "content": "Une taxonomie reussie te fait gagner du temps aujourd hui et t'evite un chantier massif demain.",
+          "author": "Brondon Jores",
+          "id": "a6-036"
+        },
+        {
+          "type": "paragraph",
+          "content": "Si ton portefeuille de projets est amene a grandir, cette base te fera gagner des mois de maintenance et te donnera une cohérence editoriale durable.",
+          "id": "a6-037"
+        }
+      ],
+      "tags": [
+        "taxonomie",
+        "projets",
+        "architecture",
+        "cms",
+        "scalabilite"
+      ],
+      "cover_image": "",
+      "likes": 0,
+      "published": true,
+      "published_at": "2026-03-07T09:00:00.000Z"
+    }
+  ],
+  "replaceExisting": true
+}
