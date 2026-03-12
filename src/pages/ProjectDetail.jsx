@@ -91,16 +91,31 @@ export default function ProjectDetail() {
           <header className="mb-8">
             {/* Image du projet */}
             {project.image_url && (
-              <img
-                src={project.image_url}
-                alt={project.title}
-                className="w-full max-h-[30rem] object-contain rounded-xl mb-6 p-2"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 72%, transparent)' }}
-                loading="lazy"
-                decoding="async"
-                width="1600"
-                height="900"
-              />
+              <div
+                className="mb-6 rounded-[1.5rem] border p-1.5 sm:p-2 overflow-hidden"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--color-border) 80%, var(--color-accent))',
+                  background:
+                    'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-secondary) 86%, transparent), color-mix(in srgb, var(--color-accent-glow) 26%, transparent))',
+                  boxShadow: '0 24px 60px color-mix(in srgb, var(--color-accent-glow) 16%, transparent)',
+                }}
+              >
+                <div
+                  className="overflow-hidden rounded-[1.15rem]"
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 82%, transparent)' }}
+                >
+                  <img
+                    src={project.image_url}
+                    alt={project.title}
+                    className="w-full max-h-[36rem] object-contain object-top"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                    width="1600"
+                    height="900"
+                  />
+                </div>
+              </div>
             )}
             <h1
               className="text-4xl font-bold mb-4"

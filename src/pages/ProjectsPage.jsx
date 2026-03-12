@@ -186,21 +186,31 @@ export default function ProjectsPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.4, delay: i * 0.05, ease: 'easeOut' }}
                     >
-                      <Card className="h-full flex flex-col overflow-hidden !p-0">
+                      <Card className="group h-full flex flex-col overflow-hidden !p-0">
                         {/* Image du projet */}
                         {project.image_url ? (
                           <div
-                            className="w-full h-44 md:h-48 overflow-hidden flex-shrink-0"
-                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 74%, transparent)' }}
+                            className="relative w-full h-48 md:h-52 overflow-hidden flex-shrink-0"
+                            style={{
+                              background:
+                                'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-primary) 86%, transparent), color-mix(in srgb, var(--color-accent-glow) 28%, transparent))',
+                            }}
                           >
                             <img
                               src={project.image_url}
                               alt={project.title}
-                              className="w-full h-full object-contain p-2 transition-transform duration-300 hover:scale-[1.02]"
+                              className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.05]"
                               loading="lazy"
                               decoding="async"
                               width="1200"
                               height="675"
+                            />
+                            <div
+                              className="pointer-events-none absolute inset-0"
+                              style={{
+                                background:
+                                  'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-primary) 18%, transparent) 100%)',
+                              }}
                             />
                           </div>
                         ) : (

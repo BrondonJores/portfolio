@@ -10,14 +10,78 @@ const API_BASE = import.meta.env.VITE_API_URL || ''
 
 /* Types autorisés et taille max */
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const MAX_SIZE_MB = 5
+const MAX_SIZE_MB = 12
+const BYTES_PER_MB = 1024 * 1024
+const COMPRESSION_THRESHOLD_MB = 2.5
+const TARGET_COMPRESSED_SIZE_MB = 1.8
+const TARGET_COMPRESSED_SIZE_MB_LARGE = 2.4
+const MAX_OUTPUT_DIMENSION_PX = 2200
+const LOSSLESS_TYPES = new Set(['image/gif'])
 
 /* Options de compression */
 const COMPRESSION_OPTIONS = {
-  maxSizeMB: 0.2,
-  maxWidthOrHeight: 800,
-  initialQuality: 0.8,
+  maxWidthOrHeight: MAX_OUTPUT_DIMENSION_PX,
+  initialQuality: 0.92,
   useWebWorker: true,
+}
+
+/**
+ * Lit les dimensions réelles d'une image côté navigateur.
+ * @param {File} file Fichier source.
+ * @returns {Promise<{width:number,height:number}>} Dimensions détectées.
+ */
+function readImageDimensions(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file)
+    const image = new Image()
+
+    image.onload = () => {
+      resolve({
+        width: image.naturalWidth || 0,
+        height: image.naturalHeight || 0,
+      })
+      URL.revokeObjectURL(objectUrl)
+    }
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error("Impossible d'analyser l'image sélectionnée."))
+    }
+
+    image.src = objectUrl
+  })
+}
+
+/**
+ * Allège une image uniquement quand elle est réellement lourde pour l'affichage.
+ * Les GIF sont conservés tels quels pour éviter de casser l'animation.
+ * @param {File} file Fichier source.
+ * @returns {Promise<File|Blob>} Fichier à uploader.
+ */
+async function prepareFileForUpload(file) {
+  if (LOSSLESS_TYPES.has(file.type)) {
+    return file
+  }
+
+  const { width, height } = await readImageDimensions(file)
+  const largestSide = Math.max(width, height)
+  const shouldCompress =
+    file.size > COMPRESSION_THRESHOLD_MB * BYTES_PER_MB
+    || largestSide > MAX_OUTPUT_DIMENSION_PX
+
+  if (!shouldCompress) {
+    return file
+  }
+
+  const compressed = await imageCompression(file, {
+    ...COMPRESSION_OPTIONS,
+    maxSizeMB:
+      file.size > 6 * BYTES_PER_MB
+        ? TARGET_COMPRESSED_SIZE_MB_LARGE
+        : TARGET_COMPRESSED_SIZE_MB,
+  })
+
+  return compressed.size < file.size ? compressed : file
 }
 
 /**
@@ -35,7 +99,7 @@ export default function ImageUploader({ value = '', onUpload, label, className =
   const [error, setError] = useState('')
   const { accessToken } = useAuthContext()
 
-  /* Upload du fichier après compression */
+  /* Upload du fichier après optimisation */
   const handleFile = async (file) => {
     setError('')
 
@@ -51,12 +115,12 @@ export default function ImageUploader({ value = '', onUpload, label, className =
 
     setUploading(true)
     try {
-      /* Compression côté client */
-      const compressed = await imageCompression(file, COMPRESSION_OPTIONS)
+      /* Compression douce uniquement si nécessaire */
+      const preparedFile = await prepareFileForUpload(file)
 
       /* Préparation du FormData */
       const formData = new FormData()
-      formData.append('image', compressed, file.name)
+      formData.append('image', preparedFile, file.name)
 
       /* Headers avec token si connecté */
       const headers = {}
@@ -161,7 +225,10 @@ export default function ImageUploader({ value = '', onUpload, label, className =
                 Glisser-déposer ou cliquer pour parcourir
               </span>
               <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                jpg, png, webp, gif — max 5 Mo
+                jpg, png, webp, gif — max 12 Mo
+              </span>
+              <span className="text-[11px] text-center px-6" style={{ color: 'var(--color-text-secondary)' }}>
+                Pour un rendu net, privilégie une image de 1600 px ou plus. Compression légère seulement si besoin.
               </span>
             </>
           )}

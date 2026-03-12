@@ -4,6 +4,7 @@ const {
   detectImageMimeFromMagicBytes,
   detectPdfMimeFromMagicBytes,
   detectVideoMimeFromMagicBytes,
+  MAX_IMAGE_UPLOAD_BYTES,
   validateDocumentUpload,
   validateImageUpload,
   validateMascotUpload,
@@ -111,11 +112,26 @@ runCase('validateImageUpload accepts valid png', () => {
   const err = runUploadValidation({
     file: {
       mimetype: 'image/png',
+      size: pngBuffer.length,
       buffer: pngBuffer,
     },
   })
 
   assert.equal(err, null)
+})
+
+runCase('validateImageUpload rejects oversized image before Cloudinary upload', () => {
+  const pngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01, 0x02, 0x03, 0x04])
+  const err = runUploadValidation({
+    file: {
+      mimetype: 'image/png',
+      size: MAX_IMAGE_UPLOAD_BYTES + 1,
+      buffer: pngBuffer,
+    },
+  })
+
+  assert.ok(err)
+  assert.equal(err.statusCode, 400)
 })
 
 runCase('validateDocumentUpload accepts valid pdf', () => {

@@ -8,6 +8,7 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
   'image/webp',
   'image/gif',
 ])
+const MAX_IMAGE_UPLOAD_BYTES = 12 * 1024 * 1024
 
 const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
   'application/pdf',
@@ -215,6 +216,11 @@ function validateImageUpload(req, res, next) {
     return
   }
 
+  if (typeof file.size === 'number' && file.size > MAX_IMAGE_UPLOAD_BYTES) {
+    next(createHttpError(400, 'Image trop volumineuse. Taille max: 12 Mo.'))
+    return
+  }
+
   if (!ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype)) {
     next(createHttpError(400, 'Type de fichier non autorise. Utilisez jpg, png, webp ou gif.'))
     return
@@ -364,6 +370,7 @@ module.exports = {
   ALLOWED_IMAGE_MIME_TYPES,
   ALLOWED_DOCUMENT_MIME_TYPES,
   ALLOWED_MASCOT_MIME_TYPES,
+  MAX_IMAGE_UPLOAD_BYTES,
   MAX_DOCUMENT_UPLOAD_BYTES,
   MAX_MASCOT_UPLOAD_BYTES,
   detectImageMimeFromMagicBytes,

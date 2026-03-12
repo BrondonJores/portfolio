@@ -238,21 +238,31 @@ export default function Projects({ projects = [], loading = false }) {
               variants={cardVariants}
               transition={{ duration: 0.52 * animationConfig.durationScale, ease: animationConfig.easePreset }}
             >
-              <Card className="h-full overflow-hidden !p-0">
+              <Card className="group h-full overflow-hidden !p-0">
                 <article className="flex h-full flex-col">
                   {heroProject.image_url ? (
                     <div
-                      className="relative h-56 md:h-72 lg:h-[24rem] overflow-hidden"
-                      style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 72%, transparent)' }}
+                      className="relative h-60 md:h-72 lg:h-[26rem] overflow-hidden"
+                      style={{
+                        background:
+                          'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-primary) 84%, transparent), color-mix(in srgb, var(--color-accent-glow) 32%, transparent))',
+                      }}
                     >
                       <img
                         src={heroProject.image_url}
                         alt={heroProject.title}
-                        className="h-full w-full object-contain p-2 md:p-3"
+                        className="h-full w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.04]"
                         loading="lazy"
                         decoding="async"
                         width="1600"
                         height="900"
+                      />
+                      <div
+                        className="pointer-events-none absolute inset-0"
+                        style={{
+                          background:
+                            'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-primary) 14%, transparent) 100%)',
+                        }}
                       />
                     </div>
                   ) : (
@@ -412,20 +422,30 @@ export default function Projects({ projects = [], loading = false }) {
                   variants={cardVariants}
                   transition={{ duration: 0.48 * animationConfig.durationScale, ease: animationConfig.easePreset }}
                 >
-                  <Card className="h-full flex flex-col overflow-hidden !p-0">
+                  <Card className="group h-full flex flex-col overflow-hidden !p-0">
                     {project.image_url ? (
                       <div
-                        className="w-full h-44 md:h-48 overflow-hidden flex-shrink-0"
-                        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 72%, transparent)' }}
+                        className="relative w-full h-48 md:h-52 overflow-hidden flex-shrink-0"
+                        style={{
+                          background:
+                            'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-primary) 84%, transparent), color-mix(in srgb, var(--color-accent-glow) 28%, transparent))',
+                        }}
                       >
                         <img
                           src={project.image_url}
                           alt={project.title}
-                          className="w-full h-full object-contain p-2 transition-transform duration-300 hover:scale-[1.02]"
+                          className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.05]"
                           loading="lazy"
                           decoding="async"
                           width="1200"
                           height="675"
+                        />
+                        <div
+                          className="pointer-events-none absolute inset-0"
+                          style={{
+                            background:
+                              'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-primary) 18%, transparent) 100%)',
+                          }}
                         />
                       </div>
                     ) : (

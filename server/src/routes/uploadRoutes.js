@@ -8,6 +8,7 @@ const {
   ALLOWED_IMAGE_MIME_TYPES,
   ALLOWED_DOCUMENT_MIME_TYPES,
   ALLOWED_MASCOT_MIME_TYPES,
+  MAX_IMAGE_UPLOAD_BYTES,
   MAX_DOCUMENT_UPLOAD_BYTES,
   MAX_MASCOT_UPLOAD_BYTES,
   validateImageUpload,
@@ -81,7 +82,7 @@ function documentFileFilter(_req, file, cb) {
 const imageUpload = multer({
   storage: multer.memoryStorage(),
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: MAX_IMAGE_UPLOAD_BYTES },
 })
 
 const mascotUpload = multer({
