@@ -45,7 +45,7 @@ jobs:
       JWT_ACCESS_EXPIRES: 15m
       JWT_REFRESH_EXPIRES: 7d
       ADMIN_EMAIL: admin@example.com
-      ADMIN_PASSWORD: ChangeMe123!
+      ADMIN_PASSWORD: ChangeMe123@QSRhyopvcs!
       MAIL_DELIVERY_MODE: mock
       CLOUDINARY_CLOUD_NAME: demo
       CLOUDINARY_API_KEY: demo
