@@ -1,5 +1,5 @@
 /* Page liste de tous les projets avec filtres structures et pagination */
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import { FolderOpenIcon, CodeBracketIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
@@ -11,21 +11,30 @@ import Button from '../components/ui/Button.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
-import { getProjects } from '../services/projectService.js'
 import { useSettings } from '../context/SettingsContext.jsx'
+import { usePublicProjects } from '../hooks/usePublicProjects.js'
 import { buildPageTitle } from '../utils/seoSettings.js'
 import { getFacetAxis, getProjectDisplayTags, getProjectTaxonomy } from '../utils/projectTaxonomy.js'
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState([])
-  const [facets, setFacets] = useState({})
   const [activeType, setActiveType] = useState('')
   const [activeStack, setActiveStack] = useState('')
   const [activeTechnology, setActiveTechnology] = useState('')
-  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [pagination, setPagination] = useState(null)
   const { settings } = useSettings()
+  const {
+    projects,
+    facets,
+    pagination,
+    loading,
+  } = usePublicProjects({
+    page,
+    limit: 9,
+    includeFacets: true,
+    ...(activeType ? { type: activeType } : {}),
+    ...(activeStack ? { stack: activeStack } : {}),
+    ...(activeTechnology ? { technology: activeTechnology } : {}),
+  })
   const pageTitle = buildPageTitle(settings, 'Projets')
   const projectsPageHeading = settings.ui_projects_page_title || 'Mes Projets'
   const projectsPageSubtitle =
@@ -33,23 +42,6 @@ export default function ProjectsPage() {
   const projectsBadgeFeatured = settings.ui_project_badge_featured || 'Mis en avant'
   const projectsActionGithub = settings.ui_project_action_github || 'GitHub'
   const projectsActionDemo = settings.ui_project_action_demo || 'Demo'
-
-  useEffect(() => {
-    const params = { page, limit: 9, includeFacets: true }
-    if (activeType) params.type = activeType
-    if (activeStack) params.stack = activeStack
-    if (activeTechnology) params.technology = activeTechnology
-
-    setLoading(true)
-    getProjects(params)
-      .then((res) => {
-        setProjects(res?.data || [])
-        setPagination(res?.pagination || null)
-        setFacets(res?.facets || {})
-      })
-      .catch(() => setProjects([]))
-      .finally(() => setLoading(false))
-  }, [page, activeType, activeStack, activeTechnology])
 
   const typeFacets = useMemo(() => getFacetAxis(facets, 'type'), [facets])
   const stackFacets = useMemo(() => getFacetAxis(facets, 'stack'), [facets])

@@ -11,7 +11,8 @@
     "lint": "npm run lint:frontend && npm --prefix server run lint",
     "test": "npm --prefix server run test",
     "test:smoke": "npm --prefix server run test:smoke",
-    "security:solid": "npm --prefix server run security:solid",
+    "security:solid": "npm --prefix server run security:solid && npm run security:solid:frontend",
+    "security:solid:frontend": "node scripts/solid-frontend.cjs",
     "security:audit": "npm --prefix server run security:audit",
     "security:check": "npm run security:solid && npm run test && npm run lint"
   },

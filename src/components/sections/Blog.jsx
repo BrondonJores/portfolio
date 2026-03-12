@@ -1,5 +1,5 @@
 /* Section Blog avec mise en avant editoriale */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
@@ -15,7 +15,6 @@ import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Badge from '../ui/Badge.jsx'
 import Spinner from '../ui/Spinner.jsx'
-import { getArticles } from '../../services/articleService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
@@ -58,9 +57,7 @@ function getCardExcerpt(value, maxLength, fallback) {
   return `${raw.slice(0, Math.max(1, maxLength - 3)).trim()}...`
 }
 
-export default function Blog() {
-  const [articles, setArticles] = useState([])
-  const [loading, setLoading] = useState(true)
+export default function Blog({ articles = [], loading = false }) {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
@@ -81,14 +78,6 @@ export default function Blog() {
   const blogViewAllLabel = settings.ui_section_blog_view_all || 'Voir tous les articles'
   const blogFeaturedLabel = settings.ui_section_blog_featured || 'A la une'
   const blogReadLabel = settings.ui_section_blog_read || "Lire l'article"
-
-  useEffect(() => {
-    setLoading(true)
-    getArticles({ limit: 4 })
-      .then((res) => setArticles(res?.data || []))
-      .catch(() => setArticles([]))
-      .finally(() => setLoading(false))
-  }, [])
 
   if (loading) {
     return (

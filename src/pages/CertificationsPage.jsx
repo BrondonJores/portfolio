@@ -1,5 +1,4 @@
 /* Page liste de toutes les certifications publiques. */
-import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import {
@@ -16,28 +15,9 @@ import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Button from '../components/ui/Button.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
-import { getCertifications } from '../services/certificationService.js'
 import { useSettings } from '../context/SettingsContext.jsx'
+import { usePublicCertifications } from '../hooks/usePublicCertifications.js'
 import { buildPageTitle } from '../utils/seoSettings.js'
-
-/**
- * Normalise une liste de badges texte.
- * @param {unknown} value Valeur brute.
- * @returns {string[]} Liste nettoyee.
- */
-function normalizeBadges(value) {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return Array.from(
-    new Set(
-      value
-        .map((entry) => String(entry || '').trim())
-        .filter(Boolean)
-    )
-  ).slice(0, 24)
-}
 
 /**
  * Formate une date ISO en texte local.
@@ -56,9 +36,8 @@ function formatDate(value) {
 }
 
 export default function CertificationsPage() {
-  const [certifications, setCertifications] = useState([])
-  const [loading, setLoading] = useState(true)
   const { settings } = useSettings()
+  const { certifications, loading } = usePublicCertifications()
 
   const pageTitle = buildPageTitle(settings, 'Certifications')
   const heading = settings.ui_certifications_page_title || 'Toutes mes certifications'
@@ -68,21 +47,6 @@ export default function CertificationsPage() {
   const emptyLabel = settings.ui_certifications_page_empty || 'Aucune certification disponible pour le moment.'
   const viewCredentialLabel = settings.ui_certification_view_credential || 'Verifier'
   const viewPdfLabel = settings.ui_certification_view_pdf || 'Voir PDF'
-
-  useEffect(() => {
-    getCertifications()
-      .then((response) => {
-        const list = Array.isArray(response?.data) ? response.data : []
-        setCertifications(
-          list.map((item) => ({
-            ...item,
-            badges: normalizeBadges(item.badges),
-          }))
-        )
-      })
-      .catch(() => setCertifications([]))
-      .finally(() => setLoading(false))
-  }, [])
 
   return (
     <>

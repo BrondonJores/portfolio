@@ -138,7 +138,6 @@ async function main() {
 
   await runCase('routes depend on controllers/middleware, not models/services (SRP)', async () => {
     const routeFiles = listJsFiles(ROUTES_DIR)
-    const allowedRouteServiceImports = new Set(['securityEventService'])
 
     for (const filePath of routeFiles) {
       const content = readFile(filePath)
@@ -155,13 +154,10 @@ async function main() {
         content.matchAll(/require\(['"]\.\.\/services\/([^'"]+)['"]\)/g),
         (match) => match[1]
       )
-      const forbiddenServiceImports = serviceImports.filter(
-        (serviceName) => !allowedRouteServiceImports.has(serviceName)
-      )
       assert.equal(
-        forbiddenServiceImports.length,
+        serviceImports.length,
         0,
-        `[${relPath}] Imports service interdits en route: ${forbiddenServiceImports.join(', ')}`
+        `[${relPath}] Imports service interdits en route: ${serviceImports.join(', ')}`
       )
 
       if (fileName !== 'index.js') {

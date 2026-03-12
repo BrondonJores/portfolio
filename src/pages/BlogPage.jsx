@@ -1,5 +1,5 @@
 /* Page liste de tous les articles de blog */
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -10,8 +10,8 @@ import SectionTitle from '../components/ui/SectionTitle.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
-import { getArticles } from '../services/articleService.js'
 import { useSettings } from '../context/SettingsContext.jsx'
+import { usePublicArticles } from '../hooks/usePublicArticles.js'
 import { buildPageTitle } from '../utils/seoSettings.js'
 
 /* Formatage de la date de publication */
@@ -25,27 +25,14 @@ function formatDate(dateString) {
 }
 
 export default function BlogPage() {
-  const [articles, setArticles] = useState([])
-  const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [pagination, setPagination] = useState(null)
   const { settings } = useSettings()
+  const { articles, pagination, loading } = usePublicArticles({ page, limit: 9 })
   const pageTitle = buildPageTitle(settings, 'Blog')
   const blogPageHeading = settings.ui_blog_page_title || 'Blog'
   const blogPageSubtitle = settings.ui_blog_page_subtitle || 'Articles et reflexions sur le developpement web'
   const blogPageEmpty = settings.ui_blog_page_empty || 'Aucun article disponible pour le moment.'
   const blogReadLabel = settings.ui_section_blog_read || "Lire l'article"
-
-  useEffect(() => {
-    setLoading(true)
-    getArticles({ page, limit: 9 })
-      .then((res) => {
-        setArticles(res?.data || [])
-        setPagination(res?.pagination || null)
-      })
-      .catch(() => setArticles([]))
-      .finally(() => setLoading(false))
-  }, [page])
 
   return (
     <>

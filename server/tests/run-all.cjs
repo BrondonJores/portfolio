@@ -6,6 +6,7 @@ const TEST_FILES = [
   'mailerService.test.cjs',
   'authService.di.test.cjs',
   'authMiddleware.test.cjs',
+  'rateLimitSecurityMiddleware.test.cjs',
   'totpService.di.test.cjs',
   'twoFactorService.di.test.cjs',
   'recaptchaService.di.test.cjs',

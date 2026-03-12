@@ -24,29 +24,9 @@ import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Button from '../ui/Button.jsx'
 import Spinner from '../ui/Spinner.jsx'
-import { getCertifications } from '../../services/certificationService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
-
-/**
- * Normalise une liste de badges.
- * @param {unknown} value Source badges.
- * @returns {string[]} Liste nettoyee.
- */
-function normalizeBadges(value) {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return Array.from(
-    new Set(
-      value
-        .map((entry) => String(entry || '').trim())
-        .filter(Boolean)
-    )
-  ).slice(0, 24)
-}
 
 /**
  * Formate une date ISO en texte local.
@@ -292,9 +272,7 @@ function BadgeCarousel({ badges, canAnimate }) {
   )
 }
 
-export default function Certifications() {
-  const [certifications, setCertifications] = useState([])
-  const [loading, setLoading] = useState(true)
+export default function Certifications({ certifications = [], loading = false }) {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
@@ -319,21 +297,6 @@ export default function Certifications() {
   const viewCredentialLabel = settings.ui_certification_view_credential || 'Verifier'
   const viewPdfLabel = settings.ui_certification_view_pdf || 'Voir PDF'
   const previewCertifications = certifications.slice(0, 3)
-
-  useEffect(() => {
-    getCertifications()
-      .then((response) => {
-        const list = Array.isArray(response?.data) ? response.data : []
-        setCertifications(
-          list.map((item) => ({
-            ...item,
-            badges: normalizeBadges(item.badges),
-          }))
-        )
-      })
-      .catch(() => setCertifications([]))
-      .finally(() => setLoading(false))
-  }, [])
 
   if (loading) {
     return (

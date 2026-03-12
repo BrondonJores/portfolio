@@ -1,5 +1,5 @@
 /* Section Projets avec grille de cartes animees */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
@@ -16,7 +16,6 @@ import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Button from '../ui/Button.jsx'
 import Spinner from '../ui/Spinner.jsx'
-import { getProjects } from '../../services/projectService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
@@ -94,9 +93,7 @@ function buildProjectSnapshot(project, labels) {
   ]
 }
 
-export default function Projects() {
-  const [projects, setProjects] = useState([])
-  const [loading, setLoading] = useState(true)
+export default function Projects({ projects = [], loading = false }) {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
@@ -130,16 +127,6 @@ export default function Projects() {
   const snapshotCaseStudyOnly = settings.ui_project_snapshot_case_study || 'Etude de cas detaillee'
   const snapshotDemoLive = settings.ui_project_snapshot_demo_live || 'Demo live'
   const snapshotSourceCode = settings.ui_project_snapshot_source_code || 'Code source'
-
-  useEffect(() => {
-    getProjects({ featured: true, limit: 4 })
-      .then((data) => setProjects(data.data))
-      .catch((err) => {
-        console.error('Erreur lors du chargement des projets :', err)
-        setProjects([])
-      })
-      .finally(() => setLoading(false))
-  }, [])
 
   const showcaseStats = useMemo(() => {
     const demosCount = projects.filter((project) => Boolean(project.demo_url)).length

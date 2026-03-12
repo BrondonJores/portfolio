@@ -1,13 +1,12 @@
 /* Page des competences avec barres de progression animees */
-import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { motion } from 'framer-motion'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
 import SectionTitle from '../components/ui/SectionTitle.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
-import { getSkills } from '../services/skillService.js'
 import { useSettings } from '../context/SettingsContext.jsx'
+import { usePublicSkills } from '../hooks/usePublicSkills.js'
 import { buildPageTitle } from '../utils/seoSettings.js'
 
 /* Animation de la barre de progression */
@@ -46,20 +45,12 @@ function SkillBar({ skill }) {
 }
 
 export default function SkillsPage() {
-  const [grouped, setGrouped] = useState({})
-  const [loading, setLoading] = useState(true)
   const { settings } = useSettings()
+  const { groupedSkills, loading } = usePublicSkills()
   const pageTitle = buildPageTitle(settings, 'Competences')
   const skillsPageHeading = settings.ui_skills_page_title || 'Mes Competences'
   const skillsPageSubtitle =
     settings.ui_skills_page_subtitle || 'Technologies et outils maitrises avec niveaux de competences'
-
-  useEffect(() => {
-    getSkills()
-      .then((res) => setGrouped(res?.data || {}))
-      .catch(() => setGrouped({}))
-      .finally(() => setLoading(false))
-  }, [])
 
   return (
     <>
@@ -80,7 +71,7 @@ export default function SkillsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {Object.entries(grouped).map(([category, skills]) => (
+              {Object.entries(groupedSkills).map(([category, skills]) => (
                 <motion.div
                   key={category}
                   initial={{ opacity: 0, y: 20 }}

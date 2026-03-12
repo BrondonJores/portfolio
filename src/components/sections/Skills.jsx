@@ -1,5 +1,5 @@
 /* Section Competences avec grille animee */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
@@ -8,14 +8,11 @@ import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Spinner from '../ui/Spinner.jsx'
-import { getSkills } from '../../services/skillService.js'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
 
-export default function Skills() {
-  const [skillGroups, setSkillGroups] = useState([])
-  const [loading, setLoading] = useState(true)
+export default function Skills({ skillGroups = [], loading = false }) {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
@@ -34,28 +31,6 @@ export default function Skills() {
   const skillsTitle = settings.ui_section_skills_title || 'Competences'
   const skillsSubtitle = settings.ui_section_skills_subtitle || "Technologies et outils que j'utilise au quotidien"
   const skillsEmptyLabel = settings.ui_section_skills_empty || 'Aucune competence pour le moment.'
-
-  useEffect(() => {
-    getSkills()
-      .then((res) => {
-        const skillsByCategory = res.data || {}
-
-        // Transformation en tableau pour mapper dans JSX
-        const grouped = Object.entries(skillsByCategory).map(
-          ([category, skills]) => ({
-            category,
-            items: skills.map((skill) => skill.name),
-          })
-        )
-
-        setSkillGroups(grouped)
-      })
-      .catch((err) => {
-        console.error('Erreur lors du chargement des competences :', err)
-        setSkillGroups([])
-      })
-      .finally(() => setLoading(false))
-  }, [])
 
   if (loading) {
     return (

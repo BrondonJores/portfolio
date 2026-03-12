@@ -254,10 +254,11 @@ async function getFreshAccessToken() {
 }
 
 /* Construction des en-tetes avec autorisation Bearer si token disponible */
-function buildHeaders(extra = {}) {
+function buildHeaders(extra = {}, accessTokenOverride = undefined) {
   const headers = { 'Content-Type': 'application/json', ...extra }
-  if (_accessToken) {
-    headers['Authorization'] = `Bearer ${_accessToken}`
+  const bearerToken = accessTokenOverride ?? _accessToken
+  if (bearerToken) {
+    headers['Authorization'] = `Bearer ${bearerToken}`
   }
   return headers
 }
@@ -269,25 +270,31 @@ async function executeRequest(
   body,
   retried = false,
   max429Retries = 0,
-  retry429Attempt = 0
+  retry429Attempt = 0,
+  requestConfig = {}
 ) {
-  const options = {
+  const normalizedOptions = requestConfig && typeof requestConfig === 'object' ? requestConfig : {}
+  const requestHeaders =
+    normalizedOptions.headers && typeof normalizedOptions.headers === 'object'
+      ? normalizedOptions.headers
+      : {}
+  const fetchOptions = {
     method,
-    headers: buildHeaders(),
+    headers: buildHeaders(requestHeaders, normalizedOptions.accessToken),
     credentials: 'include',
   }
 
   if (body !== undefined) {
-    options.body = JSON.stringify(body)
+    fetchOptions.body = JSON.stringify(body)
   }
 
-  const response = await fetch(`${API_BASE}/api${path}`, options)
+  const response = await fetch(`${API_BASE}/api${path}`, fetchOptions)
 
   /* Tentative de rafraichissement du token si 401 et non encore retente */
-  if (response.status === 401 && !retried && _refreshTokenFn) {
+  if (response.status === 401 && !retried && !normalizedOptions.skipAuthRefresh && _refreshTokenFn) {
     try {
       await getFreshAccessToken()
-      return executeRequest(method, path, body, true, max429Retries, retry429Attempt)
+      return executeRequest(method, path, body, true, max429Retries, retry429Attempt, normalizedOptions)
     } catch {
       /* Rafraichissement echoue : deconnexion et redirection */
       if (_logoutFn) _logoutFn()
@@ -300,7 +307,7 @@ async function executeRequest(
   if (response.status === 429 && retry429Attempt < max429Retries) {
     const delayMs = computeRetryDelayFor429(retry429Attempt, response.headers.get('Retry-After'))
     await sleep(delayMs)
-    return executeRequest(method, path, body, retried, max429Retries, retry429Attempt + 1)
+    return executeRequest(method, path, body, retried, max429Retries, retry429Attempt + 1, normalizedOptions)
   }
 
   if (!response.ok) {
@@ -330,15 +337,24 @@ function request(method, path, body, options = {}) {
   const normalizedOptions = options && typeof options === 'object' ? options : {}
   const cacheTtlMs = sanitizeCacheTtl(normalizedOptions.cacheTtlMs)
   const isGet = method === 'GET' && body === undefined
+  const canUseGetOptimizations =
+    isGet &&
+    normalizedOptions.skipAuthRefresh !== true &&
+    !(normalizedOptions.accessToken) &&
+    !(normalizedOptions.headers && typeof normalizedOptions.headers === 'object' && Object.keys(normalizedOptions.headers).length > 0)
   const max429Retries = isGet
     ? sanitizeRetryCount(normalizedOptions.max429Retries, DEFAULT_GET_429_RETRIES)
     : 0
 
   if (!isGet) {
-    return executeRequest(method, path, body, false, max429Retries).then((payload) => {
+    return executeRequest(method, path, body, false, max429Retries, 0, normalizedOptions).then((payload) => {
       invalidateGetOptimizations()
       return payload
     })
+  }
+
+  if (!canUseGetOptimizations) {
+    return executeRequest(method, path, body, false, max429Retries, 0, normalizedOptions)
   }
 
   const cacheKey = path
@@ -355,7 +371,7 @@ function request(method, path, body, options = {}) {
   }
 
   const generationAtStart = _cacheGeneration
-  const requestPromise = executeRequest(method, path, body, false, max429Retries)
+  const requestPromise = executeRequest(method, path, body, false, max429Retries, 0, normalizedOptions)
     .then((payload) => {
       if (cacheTtlMs > 0) {
         writeCachedGetPayload(cacheKey, payload, cacheTtlMs, generationAtStart)
@@ -375,7 +391,7 @@ function request(method, path, body, options = {}) {
 
 export const api = {
   get: (path, options) => request('GET', path, undefined, options),
-  post: (path, body) => request('POST', path, body),
-  put: (path, body) => request('PUT', path, body),
-  del: (path) => request('DELETE', path),
+  post: (path, body, options) => request('POST', path, body, options),
+  put: (path, body, options) => request('PUT', path, body, options),
+  del: (path, options) => request('DELETE', path, undefined, options),
 }

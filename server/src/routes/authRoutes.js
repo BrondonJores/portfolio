@@ -23,7 +23,7 @@ const {
   regenerateRecoveryCodesValidator,
 } = require('../validators/authValidator')
 const rateLimit = require('express-rate-limit')
-const { logSecurityEventFromRequest } = require('../services/securityEventService')
+const { buildRateLimitSecurityHandler } = require('../middleware/rateLimitSecurityMiddleware')
 const { getRateLimitCommonOptions } = require('../utils/rateLimitConfig')
 
 const router = Router()
@@ -34,16 +34,16 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: { error: 'Trop de tentatives de connexion. Reessayez dans 15 minutes.' },
-  handler(req, res) {
-    void logSecurityEventFromRequest(req, {
+  handler: buildRateLimitSecurityHandler({
+    responseBody: { error: 'Trop de tentatives de connexion. Reessayez dans 15 minutes.' },
+    logPayload: (req) => ({
       eventType: 'auth.login_rate_limited',
       severity: 'warning',
       source: 'auth_limiter',
       email: req.body?.email,
       message: 'Blocage anti-bruteforce sur /auth/login.',
-    })
-    res.status(429).json({ error: 'Trop de tentatives de connexion. Reessayez dans 15 minutes.' })
-  },
+    }),
+  }),
 })
 
 /* Rate limiter dedie aux routes session (refresh/logout) */
@@ -60,15 +60,15 @@ const verifyTwoFactorLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: 'Trop de tentatives 2FA. Reessayez dans 15 minutes.' },
-  handler(req, res) {
-    void logSecurityEventFromRequest(req, {
+  handler: buildRateLimitSecurityHandler({
+    responseBody: { error: 'Trop de tentatives 2FA. Reessayez dans 15 minutes.' },
+    logPayload: () => ({
       eventType: 'auth.2fa_rate_limited',
       severity: 'warning',
       source: 'auth_limiter',
       message: 'Blocage anti-bruteforce sur /auth/verify-2fa.',
-    })
-    res.status(429).json({ error: 'Trop de tentatives 2FA. Reessayez dans 15 minutes.' })
-  },
+    }),
+  }),
 })
 
 router.post('/login', requireTrustedOrigin, authLimiter, validate(loginValidator), login)
