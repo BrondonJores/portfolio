@@ -10,6 +10,9 @@ function getErrorMessage(error) {
   if (typeof error?.message === 'string' && error.message.trim()) {
     return error.message.trim()
   }
+  if (typeof error?.reason?.message === 'string' && error.reason.message.trim()) {
+    return error.reason.message.trim()
+  }
   return 'Une erreur inattendue est survenue.'
 }
 

@@ -1,6 +1,12 @@
-/* Pied de page enrichi et pilote par les reglages admin */
+/* Pied de page premium pilote par les reglages admin */
 import { Link } from 'react-router-dom'
-import { ArrowTopRightOnSquareIcon, EnvelopeIcon, MapPinIcon } from '@heroicons/react/24/outline'
+import {
+  ArrowTopRightOnSquareIcon,
+  ArrowUpIcon,
+  EnvelopeIcon,
+  MapPinIcon,
+  PaperAirplaneIcon,
+} from '@heroicons/react/24/outline'
 import { useSettings } from '../../context/SettingsContext.jsx'
 
 function normalizeText(value) {
@@ -10,12 +16,25 @@ function normalizeText(value) {
   return value.trim()
 }
 
+function getInitials(name) {
+  return String(name || '')
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0] || '')
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'PF'
+}
+
 export default function Footer() {
   const year = new Date().getFullYear()
   const { settings } = useSettings()
 
   const siteName = normalizeText(settings.site_name) || normalizeText(settings.hero_name) || 'Portfolio'
   const siteTagline = normalizeText(settings.tagline) || normalizeText(settings.hero_title) || 'Portfolio personnel'
+  const logoUrl = normalizeText(settings.logo_url)
+  const contactAvailability = normalizeText(settings.contact_availability) || 'Disponible pour collaborer sur des produits utiles.'
+  const contactCtaLabel = settings.ui_hero_cta_contact || 'Discutons'
   const footerText = normalizeText(settings.footer_text) || `(c) ${year} ${siteName}. Tous droits reserves.`
   const footerCredits = normalizeText(settings.footer_credits) || 'Construit avec React, Tailwind CSS et Heroicons'
   const contactEmail = normalizeText(settings.contact_email)
@@ -37,6 +56,13 @@ export default function Footer() {
     { label: 'Instagram', href: normalizeText(settings.instagram_url) },
   ].filter((item) => Boolean(item.href))
 
+  function handleScrollToTop() {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <footer
       className="relative overflow-hidden border-t"
@@ -54,52 +80,93 @@ export default function Footer() {
         aria-hidden="true"
       />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-11">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-8">
-          <div className="xl:col-span-5">
-            <p
-              className="text-[11px] font-semibold uppercase tracking-[0.18em]"
-              style={{ color: 'var(--color-accent)' }}
-            >
-              {siteName}
-            </p>
-            <p
-              className="mt-3 max-w-md text-sm leading-relaxed"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              {siteTagline}
-            </p>
-          </div>
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div
+          className="rounded-2xl border p-5 sm:p-7"
+          style={{
+            borderColor: 'color-mix(in srgb, var(--color-border) 80%, transparent)',
+            background:
+              'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-card) 88%, transparent), color-mix(in srgb, var(--color-accent-glow) 16%, transparent))',
+          }}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <span
+                className="inline-flex h-12 w-12 items-center justify-center rounded-xl border text-sm font-bold"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--color-accent) 42%, var(--color-border))',
+                  backgroundColor: 'color-mix(in srgb, var(--color-accent) 16%, transparent)',
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'JetBrains Mono Variable, monospace',
+                }}
+              >
+                {logoUrl ? (
+                  <img src={logoUrl} alt={`Logo ${siteName}`} className="h-8 w-8 object-contain" />
+                ) : (
+                  getInitials(siteName)
+                )}
+              </span>
 
-          <div className="xl:col-span-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--color-accent)' }}>
+                  {siteName}
+                </p>
+                <p className="mt-1 text-sm sm:text-base" style={{ color: 'var(--color-text-primary)' }}>
+                  {siteTagline}
+                </p>
+                <p className="mt-2 text-xs sm:text-sm leading-relaxed max-w-xl" style={{ color: 'var(--color-text-secondary)' }}>
+                  {contactAvailability}
+                </p>
+              </div>
+            </div>
+
+            <Link
+              to="/contact"
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-opacity duration-200 hover:opacity-90"
+              style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
+            >
+              <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
+              {contactCtaLabel}
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <section
+            className="rounded-2xl border p-5"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 80%, transparent)',
+            }}
+          >
             <p
               className="text-[11px] font-semibold uppercase tracking-[0.18em]"
               style={{ color: 'var(--color-accent)' }}
             >
               Navigation
             </p>
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-4 grid grid-cols-2 gap-2">
               {quickLinks.map((link) => (
                 <li key={link.to}>
                   <Link
                     to={link.to}
-                    className="text-sm transition-colors duration-200"
+                    className="text-sm transition-opacity duration-200 hover:opacity-100 opacity-85"
                     style={{ color: 'var(--color-text-secondary)' }}
-                    onMouseEnter={(event) => {
-                      event.currentTarget.style.color = 'var(--color-text-primary)'
-                    }}
-                    onMouseLeave={(event) => {
-                      event.currentTarget.style.color = 'var(--color-text-secondary)'
-                    }}
                   >
                     {link.label}
                   </Link>
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
 
-          <div className="xl:col-span-4">
+          <section
+            className="rounded-2xl border p-5"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 80%, transparent)',
+            }}
+          >
             <p
               className="text-[11px] font-semibold uppercase tracking-[0.18em]"
               style={{ color: 'var(--color-accent)' }}
@@ -107,18 +174,12 @@ export default function Footer() {
               Contact
             </p>
 
-            <div className="mt-3 space-y-3">
+            <div className="mt-4 space-y-3">
               {contactEmail && (
                 <a
                   href={`mailto:${contactEmail}`}
-                  className="inline-flex items-center gap-2 text-sm transition-colors duration-200"
+                  className="inline-flex items-center gap-2 text-sm transition-opacity duration-200 hover:opacity-100 opacity-85"
                   style={{ color: 'var(--color-text-secondary)' }}
-                  onMouseEnter={(event) => {
-                    event.currentTarget.style.color = 'var(--color-text-primary)'
-                  }}
-                  onMouseLeave={(event) => {
-                    event.currentTarget.style.color = 'var(--color-text-secondary)'
-                  }}
                 >
                   <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
                   <span>{contactEmail}</span>
@@ -141,19 +202,11 @@ export default function Footer() {
                     href={social.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors duration-200"
+                    className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-opacity duration-200 hover:opacity-100 opacity-85"
                     style={{
                       color: 'var(--color-text-secondary)',
                       borderColor: 'var(--color-border)',
                       backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 78%, transparent)',
-                    }}
-                    onMouseEnter={(event) => {
-                      event.currentTarget.style.color = 'var(--color-text-primary)'
-                      event.currentTarget.style.borderColor = 'var(--color-accent)'
-                    }}
-                    onMouseLeave={(event) => {
-                      event.currentTarget.style.color = 'var(--color-text-secondary)'
-                      event.currentTarget.style.borderColor = 'var(--color-border)'
                     }}
                   >
                     <span>{social.label}</span>
@@ -162,7 +215,52 @@ export default function Footer() {
                 ))}
               </div>
             )}
-          </div>
+          </section>
+
+          <section
+            className="rounded-2xl border p-5"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 80%, transparent)',
+            }}
+          >
+            <p
+              className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+              style={{ color: 'var(--color-accent)' }}
+            >
+              Build
+            </p>
+            <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+              {footerCredits}
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                to="/projets"
+                className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs transition-opacity duration-200 hover:opacity-100 opacity-85"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-secondary)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 85%, transparent)',
+                }}
+              >
+                Voir les projets
+              </Link>
+              <button
+                type="button"
+                onClick={handleScrollToTop}
+                className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs transition-opacity duration-200 hover:opacity-100 opacity-85"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-secondary)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 85%, transparent)',
+                }}
+              >
+                Retour en haut
+                <ArrowUpIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          </section>
         </div>
 
         <div
