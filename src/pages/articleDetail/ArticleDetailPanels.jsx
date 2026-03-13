@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   CheckCircleIcon,
+  ChevronDownIcon,
   ChevronUpIcon,
   EnvelopeIcon,
   HeartIcon,
@@ -61,8 +62,18 @@ export function BackToTopButton({ label = 'Retour en haut' }) {
 }
 
 /* Table des matieres avec suivi de section active via IntersectionObserver. */
-export function TableOfContents({ headings, title = 'Table des matieres' }) {
+export function TableOfContents({
+  headings,
+  title = 'Table des matieres',
+  helper = '',
+  className = '',
+  collapsible = false,
+  defaultOpen = true,
+  listId,
+}) {
   const [activeId, setActiveId] = useState('')
+  const [isOpen, setIsOpen] = useState(defaultOpen || !collapsible)
+  const resolvedListId = listId || `article-toc-${headings.length}-${title.toLowerCase().replace(/\s+/g, '-')}`
 
   useEffect(() => {
     if (headings.length === 0) return undefined
@@ -90,50 +101,83 @@ export function TableOfContents({ headings, title = 'Table des matieres' }) {
   return (
     <nav
       aria-label={title}
-      className="rounded-[var(--ui-radius-xl)] border p-4"
+      className={`rounded-[var(--ui-radius-xl)] border p-4 ${className}`.trim()}
       style={{
         borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
         backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
         boxShadow: '0 26px 54px -40px color-mix(in srgb, var(--color-accent-glow) 24%, transparent)',
       }}
     >
-      <p
-        className="text-[11px] font-semibold uppercase tracking-[0.2em] mb-4"
-        style={{ color: 'var(--color-text-secondary)' }}
-      >
-        {title}
-      </p>
-      <ul className="space-y-2">
-        {headings.map(({ id, text, level }) => (
-          <li key={id} style={{ paddingLeft: level === 3 ? '0.9rem' : '0' }}>
-            <a
-              href={`#${id}`}
-              onClick={(event) => {
-                event.preventDefault()
-                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-              }}
-              className="group flex items-start gap-2 rounded-xl px-3 py-2 text-sm leading-snug transition-colors"
-              style={{
-                color: activeId === id ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                backgroundColor: activeId === id
-                  ? 'color-mix(in srgb, var(--color-accent-glow) 18%, transparent)'
-                  : 'transparent',
-              }}
-            >
-              <span
-                className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full transition-colors"
-                style={{
-                  backgroundColor: activeId === id
-                    ? 'var(--color-accent)'
-                    : 'color-mix(in srgb, var(--color-border) 72%, transparent)',
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p
+            className="text-[11px] font-semibold uppercase tracking-[0.2em]"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            {title}
+          </p>
+          {helper ? (
+            <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+              {helper}
+            </p>
+          ) : null}
+        </div>
+
+        {collapsible ? (
+          <button
+            type="button"
+            onClick={() => setIsOpen((open) => !open)}
+            className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+              color: 'var(--color-text-secondary)',
+              backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 84%, transparent)',
+            }}
+            aria-expanded={isOpen}
+            aria-controls={resolvedListId}
+          >
+            {isOpen ? 'Masquer' : 'Ouvrir'}
+            <ChevronDownIcon
+              className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+              aria-hidden="true"
+            />
+          </button>
+        ) : null}
+      </div>
+
+      {(!collapsible || isOpen) && (
+        <ul id={resolvedListId} className="mt-4 space-y-2">
+          {headings.map(({ id, text, level }) => (
+            <li key={id} style={{ paddingLeft: level === 3 ? '0.9rem' : '0' }}>
+              <a
+                href={`#${id}`}
+                onClick={(event) => {
+                  event.preventDefault()
+                  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
                 }}
-                aria-hidden="true"
-              />
-              <span style={{ fontWeight: activeId === id ? '600' : '500' }}>{text}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
+                className="group flex items-start gap-2 rounded-xl px-3 py-2 text-sm leading-snug transition-colors"
+                style={{
+                  color: activeId === id ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                  backgroundColor: activeId === id
+                    ? 'color-mix(in srgb, var(--color-accent-glow) 18%, transparent)'
+                    : 'transparent',
+                }}
+              >
+                <span
+                  className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full transition-colors"
+                  style={{
+                    backgroundColor: activeId === id
+                      ? 'var(--color-accent)'
+                      : 'color-mix(in srgb, var(--color-border) 72%, transparent)',
+                  }}
+                  aria-hidden="true"
+                />
+                <span style={{ fontWeight: activeId === id ? '600' : '500' }}>{text}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </nav>
   )
 }

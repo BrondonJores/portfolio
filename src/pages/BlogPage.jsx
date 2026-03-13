@@ -17,26 +17,11 @@ import Spinner from '../components/ui/Spinner.jsx'
 import { useSettings } from '../context/SettingsContext.jsx'
 import { usePublicArticles } from '../hooks/usePublicArticles.js'
 import { buildPageTitle } from '../utils/seoSettings.js'
-
-function formatDate(dateString) {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
-
-function getExcerpt(value, maxLength, fallback) {
-  const normalized = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : ''
-  if (!normalized) {
-    return fallback
-  }
-  if (normalized.length <= maxLength) {
-    return normalized
-  }
-  return `${normalized.slice(0, Math.max(1, maxLength - 3)).trim()}...`
-}
+import {
+  buildArticleReadingProfile,
+  formatArticleDate,
+  getArticleExcerpt,
+} from '../utils/articleReading.js'
 
 function collectTopTags(articles, limit = 8) {
   const counts = new Map()
@@ -70,7 +55,20 @@ export default function BlogPage() {
   const blogReadLabel = settings.ui_section_blog_read || "Lire l'article"
   const spotlightArticle = articles[0] || null
   const secondaryArticles = spotlightArticle ? articles.slice(1) : []
+  const articleProfiles = useMemo(
+    () => new Map(articles.map((article) => [article.id, buildArticleReadingProfile(article)])),
+    [articles]
+  )
+  const spotlightProfile = spotlightArticle ? articleProfiles.get(spotlightArticle.id) : null
   const topTags = useMemo(() => collectTopTags(articles, 8), [articles])
+  const totalReadingMinutes = useMemo(
+    () => articles.reduce((sum, article) => sum + (articleProfiles.get(article.id)?.readingTime || 0), 0),
+    [articleProfiles, articles]
+  )
+  const totalReadingCues = useMemo(
+    () => articles.reduce((sum, article) => sum + (articleProfiles.get(article.id)?.tocHeadings.length || 0), 0),
+    [articleProfiles, articles]
+  )
   const pageSummary = [
     {
       key: 'articles',
@@ -79,16 +77,16 @@ export default function BlogPage() {
       helper: pagination?.pages > 1 ? `${pagination.pages} pages` : 'lecture continue',
     },
     {
-      key: 'themes',
-      label: 'Themes actifs',
-      value: String(topTags.length || 0),
-      helper: 'sujets dominants',
+      key: 'tempo',
+      label: 'Temps cumule',
+      value: `${totalReadingMinutes || 0} min`,
+      helper: articles.length > 0 ? `${Math.max(1, Math.round(totalReadingMinutes / articles.length))} min/article` : 'lecture editoriale',
     },
     {
-      key: 'page',
-      label: 'Page courante',
-      value: String(pagination?.page ?? 1),
-      helper: pagination?.pages ? `sur ${pagination.pages}` : 'sur 1',
+      key: 'reperes',
+      label: 'Reperes',
+      value: String(totalReadingCues || 0),
+      helper: topTags.length > 0 ? `${topTags.length} themes dominants` : 'lecture continue',
     },
   ]
 
@@ -188,7 +186,7 @@ export default function BlogPage() {
                       </div>
 
                       <div className="flex flex-col gap-5 p-5 sm:p-6 md:p-8">
-                        <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                           <span
                             className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
                             style={{
@@ -207,7 +205,7 @@ export default function BlogPage() {
                             >
                               <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
                               <time dateTime={spotlightArticle.published_at}>
-                                {formatDate(spotlightArticle.published_at)}
+                                {formatArticleDate(spotlightArticle.published_at)}
                               </time>
                             </span>
                           )}
@@ -218,11 +216,7 @@ export default function BlogPage() {
                             {spotlightArticle.title}
                           </h2>
                           <p className="mt-4 text-sm leading-relaxed md:text-base" style={{ color: 'var(--color-text-secondary)' }}>
-                            {getExcerpt(
-                              spotlightArticle.excerpt,
-                              230,
-                              'Un texte pour documenter les choix, les arbitrages et les apprentissages du terrain.'
-                            )}
+                            {spotlightProfile?.lead || 'Un texte pour documenter les choix, les arbitrages et les apprentissages du terrain.'}
                           </p>
                         </div>
 
@@ -234,24 +228,63 @@ export default function BlogPage() {
                           </div>
                         )}
 
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                              Angle
-                            </p>
-                            <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                              Partage de methode, contexte et arbitrages concrets.
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                              Lecture
-                            </p>
-                            <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                              Concu pour etre lu vite, retenu longtemps.
-                            </p>
-                          </div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          {[
+                            {
+                              label: 'Focus',
+                              value: spotlightProfile?.focusValue || 'Journal terrain',
+                              helper: spotlightProfile?.focusDetail || 'Partage de methode',
+                            },
+                            {
+                              label: 'Rythme',
+                              value: spotlightProfile
+                                ? `${spotlightProfile.readingTime} min`
+                                : 'Lecture',
+                              helper: spotlightProfile?.rhythmValue || 'Lecture approfondie',
+                            },
+                            {
+                              label: 'Couverture',
+                              value: spotlightProfile?.coverageValue || 'Lecture continue',
+                              helper: spotlightProfile?.coverageDetail || 'Parcours de lecture continu',
+                            },
+                          ].map((item) => (
+                            <div
+                              key={`${spotlightArticle.id}-${item.label}`}
+                              className="rounded-2xl border px-4 py-3"
+                              style={{
+                                borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                                backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 78%, transparent)',
+                              }}
+                            >
+                              <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                                {item.label}
+                              </p>
+                              <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                {item.value}
+                              </p>
+                              <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                                {item.helper}
+                              </p>
+                            </div>
+                          ))}
                         </div>
+
+                        {spotlightProfile?.chapterLabels?.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {spotlightProfile.chapterLabels.map((chapter) => (
+                              <span
+                                key={`${spotlightArticle.id}-${chapter}`}
+                                className="rounded-full border px-3 py-1 text-xs"
+                                style={{
+                                  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                                  color: 'var(--color-text-secondary)',
+                                }}
+                              >
+                                {chapter}
+                              </span>
+                            ))}
+                          </div>
+                        )}
 
                         <div className="mt-auto">
                           <Link
@@ -308,91 +341,124 @@ export default function BlogPage() {
                   </div>
 
                   <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {secondaryArticles.map((article, index) => (
-                      <motion.div
-                        key={article.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: index * 0.05, ease: 'easeOut' }}
-                      >
-                        <Link
-                          to={`/blog/${article.slug}`}
-                          className="block h-full group"
-                          aria-label={`${blogReadLabel} - ${article.title}`}
+                    {secondaryArticles.map((article, index) => {
+                      const profile = articleProfiles.get(article.id)
+
+                      return (
+                        <motion.div
+                          key={article.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: index * 0.05, ease: 'easeOut' }}
                         >
-                          <Card className="h-full flex flex-col overflow-hidden !p-0">
-                            {article.cover_image ? (
-                              <div className="h-48 overflow-hidden">
-                                <img
-                                  src={article.cover_image}
-                                  alt={article.title}
-                                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                  loading="lazy"
-                                  decoding="async"
-                                  width="1200"
-                                  height="675"
-                                />
-                              </div>
-                            ) : (
-                              <div
-                                className="flex h-44 items-center justify-center"
-                                style={{ backgroundColor: 'var(--color-bg-secondary)' }}
-                              >
-                                <DocumentTextIcon
-                                  className="h-10 w-10"
-                                  style={{ color: 'var(--color-accent)', opacity: 0.4 }}
-                                  aria-hidden="true"
-                                />
-                              </div>
-                            )}
+                          <Link
+                            to={`/blog/${article.slug}`}
+                            className="block h-full group"
+                            aria-label={`${blogReadLabel} - ${article.title}`}
+                          >
+                            <Card className="h-full flex flex-col overflow-hidden !p-0">
+                              {article.cover_image ? (
+                                <div className="h-48 overflow-hidden">
+                                  <img
+                                    src={article.cover_image}
+                                    alt={article.title}
+                                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    loading="lazy"
+                                    decoding="async"
+                                    width="1200"
+                                    height="675"
+                                  />
+                                </div>
+                              ) : (
+                                <div
+                                  className="flex h-44 items-center justify-center"
+                                  style={{ backgroundColor: 'var(--color-bg-secondary)' }}
+                                >
+                                  <DocumentTextIcon
+                                    className="h-10 w-10"
+                                    style={{ color: 'var(--color-accent)', opacity: 0.4 }}
+                                    aria-hidden="true"
+                                  />
+                                </div>
+                              )}
 
-                            <div className="flex flex-1 flex-col p-5">
-                              <h2 className="text-lg font-semibold line-clamp-2" style={{ color: 'var(--color-text-primary)' }}>
-                                {article.title}
-                              </h2>
+                              <div className="flex flex-1 flex-col p-5">
+                                <div className="mb-3 flex flex-wrap items-center gap-3 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                  {article.published_at && (
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                                      <time dateTime={article.published_at}>
+                                        {formatArticleDate(article.published_at, { month: 'short' })}
+                                      </time>
+                                    </span>
+                                  )}
+                                  <span>{profile?.readingTime || 1} min</span>
+                                  <span>{profile?.rhythmValue || 'Lecture'}</span>
+                                </div>
 
-                              {article.excerpt && (
+                                <h2 className="text-lg font-semibold line-clamp-2" style={{ color: 'var(--color-text-primary)' }}>
+                                  {article.title}
+                                </h2>
+
                                 <p className="mt-3 text-sm leading-relaxed line-clamp-3" style={{ color: 'var(--color-text-secondary)' }}>
-                                  {getExcerpt(
-                                    article.excerpt,
+                                  {getArticleExcerpt(
+                                    profile?.lead || article.excerpt,
                                     150,
                                     'Un article pour clarifier une methode, un arbitrage ou un retour terrain.'
                                   )}
                                 </p>
-                              )}
 
-                              {article.published_at && (
                                 <div
-                                  className="mt-4 flex items-center gap-1.5 text-xs"
-                                  style={{ color: 'var(--color-text-secondary)' }}
+                                  className="mt-4 rounded-2xl border px-3 py-3"
+                                  style={{
+                                    borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 76%, transparent)',
+                                  }}
                                 >
-                                  <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                                  <time dateTime={article.published_at}>
-                                    {formatDate(article.published_at)}
-                                  </time>
+                                  <div className="grid gap-2 sm:grid-cols-2">
+                                    <div>
+                                      <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--color-text-secondary)' }}>
+                                        Focus
+                                      </p>
+                                      <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                        {profile?.focusValue || 'Lecture editoriale'}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--color-text-secondary)' }}>
+                                        Couverture
+                                      </p>
+                                      <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                        {profile?.coverageValue || 'Lecture continue'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                                    {profile?.coverageDetail || 'Lecture editoriale continue'}
+                                  </p>
                                 </div>
-                              )}
 
-                              {Array.isArray(article.tags) && article.tags.length > 0 && (
-                                <div className="mt-4 flex flex-wrap gap-1.5">
-                                  {article.tags.slice(0, 4).map((tag) => (
-                                    <Badge key={`${article.id}-${tag}`}>{tag}</Badge>
-                                  ))}
-                                </div>
-                              )}
+                                {Array.isArray(article.tags) && article.tags.length > 0 && (
+                                  <div className="mt-4 flex flex-wrap gap-1.5">
+                                    {article.tags.slice(0, 4).map((tag) => (
+                                      <Badge key={`${article.id}-${tag}`}>{tag}</Badge>
+                                    ))}
+                                  </div>
+                                )}
 
-                              <span
-                                className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-medium"
-                                style={{ color: 'var(--color-accent)' }}
-                              >
-                                {blogReadLabel}
-                                <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
-                              </span>
-                            </div>
-                          </Card>
-                        </Link>
-                      </motion.div>
-                    ))}
+                                <span
+                                  className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-medium"
+                                  style={{ color: 'var(--color-accent)' }}
+                                >
+                                  {blogReadLabel}
+                                  <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
+                                </span>
+                              </div>
+                            </Card>
+                          </Link>
+                        </motion.div>
+                      )
+                    })}
                   </div>
                 </section>
               )}

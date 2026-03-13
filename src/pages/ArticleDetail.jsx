@@ -41,26 +41,24 @@ import {
   TableOfContents,
 } from './articleDetail/ArticleDetailPanels.jsx'
 import {
-  estimateReadingTime,
-  extractTocHeadings,
-  formatDate,
   formatRelativeDate,
   getAvatarColor,
   persistLikedArticle,
   readLikedArticlesMap,
 } from './articleDetail/articleDetailUtils.js'
-
-function normalizeTag(tag) {
-  return String(tag || '').trim().toLowerCase()
-}
+import {
+  buildArticleReadingProfile,
+  formatArticleDate,
+  getRelatedArticleReason,
+} from '../utils/articleReading.js'
 
 function rankRelatedArticles(currentArticle, candidates, maxItems = 3) {
-  const sourceTags = new Set((currentArticle?.tags || []).map(normalizeTag).filter(Boolean))
+  const sourceTags = new Set((currentArticle?.tags || []).map((tag) => String(tag || '').trim().toLowerCase()).filter(Boolean))
 
   return (candidates || [])
     .filter((candidate) => candidate && candidate.id !== currentArticle?.id)
     .map((candidate) => {
-      const candidateTags = new Set((candidate.tags || []).map(normalizeTag).filter(Boolean))
+      const candidateTags = new Set((candidate.tags || []).map((tag) => String(tag || '').trim().toLowerCase()).filter(Boolean))
       let overlap = 0
       sourceTags.forEach((tag) => {
         if (candidateTags.has(tag)) {
@@ -80,14 +78,6 @@ function rankRelatedArticles(currentArticle, candidates, maxItems = 3) {
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.max(1, maxItems))
     .map((entry) => entry.candidate)
-}
-
-function buildArticleLead(article) {
-  const excerpt = typeof article?.excerpt === 'string' ? article.excerpt.trim() : ''
-  if (excerpt) {
-    return excerpt
-  }
-  return 'Une lecture approfondie pour partager le contexte, les decisions et les enseignements utiles de ce sujet.'
 }
 
 export default function ArticleDetail() {
@@ -242,29 +232,56 @@ export default function ArticleDetail() {
     )
   }
 
-  const readingTime = estimateReadingTime(article.content)
-  const tocHeadings = extractTocHeadings(article.content)
+  const readingProfile = buildArticleReadingProfile(article)
+  const readingTime = readingProfile.readingTime
+  const tocHeadings = readingProfile.tocHeadings
   const canonicalUrl = typeof window !== 'undefined' ? window.location.href : ''
-  const articleLead = buildArticleLead(article)
+  const articleLead = readingProfile.lead
   const articleTags = Array.isArray(article.tags) ? article.tags.filter(Boolean).slice(0, 8) : []
+  const readingGuideCards = [
+    {
+      key: 'focus',
+      label: 'Focus',
+      value: readingProfile.focusValue,
+      helper: readingProfile.focusDetail,
+    },
+    {
+      key: 'rythme',
+      label: 'Rythme',
+      value: `${readingTime} min`,
+      helper: readingProfile.rhythmValue,
+    },
+    {
+      key: 'format',
+      label: 'Format',
+      value: readingProfile.formatValue,
+      helper: readingProfile.formatDetail,
+    },
+  ]
   const articleMetaCards = [
     {
       key: 'publication',
       label: 'Publication',
-      value: article.published_at ? formatDate(article.published_at) : 'Bientot',
+      value: article.published_at ? formatArticleDate(article.published_at) : 'Bientot',
       helper: article.author_name || settings.site_name || 'Portfolio',
     },
     {
       key: 'lecture',
       label: 'Lecture',
       value: `${readingTime} ${articleReadingSuffix}`,
-      helper: tocHeadings.length > 0 ? `${tocHeadings.length} reperes de lecture` : 'Lecture continue',
+      helper: readingProfile.coverageDetail,
     },
     {
       key: 'impact',
       label: 'Impact',
       value: article.views != null ? `${article.views} ${articleViewsSuffix}` : `${likesCount} appreciations`,
       helper: `${likesCount} signal${likesCount > 1 ? 's' : ''} de lecture`,
+    },
+    {
+      key: 'couverture',
+      label: 'Couverture',
+      value: readingProfile.coverageValue,
+      helper: readingProfile.chapterLabels.length > 0 ? readingProfile.chapterLabels.join(' | ') : 'Parcours de lecture continu',
     },
   ]
 
@@ -342,7 +359,7 @@ export default function ArticleDetail() {
                 >
                   Lecture approfondie
                 </span>
-                {article.published_at && <Badge>{formatDate(article.published_at)}</Badge>}
+                {article.published_at && <Badge>{formatArticleDate(article.published_at)}</Badge>}
               </div>
 
               <h1
@@ -366,7 +383,7 @@ export default function ArticleDetail() {
                 {article.published_at && (
                   <span className="inline-flex items-center gap-1.5">
                     <CalendarIcon className="h-4 w-4" aria-hidden="true" />
-                    <time dateTime={article.published_at}>{formatDate(article.published_at)}</time>
+                    <time dateTime={article.published_at}>{formatArticleDate(article.published_at)}</time>
                   </span>
                 )}
                 <span className="inline-flex items-center gap-1.5">
@@ -428,7 +445,7 @@ export default function ArticleDetail() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
               {articleMetaCards.map((card) => (
                 <Card key={card.key} className="h-full">
                   <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
@@ -473,6 +490,76 @@ export default function ArticleDetail() {
               </div>
             </section>
           )}
+
+          <section className="mb-10">
+            <Card>
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] xl:items-start">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    Guide de lecture
+                  </p>
+                  <h2 className="mt-3 text-2xl font-semibold leading-tight" style={{ color: 'var(--color-text-primary)' }}>
+                    Un repere rapide pour savoir ce que couvre l&apos;article avant d&apos;entrer dans le fond.
+                  </h2>
+                  <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    Cette lecture pose son angle, son rythme et son format pour que tu puisses choisir entre lecture rapide, approfondie ou consultation ciblée.
+                  </p>
+
+                  {readingProfile.chapterLabels.length > 0 && (
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {readingProfile.chapterLabels.map((chapter) => (
+                        <span
+                          key={`${article.id}-${chapter}`}
+                          className="rounded-full border px-3 py-1 text-xs"
+                          style={{
+                            borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                            color: 'var(--color-text-secondary)',
+                          }}
+                        >
+                          {chapter}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-3">
+                  {readingGuideCards.map((item) => (
+                    <div
+                      key={`${article.id}-${item.key}`}
+                      className="rounded-2xl border px-4 py-4"
+                      style={{
+                        borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 78%, transparent)',
+                      }}
+                    >
+                      <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                        {item.value}
+                      </p>
+                      <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                        {item.helper}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {tocHeadings.length > 0 && (
+                <TableOfContents
+                  headings={tocHeadings}
+                  title={articleTocTitle}
+                  helper={`${tocHeadings.length} reperes pour naviguer sans casser le rythme.`}
+                  className="mt-6 xl:hidden"
+                  collapsible
+                  defaultOpen={false}
+                  listId="article-toc-mobile"
+                />
+              )}
+            </Card>
+          </section>
 
           <section className="grid gap-8 lg:grid-cols-[88px_minmax(0,1fr)] xl:grid-cols-[88px_minmax(0,1fr)_240px] xl:items-start">
             <aside className="hidden lg:block lg:sticky lg:top-28 lg:h-fit">
@@ -749,7 +836,12 @@ export default function ArticleDetail() {
 
             {tocHeadings.length > 0 && (
               <aside className="hidden xl:block xl:sticky xl:top-28 xl:h-fit">
-                <TableOfContents headings={tocHeadings} title={articleTocTitle} />
+                <TableOfContents
+                  headings={tocHeadings}
+                  title={articleTocTitle}
+                  helper={`${tocHeadings.length} reperes pour suivre la lecture.`}
+                  listId="article-toc-desktop"
+                />
               </aside>
             )}
           </section>
@@ -825,15 +917,18 @@ export default function ArticleDetail() {
                               ))}
                             </div>
                           )}
-                          {relatedArticle.published_at && (
-                            <div
-                              className="mt-4 inline-flex items-center gap-1.5 text-xs"
-                              style={{ color: 'var(--color-text-secondary)' }}
-                            >
-                              <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                              <time dateTime={relatedArticle.published_at}>{formatDate(relatedArticle.published_at)}</time>
-                            </div>
-                          )}
+                          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                            {relatedArticle.published_at && (
+                              <span className="inline-flex items-center gap-1.5">
+                                <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                                <time dateTime={relatedArticle.published_at}>{formatArticleDate(relatedArticle.published_at, { month: 'short' })}</time>
+                              </span>
+                            )}
+                            <span>{buildArticleReadingProfile(relatedArticle).readingTime} min</span>
+                          </div>
+                          <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                            {getRelatedArticleReason(article, relatedArticle)}
+                          </p>
                         </div>
                       </Card>
                     </Link>
