@@ -1,8 +1,14 @@
 /* Page de gestion des articles admin */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate } from 'react-router-dom'
-import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline'
+import {
+  ArrowUpTrayIcon,
+  DocumentTextIcon,
+  PencilSquareIcon,
+  PlusIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import AdminPagination from '../../components/admin/AdminPagination.jsx'
@@ -10,9 +16,23 @@ import Spinner from '../../components/ui/Spinner.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { getAdminArticles, deleteArticle, importAdminArticles } from '../../services/articleService.js'
 import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPagination.js'
-import { notifyAdminEditorSaved, openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/adminEditorWindow.js'
+import {
+  notifyAdminEditorSaved,
+  openAdminEditorWindow,
+  subscribeAdminEditorRefresh,
+} from '../../utils/adminEditorWindow.js'
 
 const PAGE_LIMIT = 12
+
+const panelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 78%, transparent)',
+}
+
+const metricCardStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 56%, transparent)',
+}
 
 /**
  * Lit un fichier texte JSON cote navigateur.
@@ -52,6 +72,36 @@ function normalizeArticleImportPayload(parsed) {
   }
 
   return null
+}
+
+/**
+ * Formate une date FR.
+ * @param {string | null | undefined} value Date source.
+ * @returns {string} Date lisible.
+ */
+function fmtDate(value) {
+  return value ? new Date(value).toLocaleDateString('fr-FR') : '-'
+}
+
+/**
+ * Retourne la tonalite visuelle du statut de publication.
+ * @param {boolean} published Statut publication.
+ * @returns {{color:string, backgroundColor:string, borderColor:string}} Styles badge.
+ */
+function getPublishedTone(published) {
+  if (published) {
+    return {
+      color: '#4ade80',
+      backgroundColor: 'rgba(74, 222, 128, 0.12)',
+      borderColor: 'rgba(74, 222, 128, 0.28)',
+    }
+  }
+
+  return {
+    color: '#f59e0b',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.28)',
+  }
 }
 
 export default function AdminArticles() {
@@ -180,141 +230,249 @@ export default function AdminArticles() {
     }
   }
 
-  const fmt = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '-')
+  const publishedCount = useMemo(
+    () => articles.filter((article) => article?.published).length,
+    [articles]
+  )
+  const draftCount = useMemo(
+    () => articles.filter((article) => !article?.published).length,
+    [articles]
+  )
 
   return (
     <>
       <Helmet>
         <title>Articles - Administration</title>
       </Helmet>
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Articles
-          </h1>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <label className="inline-flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-              <input
-                type="checkbox"
-                checked={replaceExistingImport}
-                onChange={(event) => setReplaceExistingImport(event.target.checked)}
-                style={{ accentColor: 'var(--color-accent)' }}
-              />
-              Remplacer les doublons
-            </label>
-            <Button variant="secondary" onClick={openImportPicker} disabled={importing}>
-              {importing ? <Spinner size="sm" /> : <ArrowUpTrayIcon className="h-4 w-4" aria-hidden="true" />}
-              Importer JSON
-            </Button>
-            <Button variant="primary" onClick={() => openArticleEditor('/admin/articles/nouveau')}>
-              <PlusIcon className="h-4 w-4" aria-hidden="true" />
-              Nouvel article
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={handleImportFile}
-            />
+
+      <div className="space-y-6">
+        <section
+          className="overflow-hidden rounded-[32px] border px-5 py-5 sm:px-6 sm:py-6"
+          style={panelStyle}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <span
+                className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em]"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                <DocumentTextIcon className="h-4 w-4" aria-hidden="true" />
+                Editorial ops
+              </span>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl" style={{ color: 'var(--color-text-primary)' }}>
+                  Gere le flux editorial sans casser le rythme.
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 sm:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                  Liste, import et edition rapide sont regroupes dans un ecran plus propre, avec une
+                  lecture nette des contenus publies et de ceux encore en brouillon.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+              <label
+                className="inline-flex items-center justify-between gap-3 rounded-[20px] border px-4 py-3 text-sm"
+                style={metricCardStyle}
+              >
+                <span style={{ color: 'var(--color-text-primary)' }}>Remplacer les doublons</span>
+                <input
+                  type="checkbox"
+                  checked={replaceExistingImport}
+                  onChange={(event) => setReplaceExistingImport(event.target.checked)}
+                  style={{ accentColor: 'var(--color-accent)' }}
+                />
+              </label>
+              <Button variant="secondary" onClick={openImportPicker} disabled={importing}>
+                {importing ? <Spinner size="sm" /> : <ArrowUpTrayIcon className="h-4 w-4" aria-hidden="true" />}
+                Importer JSON
+              </Button>
+              <Button variant="primary" onClick={() => openArticleEditor('/admin/articles/nouveau')}>
+                <PlusIcon className="h-4 w-4" aria-hidden="true" />
+                Nouvel article
+              </Button>
+            </div>
           </div>
-        </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: 'Publies', value: publishedCount },
+              { label: 'Brouillons', value: draftCount },
+              { label: 'Total suivis', value: pagination.total },
+            ].map((metric) => (
+              <article key={metric.label} className="rounded-[24px] border px-4 py-4" style={metricCardStyle}>
+                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {metric.label}
+                </p>
+                <p className="mt-3 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {metric.value}
+                </p>
+              </article>
+            ))}
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+        </section>
 
         {loading ? (
-          <div className="flex justify-center py-20">
+          <div className="flex justify-center rounded-[28px] border py-20" style={panelStyle}>
             <Spinner size="lg" />
           </div>
         ) : articles.length === 0 ? (
-          <p style={{ color: 'var(--color-text-secondary)' }}>Aucun article pour le moment.</p>
+          <section className="rounded-[28px] border px-6 py-14 text-center" style={panelStyle}>
+            <p className="text-lg font-medium" style={{ color: 'var(--color-text-primary)' }}>
+              Aucun article pour le moment.
+            </p>
+            <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              Lance ton premier article ou importe un lot JSON pour alimenter l espace editorial.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Button variant="secondary" onClick={openImportPicker}>
+                <ArrowUpTrayIcon className="h-4 w-4" aria-hidden="true" />
+                Importer JSON
+              </Button>
+              <Button variant="primary" onClick={() => openArticleEditor('/admin/articles/nouveau')}>
+                <PlusIcon className="h-4 w-4" aria-hidden="true" />
+                Creer un article
+              </Button>
+            </div>
+          </section>
         ) : (
-          <div
-            className="rounded-xl border overflow-hidden"
-            style={{ borderColor: 'var(--color-border)' }}
-          >
-            <table className="w-full text-sm">
-              <thead
+          <>
+            <div className="grid gap-4 lg:hidden">
+              {articles.map((article) => {
+                const statusTone = getPublishedTone(Boolean(article.published))
+
+                return (
+                  <article
+                    key={article.id}
+                    className="rounded-[26px] border p-4"
+                    style={panelStyle}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-2">
+                        <p className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {article.title}
+                        </p>
+                        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                          Publication: {fmtDate(article.published_at)}
+                        </p>
+                      </div>
+                      <span
+                        className="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                        style={statusTone}
+                      >
+                        {article.published ? 'Publie' : 'Brouillon'}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-[20px] border px-3 py-3" style={metricCardStyle}>
+                        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          Etat
+                        </p>
+                        <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                          {article.published ? 'Visible sur le site' : 'Encore hors ligne'}
+                        </p>
+                      </div>
+                      <div className="rounded-[20px] border px-3 py-3" style={metricCardStyle}>
+                        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          Date cle
+                        </p>
+                        <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                          {fmtDate(article.published_at)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button variant="secondary" onClick={() => openArticleEditor(`/admin/articles/${article.id}`)} className="flex-1">
+                        <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
+                        Modifier
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={() => setConfirmId(article.id)} className="w-full sm:w-auto">
+                        <TrashIcon className="h-4 w-4" aria-hidden="true" />
+                        Supprimer
+                      </Button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+
+            <section className="hidden overflow-hidden rounded-[30px] border lg:block" style={panelStyle}>
+              <div
+                className="grid grid-cols-[minmax(0,1.35fr)_140px_180px_180px] gap-4 border-b px-6 py-4 text-[11px] font-semibold uppercase tracking-[0.22em]"
                 style={{
-                  backgroundColor: 'var(--color-bg-secondary)',
                   color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
                 }}
               >
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">Titre</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Publie</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Date de publication</th>
-                  <th className="text-right px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {articles.map((article, i) => (
-                  <tr
-                    key={article.id}
-                    style={{
-                      backgroundColor:
-                        i % 2 === 0 ? 'var(--color-bg-card)' : 'var(--color-bg-secondary)',
-                      borderTop: `1px solid var(--color-border)`,
-                    }}
-                  >
-                    <td
-                      className="px-4 py-3 font-medium"
-                      style={{ color: 'var(--color-text-primary)' }}
+                <span>Titre</span>
+                <span>Statut</span>
+                <span>Publication</span>
+                <span className="text-right">Actions</span>
+              </div>
+
+              <div className="divide-y" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+                {articles.map((article) => {
+                  const statusTone = getPublishedTone(Boolean(article.published))
+
+                  return (
+                    <div
+                      key={article.id}
+                      className="grid grid-cols-[minmax(0,1.35fr)_140px_180px_180px] items-center gap-4 px-6 py-5 transition-transform duration-200 hover:-translate-y-0.5"
+                      style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 72%, transparent)' }}
                     >
-                      {article.title}
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <span
-                        className="text-xs px-2 py-0.5 rounded"
-                        style={{
-                          color: article.published ? '#4ade80' : '#f87171',
-                          backgroundColor: article.published
-                            ? 'rgba(74, 222, 128, 0.1)'
-                            : 'rgba(248, 113, 113, 0.1)',
-                        }}
-                      >
-                        {article.published ? 'Oui' : 'Non'}
-                      </span>
-                    </td>
-                    <td
-                      className="px-4 py-3 hidden lg:table-cell text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      {fmt(article.published_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openArticleEditor(`/admin/articles/${article.id}`)}
-                          className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                          aria-label={`Modifier ${article.title}`}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                        >
-                          <PencilSquareIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setConfirmId(article.id)}
-                          className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                          aria-label={`Supprimer ${article.title}`}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {article.title}
+                        </p>
+                        <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          Edition rapide disponible dans la fenetre dediee.
+                        </p>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+
+                      <span
+                        className="inline-flex w-fit rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                        style={statusTone}
+                      >
+                        {article.published ? 'Publie' : 'Brouillon'}
+                      </span>
+
+                      <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        {fmtDate(article.published_at)}
+                      </p>
+
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="secondary" onClick={() => openArticleEditor(`/admin/articles/${article.id}`)}>
+                          <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
+                          Modifier
+                        </Button>
+                        <Button type="button" variant="ghost" onClick={() => setConfirmId(article.id)}>
+                          <TrashIcon className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          </>
         )}
 
-        <div className="mt-4">
+        <div className="pt-1">
           <AdminPagination
             total={pagination.total}
             limit={pagination.limit}

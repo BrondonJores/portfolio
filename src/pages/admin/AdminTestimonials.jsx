@@ -1,8 +1,13 @@
 /* Page de gestion des temoignages admin */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
+import {
+  ChatBubbleBottomCenterTextIcon,
+  PencilSquareIcon,
+  PlusIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
 import AdminPagination from '../../components/admin/AdminPagination.jsx'
@@ -26,10 +31,41 @@ import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPa
 const EMPTY = { author_name: '', author_role: '', content: '', visible: true }
 const PAGE_LIMIT = 12
 
+const panelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 78%, transparent)',
+}
+
+const metricCardStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 56%, transparent)',
+}
+
 const inputStyle = {
-  backgroundColor: 'var(--color-bg-primary)',
-  borderColor: 'var(--color-border)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 88%, transparent)',
+  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
   color: 'var(--color-text-primary)',
+}
+
+/**
+ * Retourne le style visuel d'un badge visible/non visible.
+ * @param {boolean} visible Visibilite publique.
+ * @returns {{color:string, backgroundColor:string, borderColor:string}} Styles badge.
+ */
+function getVisibilityTone(visible) {
+  if (visible) {
+    return {
+      color: '#4ade80',
+      backgroundColor: 'rgba(74, 222, 128, 0.12)',
+      borderColor: 'rgba(74, 222, 128, 0.28)',
+    }
+  }
+
+  return {
+    color: '#f59e0b',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.28)',
+  }
 }
 
 /* Formulaire de temoignage dans un modal */
@@ -40,10 +76,12 @@ function TestimonialModal({ isOpen, initial, onSave, onClose }) {
     setForm(initial || EMPTY)
   }, [initial])
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target
     setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
+
+  const visibilityTone = getVisibilityTone(form.visible)
 
   return (
     <Modal
@@ -52,81 +90,120 @@ function TestimonialModal({ isOpen, initial, onSave, onClose }) {
       title={initial ? 'Modifier le temoignage' : 'Nouveau temoignage'}
     >
       <form
-        onSubmit={(e) => {
-          e.preventDefault()
+        onSubmit={(event) => {
+          event.preventDefault()
           onSave(form)
         }}
-        className="space-y-4"
+        className="space-y-5"
       >
-        <div>
-          <label
-            htmlFor="tm-author"
-            className="block text-sm font-medium mb-1"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Auteur <span style={{ color: '#f87171' }}>*</span>
-          </label>
-          <input
-            id="tm-author"
-            name="author_name"
-            type="text"
-            value={form.author_name}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-            style={inputStyle}
-          />
+        <section className="rounded-[24px] border p-4" style={metricCardStyle}>
+          <div className="flex flex-col gap-4 md:grid md:grid-cols-2">
+            <div className="space-y-2">
+              <label
+                htmlFor="tm-author"
+                className="block text-sm font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Auteur <span style={{ color: '#f87171' }}>*</span>
+              </label>
+              <input
+                id="tm-author"
+                name="author_name"
+                type="text"
+                value={form.author_name}
+                onChange={handleChange}
+                required
+                className="w-full rounded-2xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                style={inputStyle}
+              />
+            </div>
+            <div className="space-y-2">
+              <label
+                htmlFor="tm-role"
+                className="block text-sm font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Role
+              </label>
+              <input
+                id="tm-role"
+                name="author_role"
+                type="text"
+                value={form.author_role}
+                onChange={handleChange}
+                className="w-full rounded-2xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[24px] border p-4" style={metricCardStyle}>
+          <div className="space-y-2">
+            <label
+              htmlFor="tm-content"
+              className="block text-sm font-medium"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              Contenu <span style={{ color: '#f87171' }}>*</span>
+            </label>
+            <textarea
+              id="tm-content"
+              name="content"
+              value={form.content}
+              onChange={handleChange}
+              required
+              rows={5}
+              className="w-full rounded-2xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-none"
+              style={inputStyle}
+            />
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              Garde un ton humain et suffisamment court pour bien vivre sur la home.
+            </p>
+          </div>
+        </section>
+
+        <section className="rounded-[24px] border p-4" style={metricCardStyle}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                Visibilite publique
+              </p>
+              <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                Controle si le temoignage peut etre affiche sur le site.
+              </p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-3">
+              <span
+                className="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                style={visibilityTone}
+              >
+                {form.visible ? 'Visible' : 'Masque'}
+              </span>
+              <input
+                name="visible"
+                type="checkbox"
+                checked={form.visible}
+                onChange={handleChange}
+                style={{ accentColor: 'var(--color-accent)' }}
+              />
+            </label>
+          </div>
+        </section>
+
+        <div className="rounded-[24px] border p-4" style={metricCardStyle}>
+          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+            Apercu
+          </p>
+          <blockquote className="mt-3 text-sm leading-7" style={{ color: 'var(--color-text-primary)' }}>
+            {form.content?.trim() || 'Le contenu du temoignage apparaitra ici.'}
+          </blockquote>
+          <p className="mt-3 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            {form.author_name?.trim() || 'Auteur'}{form.author_role?.trim() ? `, ${form.author_role}` : ''}
+          </p>
         </div>
-        <div>
-          <label
-            htmlFor="tm-role"
-            className="block text-sm font-medium mb-1"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Role
-          </label>
-          <input
-            id="tm-role"
-            name="author_role"
-            type="text"
-            value={form.author_role}
-            onChange={handleChange}
-            className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-            style={inputStyle}
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="tm-content"
-            className="block text-sm font-medium mb-1"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            Contenu <span style={{ color: '#f87171' }}>*</span>
-          </label>
-          <textarea
-            id="tm-content"
-            name="content"
-            value={form.content}
-            onChange={handleChange}
-            required
-            rows={4}
-            className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-none"
-            style={inputStyle}
-          />
-        </div>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            name="visible"
-            type="checkbox"
-            checked={form.visible}
-            onChange={handleChange}
-            style={{ accentColor: 'var(--color-accent)' }}
-          />
-          <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            Visible publiquement
-          </span>
-        </label>
-        <div className="flex items-center justify-end gap-3 pt-2">
+
+        <div className="flex items-center justify-end gap-3 pt-1">
           <Button type="button" variant="ghost" onClick={onClose}>
             Annuler
           </Button>
@@ -244,10 +321,7 @@ export default function AdminTestimonials() {
       return
     }
 
-    const path =
-      target === 'new'
-        ? '/admin/temoignages?editor=new'
-        : `/admin/temoignages?editor=${target}`
+    const path = target === 'new' ? '/admin/temoignages?editor=new' : `/admin/temoignages?editor=${target}`
 
     const popup = openAdminEditorWindow(path, {
       windowName: 'portfolio-admin-testimonial-editor',
@@ -309,117 +383,200 @@ export default function AdminTestimonials() {
     })
   }
 
+  const visibleCount = useMemo(
+    () => testimonials.filter((testimonial) => testimonial?.visible).length,
+    [testimonials]
+  )
+  const hiddenCount = useMemo(
+    () => testimonials.filter((testimonial) => !testimonial?.visible).length,
+    [testimonials]
+  )
+
   return (
     <>
       <Helmet>
         <title>Temoignages - Administration</title>
       </Helmet>
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Temoignages
-          </h1>
-          <Button variant="primary" onClick={openNew}>
-            <PlusIcon className="h-4 w-4" aria-hidden="true" />
-            Ajouter
-          </Button>
-        </div>
+
+      <div className="space-y-6">
+        <section
+          className="overflow-hidden rounded-[32px] border px-5 py-5 sm:px-6 sm:py-6"
+          style={panelStyle}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <span
+                className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em]"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                <ChatBubbleBottomCenterTextIcon className="h-4 w-4" aria-hidden="true" />
+                Social proof
+              </span>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl" style={{ color: 'var(--color-text-primary)' }}>
+                  Des temoignages mieux calibres pour le site et pour l admin.
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 sm:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                  Gere les citations, leur visibilite et leur qualite editoriale dans un espace plus
+                  dense, plus clair et plus agreable a relire.
+                </p>
+              </div>
+            </div>
+
+            <Button variant="primary" onClick={openNew} className="w-full sm:w-auto">
+              <PlusIcon className="h-4 w-4" aria-hidden="true" />
+              Ajouter
+            </Button>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: 'Visibles', value: visibleCount },
+              { label: 'Masques', value: hiddenCount },
+              { label: 'Total suivis', value: pagination.total },
+            ].map((metric) => (
+              <article key={metric.label} className="rounded-[24px] border px-4 py-4" style={metricCardStyle}>
+                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {metric.label}
+                </p>
+                <p className="mt-3 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {metric.value}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         {loading ? (
-          <div className="flex justify-center py-20">
+          <div className="flex justify-center rounded-[28px] border py-20" style={panelStyle}>
             <Spinner size="lg" />
           </div>
         ) : testimonials.length === 0 ? (
-          <p style={{ color: 'var(--color-text-secondary)' }}>Aucun temoignage.</p>
+          <section className="rounded-[28px] border px-6 py-14 text-center" style={panelStyle}>
+            <p className="text-lg font-medium" style={{ color: 'var(--color-text-primary)' }}>
+              Aucun temoignage.
+            </p>
+            <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              Ajoute une premiere citation pour alimenter la preuve sociale du portfolio.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <Button variant="primary" onClick={openNew}>
+                <PlusIcon className="h-4 w-4" aria-hidden="true" />
+                Ajouter un temoignage
+              </Button>
+            </div>
+          </section>
         ) : (
-          <div
-            className="rounded-xl border overflow-hidden"
-            style={{ borderColor: 'var(--color-border)' }}
-          >
-            <table className="w-full text-sm">
-              <thead
+          <>
+            <div className="grid gap-4 lg:hidden">
+              {testimonials.map((testimonial) => {
+                const visibilityTone = getVisibilityTone(Boolean(testimonial.visible))
+
+                return (
+                  <article key={testimonial.id} className="rounded-[26px] border p-4" style={panelStyle}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-2">
+                        <p className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {testimonial.author_name}
+                        </p>
+                        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                          {testimonial.author_role || 'Role non renseigne'}
+                        </p>
+                      </div>
+                      <span
+                        className="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                        style={visibilityTone}
+                      >
+                        {testimonial.visible ? 'Visible' : 'Masque'}
+                      </span>
+                    </div>
+
+                    <blockquote className="mt-4 line-clamp-4 text-sm leading-7" style={{ color: 'var(--color-text-primary)' }}>
+                      {testimonial.content}
+                    </blockquote>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button variant="secondary" onClick={() => openEdit(testimonial)} className="flex-1">
+                        <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
+                        Modifier
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={() => setConfirmId(testimonial.id)} className="w-full sm:w-auto">
+                        <TrashIcon className="h-4 w-4" aria-hidden="true" />
+                        Supprimer
+                      </Button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+
+            <section className="hidden overflow-hidden rounded-[30px] border lg:block" style={panelStyle}>
+              <div
+                className="grid grid-cols-[minmax(0,1fr)_220px_140px_180px] gap-4 border-b px-6 py-4 text-[11px] font-semibold uppercase tracking-[0.22em]"
                 style={{
-                  backgroundColor: 'var(--color-bg-secondary)',
                   color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
                 }}
               >
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">Auteur</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Role</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Visible</th>
-                  <th className="text-right px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {testimonials.map((t, i) => (
-                  <tr
-                    key={t.id}
-                    style={{
-                      backgroundColor:
-                        i % 2 === 0 ? 'var(--color-bg-card)' : 'var(--color-bg-secondary)',
-                      borderTop: `1px solid var(--color-border)`,
-                    }}
-                  >
-                    <td
-                      className="px-4 py-3 font-medium"
-                      style={{ color: 'var(--color-text-primary)' }}
+                <span>Auteur</span>
+                <span>Role</span>
+                <span>Visibilite</span>
+                <span className="text-right">Actions</span>
+              </div>
+
+              <div className="divide-y" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+                {testimonials.map((testimonial) => {
+                  const visibilityTone = getVisibilityTone(Boolean(testimonial.visible))
+
+                  return (
+                    <div
+                      key={testimonial.id}
+                      className="grid grid-cols-[minmax(0,1fr)_220px_140px_180px] items-center gap-4 px-6 py-5 transition-transform duration-200 hover:-translate-y-0.5"
+                      style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 72%, transparent)' }}
                     >
-                      {t.author_name}
-                    </td>
-                    <td
-                      className="px-4 py-3 hidden md:table-cell text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      {t.author_role || '-'}
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <span
-                        className="text-xs px-2 py-0.5 rounded"
-                        style={{
-                          color: t.visible ? '#4ade80' : '#f87171',
-                          backgroundColor: t.visible
-                            ? 'rgba(74, 222, 128, 0.1)'
-                            : 'rgba(248, 113, 113, 0.1)',
-                        }}
-                      >
-                        {t.visible ? 'Oui' : 'Non'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEdit(t)}
-                          className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                          aria-label={`Modifier temoignage de ${t.author_name}`}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent)' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                        >
-                          <PencilSquareIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setConfirmId(t.id)}
-                          className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                          aria-label={`Supprimer temoignage de ${t.author_name}`}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {testimonial.author_name}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          {testimonial.content}
+                        </p>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+
+                      <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        {testimonial.author_role || '-'}
+                      </p>
+
+                      <span
+                        className="inline-flex w-fit rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                        style={visibilityTone}
+                      >
+                        {testimonial.visible ? 'Visible' : 'Masque'}
+                      </span>
+
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="secondary" onClick={() => openEdit(testimonial)}>
+                          <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
+                          Modifier
+                        </Button>
+                        <Button type="button" variant="ghost" onClick={() => setConfirmId(testimonial.id)}>
+                          <TrashIcon className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          </>
         )}
 
-        <div className="mt-4">
+        <div className="pt-1">
           <AdminPagination
             total={pagination.total}
             limit={pagination.limit}
