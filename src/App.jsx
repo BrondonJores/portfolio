@@ -88,7 +88,7 @@ function buildCspPolicy(assetOrigins = []) {
       ...VERCEL_SCRIPT_ORIGINS,
     ])}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src ${joinCspSources(["'self'", 'data:', 'https:', serverOrigin, ...RECAPTCHA_SCRIPT_ORIGINS, ...CLOUDINARY_ORIGINS])}`,
+    `img-src ${joinCspSources(["'self'", 'data:', 'blob:', 'https:', serverOrigin, ...RECAPTCHA_SCRIPT_ORIGINS, ...CLOUDINARY_ORIGINS])}`,
     `font-src ${joinCspSources(["'self'", 'data:'])}`,
     `media-src ${joinCspSources(["'self'", 'data:', 'blob:', ...CLOUDINARY_ORIGINS, ...assetOrigins])}`,
     `connect-src ${joinCspSources([
