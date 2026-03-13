@@ -7,6 +7,11 @@ import {
 } from '@heroicons/react/24/outline'
 import Button from '../ui/Button.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
+import {
+  CONTACT_INTENT_PRESETS,
+  CONTACT_REASSURANCE_POINTS,
+  getContactIntentHref,
+} from '../../utils/contactConversion.js'
 
 function normalizeText(value) {
   if (typeof value !== 'string') {
@@ -25,6 +30,7 @@ export default function Footer() {
   const footerCredits = normalizeText(settings.footer_credits) || 'Construit avec React, Tailwind CSS et Heroicons'
   const contactEmail = normalizeText(settings.contact_email)
   const contactLocation = normalizeText(settings.contact_location)
+  const contactAvailability = normalizeText(settings.contact_availability) || 'Disponible pour cadrer un prochain mouvement'
 
   const quickLinks = [
     { to: '/', label: settings.ui_nav_label_home || 'Accueil' },
@@ -75,7 +81,7 @@ export default function Footer() {
               <p className="mt-3 max-w-2xl text-sm leading-relaxed md:text-base" style={{ color: 'var(--color-text-secondary)' }}>
                 {siteTagline}
               </p>
-              {(contactEmail || contactLocation) && (
+              {(contactEmail || contactLocation || contactAvailability) && (
                 <div className="-mx-1 mt-5 flex flex-nowrap gap-3 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
                   {contactEmail && (
                     <span
@@ -103,19 +109,65 @@ export default function Footer() {
                       {contactLocation}
                     </span>
                   )}
+                  <span
+                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 56%, transparent)',
+                    }}
+                  >
+                    {contactAvailability}
+                  </span>
                 </div>
               )}
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {CONTACT_INTENT_PRESETS.map((preset) => (
+                  <Link
+                    key={preset.id}
+                    to={getContactIntentHref(preset.id)}
+                    className="rounded-[var(--ui-radius-xl)] border px-4 py-4 transition-all"
+                    style={{
+                      borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                    }}
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      {preset.label}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                      {preset.title}
+                    </p>
+                    <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                      {preset.helper}
+                    </p>
+                  </Link>
+                ))}
+              </div>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap lg:justify-end">
+              <Link
+                to={getContactIntentHref('build')}
+                className="inline-flex min-h-[var(--ui-control-height)] items-center justify-center gap-2 rounded-[var(--ui-radius-xl)] border px-[var(--ui-button-px)] py-[var(--ui-button-py)] text-[length:var(--ui-button-font-size)] font-medium transition-all duration-200"
+                style={{
+                  color: '#ffffff',
+                  borderColor: 'color-mix(in srgb, var(--color-accent-light) 48%, var(--color-accent))',
+                  background: 'linear-gradient(135deg, var(--color-accent), color-mix(in srgb, var(--color-accent-light) 72%, white))',
+                  boxShadow: '0 16px 32px -26px color-mix(in srgb, var(--color-accent-glow) 48%, transparent)',
+                }}
+              >
+                Demarrer un brief
+              </Link>
               {contactEmail && (
-                <Button variant="primary" href={`mailto:${contactEmail}`} className="w-full justify-center sm:w-auto">
+                <Button variant="secondary" href={`mailto:${contactEmail}`} className="w-full justify-center sm:w-auto">
                   <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
-                  Ecrire
+                  Email direct
                 </Button>
               )}
               {socialLinks[0] && (
-                <Button variant="secondary" href={socialLinks[0].href} className="w-full justify-center sm:w-auto">
+                <Button variant="ghost" href={socialLinks[0].href} className="w-full justify-center sm:w-auto">
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
                   {socialLinks[0].label}
                 </Button>
@@ -135,6 +187,18 @@ export default function Footer() {
             <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)', opacity: 0.82 }}>
               {footerCredits}
             </p>
+            <div className="mt-4 space-y-2">
+              {CONTACT_REASSURANCE_POINTS.map((point) => (
+                <div key={point.key}>
+                  <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                    {point.label}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    {point.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
 
           <nav aria-label="Navigation pied de page">

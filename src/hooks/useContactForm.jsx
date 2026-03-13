@@ -1,5 +1,5 @@
 /* Hook de gestion du formulaire de contact */
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { sanitizeInput } from '../utils/sanitize.js'
 import { sendMessage } from '../services/messageService.js'
 import { executeRecaptcha, preloadRecaptcha } from '../services/recaptchaService.js'
@@ -21,13 +21,39 @@ export function useContactForm() {
   }, [])
 
   /* Mise a jour d'un champ du formulaire */
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target
+    setStatus((prev) => (
+      prev.success || prev.error
+        ? { ...prev, success: false, error: null }
+        : prev
+    ))
     setFields((prev) => ({ ...prev, [name]: value }))
-  }
+  }, [])
+
+  /**
+   * Applique des valeurs partielles au formulaire.
+   * @param {Partial<typeof INITIAL_FIELDS>} patch Valeurs a injecter.
+   * @returns {void}
+   */
+  const applyFieldValues = useCallback((patch) => {
+    if (!patch || typeof patch !== 'object') {
+      return
+    }
+
+    setStatus((prev) => ({
+      ...prev,
+      success: false,
+      error: null,
+    }))
+    setFields((prev) => ({
+      ...prev,
+      ...patch,
+    }))
+  }, [])
 
   /* Soumission du formulaire avec sanitisation des donnees */
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
     setStatus({ loading: true, success: false, error: null })
 
@@ -50,7 +76,7 @@ export function useContactForm() {
         error: err.message || 'Echec de l\'envoi du message. Veuillez reessayer.',
       })
     }
-  }
+  }, [fields.email, fields.message, fields.name])
 
-  return { fields, handleChange, handleSubmit, status }
+  return { fields, handleChange, handleSubmit, applyFieldValues, status }
 }

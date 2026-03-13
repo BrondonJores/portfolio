@@ -1,7 +1,7 @@
 /* Section Contact avec formulaire et informations */
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { EnvelopeIcon, MapPinIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import { ArrowTopRightOnSquareIcon, EnvelopeIcon, MapPinIcon, PaperAirplaneIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Button from '../ui/Button.jsx'
@@ -12,6 +12,12 @@ import { useContactForm } from '../../hooks/useContactForm.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
+import {
+  buildContactIntentMessage,
+  CONTACT_BRIEF_CHECKLIST,
+  CONTACT_INTENT_PRESETS,
+  CONTACT_REASSURANCE_POINTS,
+} from '../../utils/contactConversion.js'
 
 /* Style commun des inputs */
 const inputStyle = {
@@ -21,8 +27,9 @@ const inputStyle = {
 }
 
 export default function Contact() {
-  const { fields, handleChange, handleSubmit, status } = useContactForm()
+  const { fields, handleChange, handleSubmit, applyFieldValues, status } = useContactForm()
   const { settings } = useSettings()
+  const [selectedIntentId, setSelectedIntentId] = useState('')
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
     () => getSectionAnimationConfig(settings, Boolean(prefersReducedMotion), 'contact'),
@@ -46,6 +53,7 @@ export default function Contact() {
 
   const contactEmail = settings.contact_email || 'contact@brondonjores.dev'
   const contactLocation = settings.contact_location || 'France'
+  const contactAvailability = settings.contact_availability || 'Disponible pour cadrer un projet'
   const sectionTitle = settings.ui_section_contact_title || 'Contact'
   const sectionSubtitle = settings.ui_section_contact_subtitle || 'Discutons de votre prochain projet'
   const contactIntro =
@@ -60,6 +68,14 @@ export default function Contact() {
   const formSuccessMessage = settings.ui_contact_form_success || 'Votre message a ete envoye avec succes.'
   const formSubmitLabel = settings.ui_contact_form_submit || 'Envoyer le message'
   const formSubmittingLabel = settings.ui_contact_form_submitting || 'Envoi en cours...'
+  const activeIntent = CONTACT_INTENT_PRESETS.find((preset) => preset.id === selectedIntentId) || null
+
+  const handleIntentSelect = (preset) => {
+    setSelectedIntentId(preset.id)
+    applyFieldValues({
+      message: buildContactIntentMessage(preset),
+    })
+  }
 
   return (
     <AnimatedSection
@@ -91,6 +107,39 @@ export default function Contact() {
               {contactIntro}
             </p>
 
+            <div className="grid gap-3 sm:grid-cols-3 mb-8">
+              {CONTACT_INTENT_PRESETS.map((preset) => {
+                const isActive = activeIntent?.id === preset.id
+
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handleIntentSelect(preset)}
+                    className="rounded-[var(--ui-radius-xl)] border px-4 py-4 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                    style={{
+                      borderColor: isActive
+                        ? 'color-mix(in srgb, var(--color-accent) 56%, var(--color-border))'
+                        : 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                      backgroundColor: isActive
+                        ? 'color-mix(in srgb, var(--color-accent-glow) 16%, transparent)'
+                        : 'color-mix(in srgb, var(--color-bg-card) 72%, transparent)',
+                    }}
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      {preset.label}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                      {preset.title}
+                    </p>
+                    <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                      {preset.helper}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
+
             {/* Informations de contact */}
             <div className="space-y-4 mb-8">
               <div className="flex items-center gap-3">
@@ -119,10 +168,23 @@ export default function Contact() {
                   {contactLocation}
                 </span>
               </div>
+              <div className="flex items-center gap-3">
+                <SparklesIcon
+                  className="h-5 w-5 flex-shrink-0"
+                  style={{ color: 'var(--color-accent)' }}
+                  aria-hidden="true"
+                />
+                <span
+                  className="text-sm"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  {contactAvailability}
+                </span>
+              </div>
             </div>
 
             {/* Liens sociaux */}
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-4">
               {socialLinks.map((link) => (
                 <a
                   key={link.label}
@@ -142,11 +204,65 @@ export default function Contact() {
                 </a>
               ))}
             </div>
+
+            <div className="mt-8 grid gap-3">
+              {CONTACT_REASSURANCE_POINTS.map((point) => (
+                <div
+                  key={point.key}
+                  className="rounded-[var(--ui-radius-xl)] border px-4 py-4"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--color-border) 72%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                  }}
+                >
+                  <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    {point.label}
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    {point.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
           </motion.div>
 
           {/* Colonne droite : formulaire de contact */}
           <motion.form onSubmit={handleSubmit} noValidate variants={itemVariants}>
             <div className="space-y-4">
+              {activeIntent && (
+                <div
+                  className="rounded-[var(--ui-radius-xl)] border px-4 py-4"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--color-accent) 46%, var(--color-border))',
+                    backgroundColor: 'color-mix(in srgb, var(--color-accent-glow) 16%, transparent)',
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        Brief actif
+                      </p>
+                      <p className="mt-2 text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                        {activeIntent.title}
+                      </p>
+                      <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                        {activeIntent.description}
+                      </p>
+                    </div>
+                    <span
+                      className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium"
+                      style={{
+                        color: 'var(--color-accent-light)',
+                        borderColor: 'color-mix(in srgb, var(--color-accent) 44%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
+                      }}
+                    >
+                      {activeIntent.label}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Champ nom */}
               <motion.div variants={itemVariants}>
                 <label
@@ -246,17 +362,48 @@ export default function Contact() {
               <RecaptchaNotice />
 
               {/* Bouton de soumission */}
-              <motion.div variants={itemVariants}>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={status.loading}
-                  className="w-full justify-center"
-                  aria-label={formSubmitLabel}
-                >
-                  <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
-                  {status.loading ? formSubmittingLabel : formSubmitLabel}
-                </Button>
+              <motion.div variants={itemVariants} className="flex flex-col gap-4">
+                <div className="flex flex-wrap gap-2">
+                  {CONTACT_BRIEF_CHECKLIST.map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-full border px-3 py-1.5 text-xs"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                      }}
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="max-w-md text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    Un brief simple suffit. Si tu bloques, choisis un format ci-contre et je pre-remplis la base pour toi.
+                  </p>
+                  <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      disabled={status.loading}
+                      className="w-full justify-center sm:min-w-[220px]"
+                      aria-label={formSubmitLabel}
+                    >
+                      <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
+                      {status.loading ? formSubmittingLabel : formSubmitLabel}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      href={`mailto:${contactEmail}`}
+                      className="w-full justify-center sm:w-auto"
+                    >
+                      <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
+                      Email direct
+                    </Button>
+                  </div>
+                </div>
               </motion.div>
             </div>
           </motion.form>

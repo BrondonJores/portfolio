@@ -1,11 +1,11 @@
 /* Page de contact complete avec temoignages */
 import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { Link, useLocation } from 'react-router-dom'
 import {
   ArrowTopRightOnSquareIcon,
   ChatBubbleLeftRightIcon,
   EnvelopeIcon,
-  MapPinIcon,
   PaperAirplaneIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline'
@@ -17,6 +17,14 @@ import { useContactForm } from '../hooks/useContactForm.jsx'
 import { getTestimonials } from '../services/testimonialService.js'
 import { useSettings } from '../context/SettingsContext.jsx'
 import { buildPageTitle } from '../utils/seoSettings.js'
+import {
+  buildContactIntentMessage,
+  CONTACT_BRIEF_CHECKLIST,
+  CONTACT_INTENT_PRESETS,
+  CONTACT_REASSURANCE_POINTS,
+  getContactIntentHref,
+  resolveContactIntentPreset,
+} from '../utils/contactConversion.js'
 
 const inputStyle = {
   backgroundColor: 'var(--color-bg-card)',
@@ -38,9 +46,11 @@ function buildChannelDescription(label) {
 }
 
 export default function ContactPage() {
-  const { fields, handleChange, handleSubmit, status } = useContactForm()
+  const { fields, handleChange, handleSubmit, applyFieldValues, status } = useContactForm()
   const { settings } = useSettings()
+  const routerLocation = useLocation()
   const [testimonials, setTestimonials] = useState([])
+  const [selectedIntentId, setSelectedIntentId] = useState('')
   const pageTitle = buildPageTitle(settings, 'Contact')
 
   const socialLinks = useMemo(() => ([
@@ -51,6 +61,7 @@ export default function ContactPage() {
 
   const contactEmail = settings.contact_email || 'contact@brondonjores.dev'
   const contactLocation = settings.contact_location || 'France'
+  const contactAvailability = settings.contact_availability || 'Disponible pour cadrer un projet'
   const sectionTitle = settings.ui_section_contact_title || 'Contact'
   const sectionSubtitle = settings.ui_section_contact_subtitle || 'Discutons de votre prochain projet'
   const contactIntro =
@@ -66,6 +77,15 @@ export default function ContactPage() {
   const formSubmitLabel = settings.ui_contact_form_submit || 'Envoyer le message'
   const formSubmittingLabel = settings.ui_contact_form_submitting || 'Envoi en cours...'
   const testimonialsTitle = settings.ui_contact_testimonials_title || 'Temoignages'
+  const routeIntent = useMemo(() => {
+    const params = new URLSearchParams(routerLocation.search)
+    return resolveContactIntentPreset(params.get('intent'))
+  }, [routerLocation.search])
+  const activeIntentId = selectedIntentId || routeIntent?.id || ''
+  const activeIntent = useMemo(
+    () => resolveContactIntentPreset(activeIntentId),
+    [activeIntentId]
+  )
 
   useEffect(() => {
     getTestimonials()
@@ -73,26 +93,44 @@ export default function ContactPage() {
       .catch(() => setTestimonials([]))
   }, [])
 
+  useEffect(() => {
+    if (!routeIntent) {
+      return
+    }
+
+    setSelectedIntentId(routeIntent.id)
+    applyFieldValues({
+      message: buildContactIntentMessage(routeIntent),
+    })
+  }, [applyFieldValues, routeIntent])
+
+  const handleIntentSelect = (preset) => {
+    setSelectedIntentId(preset.id)
+    applyFieldValues({
+      message: buildContactIntentMessage(preset),
+    })
+  }
+
   const responseSignals = [
     {
       key: 'email',
-      label: 'Canal principal',
+      label: 'Canal direct',
       value: contactEmail,
       helper: 'Le plus direct pour lancer un projet ou une discussion.',
       icon: EnvelopeIcon,
     },
     {
-      key: 'location',
-      label: 'Base',
-      value: contactLocation,
-      helper: 'Disponible a distance, avec des collaborations asynchrones fluides.',
-      icon: MapPinIcon,
+      key: 'cadence',
+      label: 'Cadence',
+      value: contactAvailability,
+      helper: 'Je reviens avec un angle clair et un prochain pas concret.',
+      icon: ChatBubbleLeftRightIcon,
     },
     {
-      key: 'network',
-      label: 'Presence',
-      value: socialLinks.length > 0 ? `${socialLinks.length} canaux actifs` : 'Contact direct',
-      helper: socialLinks.length > 0 ? 'Choisis le canal qui correspond a ton contexte.' : 'On peut passer uniquement par email.',
+      key: 'format',
+      label: 'Formats',
+      value: `${CONTACT_INTENT_PRESETS.length} points d'entree`,
+      helper: 'Audit, build ou renfort selon le contexte reel.',
       icon: SparklesIcon,
     },
   ]
@@ -149,17 +187,70 @@ export default function ContactPage() {
                 {contactIntro}
               </p>
 
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                {CONTACT_INTENT_PRESETS.map((preset) => {
+                  const isActive = activeIntentId === preset.id
+
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => handleIntentSelect(preset)}
+                      className="rounded-[var(--ui-radius-xl)] border px-4 py-4 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                      style={{
+                        borderColor: isActive
+                          ? 'color-mix(in srgb, var(--color-accent) 56%, var(--color-border))'
+                          : 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                        backgroundColor: isActive
+                          ? 'color-mix(in srgb, var(--color-accent-glow) 16%, transparent)'
+                          : 'color-mix(in srgb, var(--color-bg-card) 74%, transparent)',
+                        boxShadow: isActive
+                          ? '0 20px 42px -30px color-mix(in srgb, var(--color-accent-glow) 36%, transparent)'
+                          : 'none',
+                      }}
+                    >
+                      <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        {preset.label}
+                      </p>
+                      <p className="mt-2 text-base font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                        {preset.title}
+                      </p>
+                      <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                        {preset.helper}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                {CONTACT_BRIEF_CHECKLIST.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border px-3 py-1.5 text-xs font-medium"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                    }}
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button variant="primary" href={`mailto:${contactEmail}`}>
                   <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
-                  {contactEmail}
+                  Email direct
                 </Button>
-                {socialLinks[0] && (
-                  <Button variant="secondary" href={socialLinks[0].href}>
-                    <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
-                    {socialLinks[0].label}
-                  </Button>
-                )}
+                <Button
+                  variant="secondary"
+                  onClick={() => handleIntentSelect(CONTACT_INTENT_PRESETS[1] || CONTACT_INTENT_PRESETS[0])}
+                >
+                  <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
+                  Pre-remplir un brief
+                </Button>
               </div>
             </div>
 
@@ -222,6 +313,70 @@ export default function ContactPage() {
                       Decris le contexte, je m'occupe du reste.
                     </p>
                   </div>
+                </div>
+
+                {activeIntent && (
+                  <div
+                    className="mb-6 rounded-[var(--ui-radius-xl)] border px-4 py-4"
+                    style={{
+                      borderColor: 'color-mix(in srgb, var(--color-accent) 44%, var(--color-border))',
+                      backgroundColor: 'color-mix(in srgb, var(--color-accent-glow) 16%, transparent)',
+                    }}
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          Brief actif
+                        </p>
+                        <p className="mt-2 text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {activeIntent.title}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                          {activeIntent.description}
+                        </p>
+                      </div>
+                      <span
+                        className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium"
+                        style={{
+                          color: 'var(--color-accent-light)',
+                          borderColor: 'color-mix(in srgb, var(--color-accent) 44%, transparent)',
+                          backgroundColor: 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
+                        }}
+                      >
+                        {activeIntent.label}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mb-6 grid gap-3 sm:grid-cols-3">
+                  {CONTACT_INTENT_PRESETS.map((preset) => {
+                    const isActive = activeIntentId === preset.id
+
+                    return (
+                      <button
+                        key={`form-${preset.id}`}
+                        type="button"
+                        onClick={() => handleIntentSelect(preset)}
+                        className="rounded-[var(--ui-radius-xl)] border px-4 py-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={{
+                          borderColor: isActive
+                            ? 'color-mix(in srgb, var(--color-accent) 56%, var(--color-border))'
+                            : 'color-mix(in srgb, var(--color-border) 72%, transparent)',
+                          backgroundColor: isActive
+                            ? 'color-mix(in srgb, var(--color-accent-glow) 16%, transparent)'
+                            : 'color-mix(in srgb, var(--color-bg-primary) 64%, transparent)',
+                        }}
+                      >
+                        <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          {preset.label}
+                        </p>
+                        <p className="mt-2 text-sm font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                          {preset.title}
+                        </p>
+                      </button>
+                    )
+                  })}
                 </div>
 
                 <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -324,6 +479,22 @@ export default function ContactPage() {
                       {status.loading ? formSubmittingLabel : formSubmitLabel}
                     </Button>
                   </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {CONTACT_BRIEF_CHECKLIST.map((item) => (
+                      <span
+                        key={`form-${item}`}
+                        className="rounded-full border px-3 py-1.5 text-xs"
+                        style={{
+                          color: 'var(--color-text-secondary)',
+                          borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                        }}
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
                 </form>
               </div>
 
@@ -379,38 +550,82 @@ export default function ContactPage() {
                   </span>
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                      Cadence
+                      Collaboration
                     </p>
                     <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                      Une discussion utile avant toute promesse.
+                      Une conversation claire avant toute promesse.
                     </p>
                   </div>
                 </div>
                 <div className="mt-5 space-y-3">
-                  <div className="rounded-xl border px-4 py-3" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 66%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)' }}>
+                  {CONTACT_REASSURANCE_POINTS.map((point, index) => (
+                    <div
+                      key={point.key}
+                      className="rounded-xl border px-4 py-3"
+                      style={{
+                        borderColor: 'color-mix(in srgb, var(--color-border) 66%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                      }}
+                    >
+                      <p className="text-xs uppercase tracking-[0.16em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        Point {index + 1}
+                      </p>
+                      <p className="mt-1 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                        {point.label}
+                      </p>
+                      <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                        {point.detail}
+                      </p>
+                    </div>
+                  ))}
+                  <div
+                    className="rounded-xl border px-4 py-3"
+                    style={{
+                      borderColor: 'color-mix(in srgb, var(--color-border) 66%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                    }}
+                  >
                     <p className="text-xs uppercase tracking-[0.16em]" style={{ color: 'var(--color-text-secondary)' }}>
-                      Etape 1
+                      Base
                     </p>
                     <p className="mt-1 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                      Tu partages le besoin, le timing et les contraintes.
+                      {contactLocation}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                      Remote-first, avec des echanges asynchrones propres et des points synchrones quand ils ont du sens.
                     </p>
                   </div>
-                  <div className="rounded-xl border px-4 py-3" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 66%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)' }}>
-                    <p className="text-xs uppercase tracking-[0.16em]" style={{ color: 'var(--color-text-secondary)' }}>
-                      Etape 2
-                    </p>
-                    <p className="mt-1 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                      Je reviens avec un angle, une priorisation et la meilleure forme de collaboration.
-                    </p>
-                  </div>
-                  <div className="rounded-xl border px-4 py-3" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 66%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)' }}>
-                    <p className="text-xs uppercase tracking-[0.16em]" style={{ color: 'var(--color-text-secondary)' }}>
-                      Etape 3
-                    </p>
-                    <p className="mt-1 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                      On cadre le prochain pas concret: audit, mission, prototype ou echange exploratoire.
-                    </p>
-                  </div>
+                </div>
+              </Card>
+
+              <Card>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Demarrages rapides
+                </p>
+                <div className="mt-4 space-y-3">
+                  {CONTACT_INTENT_PRESETS.map((preset) => (
+                    <Link
+                      key={`route-${preset.id}`}
+                      to={getContactIntentHref(preset.id)}
+                      className="block rounded-xl border p-4 transition-colors"
+                      style={{
+                        borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                            {preset.title}
+                          </p>
+                          <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                            {preset.description}
+                          </p>
+                        </div>
+                        <ArrowTopRightOnSquareIcon className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               </Card>
 
