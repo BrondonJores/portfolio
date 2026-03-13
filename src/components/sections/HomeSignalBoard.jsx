@@ -175,6 +175,19 @@ export default function HomeSignalBoard({
                       {description}
                     </p>
                   </div>
+
+                  <div className="mt-auto flex items-center justify-between gap-3">
+                    <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      {helper}
+                    </span>
+                    <span
+                      className="inline-flex items-center gap-1 text-sm font-medium transition-transform duration-200 group-hover:translate-x-1"
+                      style={{ color: 'var(--color-accent)' }}
+                    >
+                      Explorer
+                      <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                  </div>
                 </div>
               </Card>
             </Link>

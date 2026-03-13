@@ -52,6 +52,15 @@ const tooltipStyle = {
 }
 
 const axisTickStyle = { fill: 'var(--color-text-secondary)', fontSize: 12 }
+const dashboardPanelStyle = {
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 88%, transparent)',
+  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+  boxShadow: '0 26px 56px -44px color-mix(in srgb, var(--color-accent-glow) 26%, transparent)',
+}
+const dashboardSoftPanelStyle = {
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 86%, transparent)',
+  borderColor: 'color-mix(in srgb, var(--color-border) 70%, transparent)',
+}
 
 /**
  * Entete standard de section dashboard.
@@ -60,21 +69,31 @@ const axisTickStyle = { fill: 'var(--color-text-secondary)', fontSize: 12 }
  */
 function SectionHeader({ title, description = '', icon: Icon = null }) {
   return (
-    <div className="mb-3">
-      <div className="flex items-center gap-2">
+    <div className="mb-4">
+      <div className="flex items-center gap-3">
         {Icon && (
-          <Icon
-            className="h-4 w-4"
-            style={{ color: 'var(--color-accent)' }}
-            aria-hidden="true"
-          />
+          <span
+            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl"
+            style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent-glow) 18%, transparent)' }}
+          >
+            <Icon
+              className="h-4 w-4"
+              style={{ color: 'var(--color-accent)' }}
+              aria-hidden="true"
+            />
+          </span>
         )}
-        <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-          {title}
-        </h2>
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+            Pilotage
+          </p>
+          <h2 className="mt-1 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+            {title}
+          </h2>
+        </div>
       </div>
       {description && (
-        <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
           {description}
         </p>
       )}
@@ -210,31 +229,37 @@ function StatCard({ icon: Icon, label, value, hint, color, to, delay = 0 }) {
     >
       <Link
         to={to}
-        className="flex items-center gap-4 p-5 rounded-xl border transition-all hover:border-[var(--color-accent)]"
+        className="group flex h-full flex-col gap-5 rounded-[var(--ui-radius-xl)] border p-5 transition-all"
         style={{
-          backgroundColor: 'var(--color-bg-card)',
-          borderColor: 'var(--color-border)',
+          ...dashboardPanelStyle,
         }}
       >
-        <div
-          className="w-12 h-12 rounded-xl border flex items-center justify-center flex-shrink-0"
-          style={{
-            backgroundColor: 'var(--color-bg-secondary)',
-            borderColor: color,
-          }}
-        >
-          <Icon className="h-6 w-6" style={{ color }} aria-hidden="true" />
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+              {label}
+            </p>
+            <p className="mt-3 text-3xl font-semibold leading-none" style={{ color: 'var(--color-text-primary)' }}>
+              {value ?? '-'}
+            </p>
+          </div>
+          <span
+            className="inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[1.1rem] border"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 56%, transparent)',
+              borderColor: color,
+            }}
+          >
+            <Icon className="h-6 w-6" style={{ color }} aria-hidden="true" />
+          </span>
         </div>
 
-        <div className="min-w-0">
-          <p className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            {value ?? '-'}
-          </p>
-          <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-            {label}
+        <div className="min-w-0 border-t pt-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 62%, transparent)' }}>
+          <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+            Ouvrir le module
           </p>
           {hint && (
-            <p className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
+            <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
               {hint}
             </p>
           )}
@@ -256,17 +281,17 @@ function TrendPill({ label, trend }) {
 
   return (
     <div
-      className="rounded-lg border p-3"
-      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-card)' }}
+      className="rounded-[var(--ui-radius-xl)] border p-4"
+      style={dashboardPanelStyle}
     >
-      <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+      <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
         {label}
       </p>
-      <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+      <p className="mt-3 text-2xl font-semibold leading-none" style={{ color: 'var(--color-text-primary)' }}>
         {safeTrend.current}
       </p>
       <p
-        className="text-xs font-medium"
+        className="mt-3 text-xs font-medium leading-relaxed"
         style={{
           color: isUp ? 'var(--color-accent)' : 'var(--color-text-secondary)',
         }}
@@ -303,17 +328,17 @@ function formatDate(isoDate) {
 function MetricTile({ label, value, helper }) {
   return (
     <div
-      className="rounded-lg border p-3"
-      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-card)' }}
+      className="rounded-[var(--ui-radius-xl)] border p-4"
+      style={dashboardPanelStyle}
     >
-      <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+      <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
         {label}
       </p>
-      <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+      <p className="mt-3 text-2xl font-semibold leading-none" style={{ color: 'var(--color-text-primary)' }}>
         {value}
       </p>
       {helper && (
-        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+        <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
           {helper}
         </p>
       )}
@@ -398,8 +423,8 @@ export default function AdminDashboard() {
   if (error) {
     return (
       <div
-        className="rounded-xl border p-6"
-        style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+        className="rounded-[var(--ui-radius-2xl)] border p-6"
+        style={dashboardSoftPanelStyle}
       >
         <p className="font-medium" style={{ color: 'var(--color-text-primary)' }}>
           Erreur de chargement
@@ -410,7 +435,7 @@ export default function AdminDashboard() {
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 rounded-lg text-sm font-medium focus:outline-none"
+          className="mt-4 rounded-xl px-4 py-2 text-sm font-medium focus:outline-none"
           style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
         >
           Reessayer
@@ -426,97 +451,161 @@ export default function AdminDashboard() {
       </Helmet>
 
       <div className="space-y-8">
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto] gap-3 items-start">
-          <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-              Tableau de bord
-            </h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-              Pilotage global du portfolio sur la fenetre active ({activePeriodLabel}).
-            </p>
-          </div>
-
-          <div
-            className="rounded-xl border p-3 space-y-2"
-            style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-              Periode et export
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              {allowedPeriodDays.map((days) => (
-                <button
-                  key={days}
-                  type="button"
-                  onClick={() => setPeriodDays(days)}
-                  aria-pressed={periodDays === days}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+        <section
+          className="overflow-hidden rounded-[var(--ui-radius-2xl)] border p-6 md:p-7"
+          style={{
+            borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+            background:
+              'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-card) 90%, transparent), color-mix(in srgb, var(--color-accent-glow) 18%, transparent))',
+            boxShadow: '0 30px 68px -46px color-mix(in srgb, var(--color-accent-glow) 30%, transparent)',
+          }}
+        >
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] xl:items-end">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+                Poste de pilotage
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl" style={{ color: 'var(--color-text-primary)' }}>
+                Tableau de bord
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-relaxed md:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                Lecture globale du portfolio, de l'inbox, du contenu et des campagnes sur la fenetre active ({activePeriodLabel}).
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <div
+                  className="rounded-full border px-4 py-2 text-xs font-medium"
                   style={{
-                    borderColor: periodDays === days ? 'var(--color-accent)' : 'var(--color-border)',
-                    color: periodDays === days ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-                    backgroundColor: 'var(--color-bg-card)',
+                    color: 'var(--color-text-primary)',
+                    borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
                   }}
                 >
-                  {days}j
-                </button>
-              ))}
+                  {summary.interactionTotal || 0} interactions totales
+                </div>
+                <div
+                  className="rounded-full border px-4 py-2 text-xs font-medium"
+                  style={{
+                    color: 'var(--color-text-primary)',
+                    borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                  }}
+                >
+                  {summary.responsePressure || 0} points d'attention inbox
+                </div>
+              </div>
+            </div>
 
-              <button
-                type="button"
-                onClick={handleExportCsv}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border focus:outline-none"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text-secondary)',
-                  backgroundColor: 'var(--color-bg-card)',
-                }}
-              >
-                <ArrowDownTrayIcon className="h-4 w-4" aria-hidden="true" />
-                Export CSV
-              </button>
+            <div
+              className="rounded-[var(--ui-radius-xl)] border p-4"
+              style={dashboardSoftPanelStyle}
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                Periode et export
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {allowedPeriodDays.map((days) => (
+                  <button
+                    key={days}
+                    type="button"
+                    onClick={() => setPeriodDays(days)}
+                    aria-pressed={periodDays === days}
+                    className="rounded-xl border px-3 py-2 text-xs font-semibold transition-colors"
+                    style={{
+                      borderColor: periodDays === days ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                      color: periodDays === days ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 88%, transparent)',
+                    }}
+                  >
+                    {days}j
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div
+                  className="rounded-xl border px-4 py-3"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--color-border) 66%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+                  }}
+                >
+                  <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    Fenetre active
+                  </p>
+                  <p className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    {activePeriodLabel}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium focus:outline-none"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                    color: 'var(--color-text-primary)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+                  }}
+                >
+                  <ArrowDownTrayIcon className="h-4 w-4" aria-hidden="true" />
+                  Export CSV
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
         <section
-          className="rounded-xl border p-4"
-          style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
+          className="rounded-[var(--ui-radius-2xl)] border p-5 md:p-6"
+          style={dashboardSoftPanelStyle}
         >
           <SectionHeader
-            title="Acces rapides marketplace"
-            description="Templates et themes pour accelerer la production de pages."
+            title="Studio et accelerateurs"
+            description="Acces directs pour pousser le design system, les templates et la production sans friction."
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Link
               to="/admin/templates"
-              className="rounded-lg border p-4 transition-all hover:border-[var(--color-accent)]"
-              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+              className="rounded-[var(--ui-radius-xl)] border p-5 transition-all"
+              style={dashboardPanelStyle}
             >
-              <div className="flex items-center gap-2">
-                <Squares2X2Icon className="h-5 w-5" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
-                <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                  Marketplace Templates
-                </p>
+              <div className="flex items-center gap-3">
+                <span
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl"
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent-glow) 18%, transparent)' }}
+                >
+                  <Squares2X2Icon className="h-5 w-5" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    Marketplace Templates
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    Gerer les templates de blocs et importer des packs.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs mt-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                Gerer les templates de blocs et importer des packs.
-              </p>
             </Link>
 
             <Link
               to="/admin/themes"
-              className="rounded-lg border p-4 transition-all hover:border-[var(--color-accent)]"
-              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+              className="rounded-[var(--ui-radius-xl)] border p-5 transition-all"
+              style={dashboardPanelStyle}
             >
-              <div className="flex items-center gap-2">
-                <PaintBrushIcon className="h-5 w-5" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
-                <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                  Marketplace Themes
-                </p>
+              <div className="flex items-center gap-3">
+                <span
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-2xl"
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent-glow) 18%, transparent)' }}
+                >
+                  <PaintBrushIcon className="h-5 w-5" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    Marketplace Themes
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    Parcourir, importer et appliquer des themes.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs mt-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                Parcourir, importer et appliquer des themes.
-              </p>
             </Link>
           </div>
         </section>
@@ -579,8 +668,8 @@ export default function AdminDashboard() {
         </div>
 
         <section
-          className="rounded-xl border p-4"
-          style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
+          className="rounded-[var(--ui-radius-2xl)] border p-5 md:p-6"
+          style={dashboardSoftPanelStyle}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
             <MetricTile
@@ -612,8 +701,8 @@ export default function AdminDashboard() {
         </section>
 
         <section
-          className="rounded-xl border p-4"
-          style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
+          className="rounded-[var(--ui-radius-2xl)] border p-5 md:p-6"
+          style={dashboardSoftPanelStyle}
         >
           <SectionHeader
             title={`Tendances sur ${activePeriodDays} jours`}
@@ -638,8 +727,8 @@ export default function AdminDashboard() {
           />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div
-              className="rounded-xl border p-4"
-              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+              className="rounded-[var(--ui-radius-2xl)] border p-5"
+              style={dashboardPanelStyle}
             >
               <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
                 Flux messages / abonnes
@@ -668,8 +757,8 @@ export default function AdminDashboard() {
             </div>
 
             <div
-              className="rounded-xl border p-4"
-              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+              className="rounded-[var(--ui-radius-2xl)] border p-5"
+              style={dashboardPanelStyle}
             >
               <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
                 Contenu / campagnes sur la periode
@@ -716,8 +805,8 @@ export default function AdminDashboard() {
           />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div
-              className="rounded-xl border p-4"
-              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+              className="rounded-[var(--ui-radius-2xl)] border p-5"
+              style={dashboardPanelStyle}
             >
               <div className="flex items-center gap-2 mb-3">
                 <EnvelopeIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
@@ -749,8 +838,8 @@ export default function AdminDashboard() {
             </div>
 
             <div
-              className="rounded-xl border p-4"
-              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+              className="rounded-[var(--ui-radius-2xl)] border p-5"
+              style={dashboardPanelStyle}
             >
               <div className="flex items-center gap-2 mb-3">
                 <DocumentTextIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
@@ -773,8 +862,8 @@ export default function AdminDashboard() {
             </div>
 
             <div
-              className="rounded-xl border p-4"
-              style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+              className="rounded-[var(--ui-radius-2xl)] border p-5"
+              style={dashboardPanelStyle}
             >
               <div className="flex items-center gap-2 mb-3">
                 <ChartPieIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
@@ -806,8 +895,8 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)] gap-4">
           <section
-            className="rounded-xl border p-4"
-            style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+            className="rounded-[var(--ui-radius-2xl)] border p-5"
+            style={dashboardPanelStyle}
           >
             <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-primary)' }}>
               Derniers messages
@@ -821,10 +910,12 @@ export default function AdminDashboard() {
                 {recentMessages.map((msg) => (
                   <div
                     key={msg.id}
-                    className="rounded-lg border p-3"
+                    className="rounded-[var(--ui-radius-xl)] border p-4"
                     style={{
-                      borderColor: msg.read_at ? 'var(--color-border)' : 'var(--color-accent)',
-                      backgroundColor: 'var(--color-bg-secondary)',
+                      borderColor: msg.read_at
+                        ? 'color-mix(in srgb, var(--color-border) 68%, transparent)'
+                        : 'var(--color-accent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 72%, transparent)',
                     }}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -854,8 +945,8 @@ export default function AdminDashboard() {
           </section>
 
           <section
-            className="rounded-xl border p-4 space-y-4"
-            style={{ backgroundColor: 'var(--color-bg-card)', borderColor: 'var(--color-border)' }}
+            className="rounded-[var(--ui-radius-2xl)] border p-5 space-y-4"
+            style={dashboardPanelStyle}
           >
             <div>
               <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
@@ -875,8 +966,11 @@ export default function AdminDashboard() {
                 {topTags.map((item) => (
                   <div
                     key={item.tag}
-                    className="flex items-center justify-between rounded-lg border px-3 py-2"
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
+                    className="flex items-center justify-between rounded-[var(--ui-radius-xl)] border px-4 py-3"
+                    style={{
+                      borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 72%, transparent)',
+                    }}
                   >
                     <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
                       #{item.tag}
@@ -889,7 +983,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            <div className="pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="border-t pt-3" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
               <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
                 Derniere campagne envoyee
               </p>

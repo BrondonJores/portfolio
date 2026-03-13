@@ -373,20 +373,6 @@ export default function Hero({ homeMetrics = [] }) {
           </motion.div>
         </motion.div>
       </div>
-
-      <div className="pointer-events-none absolute bottom-7 left-1/2 -translate-x-1/2">
-        <div
-          className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs uppercase tracking-[0.22em]"
-          style={{
-            borderColor: 'color-mix(in srgb, var(--color-border) 70%, transparent)',
-            color: 'var(--color-text-secondary)',
-            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 80%, transparent)',
-          }}
-        >
-          Explorer
-          <ArrowDownIcon className="h-4 w-4" aria-hidden="true" />
-        </div>
-      </div>
     </section>
   )
 }
