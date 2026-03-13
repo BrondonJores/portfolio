@@ -11,6 +11,7 @@ import Spinner from './components/ui/Spinner.jsx'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { SettingsProvider } from './context/SettingsContext.jsx'
+import { applyUiCompatibilityClasses } from './utils/uiCompatibility.js'
 import './index.css'
 
 const CHUNK_RELOAD_MARK_KEY = 'portfolio:chunk-reload-ts'
@@ -99,6 +100,7 @@ function installChunkRecoveryHandlers() {
 }
 
 installChunkRecoveryHandlers()
+applyUiCompatibilityClasses()
 
 /* Chargement paresseux de toutes les pages pour le code splitting */
 const Home = lazy(() => import('./pages/Home.jsx'))

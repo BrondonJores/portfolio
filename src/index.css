@@ -262,6 +262,33 @@ samp {
   animation: media-shimmer 1600ms ease-in-out infinite;
 }
 
+.ui-compat-legacy .media-shell,
+.media-shell--compat {
+  -webkit-transform: none;
+  transform: none;
+  background: var(--color-bg-secondary);
+}
+
+.ui-compat-legacy .media-skeleton,
+.media-shell--compat .media-skeleton {
+  background: var(--color-bg-secondary);
+}
+
+.ui-compat-legacy .media-skeleton::after,
+.media-shell--compat .media-skeleton::after {
+  display: none;
+}
+
+.ui-compat-no-color-mix .border,
+.ui-compat-no-color-mix .border-t,
+.ui-compat-no-color-mix .border-r,
+.ui-compat-no-color-mix .border-b,
+.ui-compat-no-color-mix .border-l,
+.ui-compat-no-color-mix .border-x,
+.ui-compat-no-color-mix .border-y {
+  border-color: var(--color-border);
+}
+
 @supports not (background: color-mix(in srgb, black 50%, white)) {
   .media-skeleton {
     background: linear-gradient(145deg, var(--color-bg-secondary), var(--color-bg-card));

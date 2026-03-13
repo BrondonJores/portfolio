@@ -12,7 +12,7 @@ const BASE_STYLES = [
   'text-[length:var(--ui-button-font-size)] font-medium transition-all duration-200',
   'disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none',
   'focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2',
-  'focus-visible:ring-offset-[var(--color-bg-primary)] transform-gpu',
+  'focus-visible:ring-offset-[var(--color-bg-primary)]',
 ].join(' ')
 
 const BUTTON_ASSET_URL_BY_VARIANT = {
@@ -70,6 +70,7 @@ function buildButtonChrome({
   uiPrimitives,
   isHovered,
   animationConfig,
+  simplifyChrome,
   canRunMicroInteractions,
   canRenderButtonAsset,
   shouldPulse,
@@ -79,15 +80,28 @@ function buildButtonChrome({
   const glowStrength = Math.max(0.28, 0.48 * animationConfig.buttonGlowBoost)
   const sharedStyle = {
     letterSpacing: uiPrimitives.density === 'compact' ? '0.01em' : '0.015em',
-    backdropFilter: uiPrimitives.surfaceBlurPx > 0 && variant !== 'primary'
+    backdropFilter: !simplifyChrome && uiPrimitives.surfaceBlurPx > 0 && variant !== 'primary'
       ? `blur(${uiPrimitives.surfaceBlurPx}px)`
       : 'none',
-    WebkitBackdropFilter: uiPrimitives.surfaceBlurPx > 0 && variant !== 'primary'
+    WebkitBackdropFilter: !simplifyChrome && uiPrimitives.surfaceBlurPx > 0 && variant !== 'primary'
       ? `blur(${uiPrimitives.surfaceBlurPx}px)`
       : 'none',
   }
 
   if (variant === 'secondary') {
+    if (simplifyChrome) {
+      return {
+        ...sharedStyle,
+        color: 'var(--color-accent)',
+        backgroundColor: 'var(--color-bg-card)',
+        borderColor: isHovered ? 'var(--color-accent)' : 'var(--color-border)',
+        boxShadow: isHovered
+          ? '0 18px 34px -26px var(--color-accent-glow)'
+          : '0 12px 24px -24px rgba(0, 0, 0, 0.18)',
+        animation: 'none',
+      }
+    }
+
     return {
       ...sharedStyle,
       color: isHovered ? 'var(--color-text-primary)' : 'var(--color-accent)',
@@ -101,6 +115,17 @@ function buildButtonChrome({
   }
 
   if (variant === 'ghost') {
+    if (simplifyChrome) {
+      return {
+        ...sharedStyle,
+        color: isHovered ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+        backgroundColor: 'transparent',
+        borderColor: isHovered ? 'var(--color-border)' : 'transparent',
+        boxShadow: 'none',
+        animation: 'none',
+      }
+    }
+
     return {
       ...sharedStyle,
       color: isHovered ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
@@ -111,6 +136,19 @@ function buildButtonChrome({
         ? 'color-mix(in srgb, var(--color-border) 66%, transparent)'
         : 'transparent',
       boxShadow: 'none',
+      animation: 'none',
+    }
+  }
+
+  if (simplifyChrome) {
+    return {
+      ...sharedStyle,
+      color: '#ffffff',
+      borderColor: 'var(--color-accent)',
+      background: 'var(--color-accent)',
+      boxShadow: isHovered
+        ? '0 20px 36px -24px var(--color-accent-glow)'
+        : '0 14px 28px -24px var(--color-accent-glow)',
       animation: 'none',
     }
   }
@@ -172,7 +210,8 @@ export default function Button({
     && Boolean(buttonAssetUrl)
     && buttonAssetMode === 'lottie'
     && !assetLoadFailed
-  const classes = `${BASE_STYLES} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`
+  const simplifyChrome = animationConfig.compatSimplifyChrome
+  const classes = `${BASE_STYLES} ${simplifyChrome ? '' : 'transform-gpu'} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`.trim()
   const canRunMicroInteractions = animationConfig.canAnimate
     && animationConfig.buttonMicroEnabled
     && !disabled
@@ -197,6 +236,7 @@ export default function Button({
     uiPrimitives,
     isHovered,
     animationConfig,
+    simplifyChrome,
     canRunMicroInteractions,
     canRenderButtonAsset,
     shouldPulse,
@@ -330,16 +370,18 @@ export default function Button({
           />
         </span>
       )}
-      <span
-        className="pointer-events-none absolute inset-[1px] z-0 rounded-[inherit]"
-        style={{
-          border: variant === 'ghost'
-            ? 'none'
-            : '1px solid color-mix(in srgb, white 16%, transparent)',
-          opacity: variant === 'ghost' ? 0 : isHovered ? 0.52 : 0.26,
-        }}
-        aria-hidden="true"
-      />
+      {!simplifyChrome && (
+        <span
+          className="pointer-events-none absolute inset-[1px] z-0 rounded-[inherit]"
+          style={{
+            border: variant === 'ghost'
+              ? 'none'
+              : '1px solid color-mix(in srgb, white 16%, transparent)',
+            opacity: variant === 'ghost' ? 0 : isHovered ? 0.52 : 0.26,
+          }}
+          aria-hidden="true"
+        />
+      )}
       <span className="relative z-[1] inline-flex items-center gap-2">{children}</span>
       {shouldRenderRipple && (
         <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" aria-hidden="true">

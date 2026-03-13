@@ -4,7 +4,7 @@ import { useSettings } from '../../context/SettingsContext.jsx'
 import { getAnimationConfig } from '../../utils/animationSettings.js'
 import { getUiThemePrimitives } from '../../utils/themeSettings.js'
 
-function buildCardChrome(uiPrimitives, isHovered) {
+function buildCardChrome(uiPrimitives, isHovered, simplifyChrome = false) {
   const surfaceMix = Math.round(uiPrimitives.surfaceOpacity * 100)
   const borderMix = Math.round(uiPrimitives.surfaceBorderAlpha * 100)
   const accentMix = Math.round(uiPrimitives.accentBorderAlpha * 100)
@@ -12,6 +12,20 @@ function buildCardChrome(uiPrimitives, isHovered) {
   const baseSurface = uiPrimitives.cardStyle === 'panel'
     ? 'var(--color-bg-secondary)'
     : 'var(--color-bg-card)'
+
+  if (simplifyChrome) {
+    return {
+      backgroundColor: baseSurface,
+      backgroundImage: 'none',
+      borderColor: isHovered ? 'var(--color-accent)' : 'var(--color-border)',
+      boxShadow: isHovered
+        ? '0 20px 40px -32px var(--color-accent-glow)'
+        : '0 14px 28px -26px rgba(0, 0, 0, 0.22)',
+      backdropFilter: 'none',
+      WebkitBackdropFilter: 'none',
+    }
+  }
+
   const backgroundColor = `color-mix(in srgb, ${baseSurface} ${surfaceMix}%, transparent)`
   const borderColor = isHovered
     ? `color-mix(in srgb, var(--color-accent) ${accentMix}%, var(--color-border))`
@@ -56,9 +70,10 @@ export default function Card({ children, className = '' }) {
 
   const canLift = animationConfig.canAnimate && animationConfig.cardHover
   const canTilt = canLift && animationConfig.cardTiltEnabled
+  const simplifyChrome = animationConfig.compatSimplifyChrome
   const hoverLift = Math.max(2, animationConfig.cardLiftPx * (uiPrimitives.hoverLiftPx / 10))
   const hoverScale = uiPrimitives.hoverScale
-  const chromeStyle = buildCardChrome(uiPrimitives, isHovered)
+  const chromeStyle = buildCardChrome(uiPrimitives, isHovered, simplifyChrome)
 
   function handleMouseMove(event) {
     if (!canTilt) {
@@ -100,16 +115,16 @@ export default function Card({ children, className = '' }) {
 
   return (
     <motion.div
-      className={`relative overflow-hidden rounded-[var(--ui-radius-xl)] border p-[var(--ui-card-padding)] ${className}`}
+      className={`card-shell relative overflow-hidden rounded-[var(--ui-radius-xl)] border p-[var(--ui-card-padding)] ${className}`}
       style={{
         ...chromeStyle,
         transition:
           'border-color var(--ui-transition-ms) ease, box-shadow var(--ui-transition-ms) ease, background-color var(--ui-transition-ms) ease',
-        transformStyle: 'preserve-3d',
-        backfaceVisibility: 'hidden',
-        WebkitBackfaceVisibility: 'hidden',
-        rotateX: canTilt ? springRotateX : 0,
-        rotateY: canTilt ? springRotateY : 0,
+        transformStyle: simplifyChrome ? 'flat' : 'preserve-3d',
+        backfaceVisibility: simplifyChrome ? 'visible' : 'hidden',
+        WebkitBackfaceVisibility: simplifyChrome ? 'visible' : 'hidden',
+        rotateX: canTilt && !simplifyChrome ? springRotateX : 0,
+        rotateY: canTilt && !simplifyChrome ? springRotateY : 0,
       }}
       whileHover={canLift ? { y: -hoverLift, scale: hoverScale } : undefined}
       transition={{ duration: 0.24 * animationConfig.durationScale, ease: [0.22, 1, 0.36, 1] }}
@@ -119,7 +134,7 @@ export default function Card({ children, className = '' }) {
       onFocus={() => setIsHovered(true)}
       onBlur={handleMouseLeave}
     >
-      {canLift && (
+      {canLift && !simplifyChrome && (
         <motion.span
           className="pointer-events-none absolute -right-12 top-0 z-0 h-32 w-32 rounded-full blur-3xl"
           animate={{
@@ -137,7 +152,7 @@ export default function Card({ children, className = '' }) {
         />
       )}
 
-      {animationConfig.cardTiltGlareEnabled && (
+      {animationConfig.cardTiltGlareEnabled && !simplifyChrome && (
         <span
           className="pointer-events-none absolute inset-0 rounded-[inherit]"
           style={{
@@ -149,31 +164,35 @@ export default function Card({ children, className = '' }) {
         />
       )}
 
-      <motion.span
-        className="pointer-events-none absolute inset-[1px] z-0"
-        animate={{ opacity: isHovered ? 0.88 : 0.42 }}
-        transition={{ duration: 0.22 * animationConfig.durationScale, ease: 'easeOut' }}
-        style={{
-          borderRadius: 'calc(var(--ui-radius-xl) - 1px)',
-          border: '1px solid color-mix(in srgb, var(--color-border) 48%, transparent)',
-        }}
-        aria-hidden="true"
-      />
+      {!simplifyChrome && (
+        <>
+          <motion.span
+            className="pointer-events-none absolute inset-[1px] z-0"
+            animate={{ opacity: isHovered ? 0.88 : 0.42 }}
+            transition={{ duration: 0.22 * animationConfig.durationScale, ease: 'easeOut' }}
+            style={{
+              borderRadius: 'calc(var(--ui-radius-xl) - 1px)',
+              border: '1px solid color-mix(in srgb, var(--color-border) 48%, transparent)',
+            }}
+            aria-hidden="true"
+          />
 
-      <motion.span
-        className="pointer-events-none absolute inset-x-[18%] top-0 z-0 h-px"
-        animate={{
-          opacity: isHovered ? 0.9 : 0.2,
-          scaleX: isHovered ? 1 : 0.56,
-        }}
-        transition={{ duration: 0.24 * animationConfig.durationScale, ease: 'easeOut' }}
-        style={{
-          background:
-            'linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-accent-light) 74%, transparent), transparent)',
-          transformOrigin: 'center',
-        }}
-        aria-hidden="true"
-      />
+          <motion.span
+            className="pointer-events-none absolute inset-x-[18%] top-0 z-0 h-px"
+            animate={{
+              opacity: isHovered ? 0.9 : 0.2,
+              scaleX: isHovered ? 1 : 0.56,
+            }}
+            transition={{ duration: 0.24 * animationConfig.durationScale, ease: 'easeOut' }}
+            style={{
+              background:
+                'linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-accent-light) 74%, transparent), transparent)',
+              transformOrigin: 'center',
+            }}
+            aria-hidden="true"
+          />
+        </>
+      )}
 
       <motion.div
         className="relative z-[1]"

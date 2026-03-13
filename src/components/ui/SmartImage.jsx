@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { buildResponsiveImageSet } from '../../utils/mediaImage.js'
+import { getUiCompatibilityFlags } from '../../utils/uiCompatibility.js'
 
 function normalizeAspectRatio(value) {
   if (typeof value === 'string' && value.trim()) {
@@ -41,6 +42,7 @@ export default function SmartImage({
   const normalizedSrc = typeof src === 'string' ? src.trim() : ''
   const resolvedLoading = fetchPriority === 'high' ? 'eager' : loading
   const [status, setStatus] = useState(normalizedSrc ? 'loading' : 'empty')
+  const uiCompatibility = useMemo(() => getUiCompatibilityFlags(), [])
 
   const sourceSet = useMemo(
     () => buildResponsiveImageSet(normalizedSrc, {
@@ -70,7 +72,10 @@ export default function SmartImage({
   const effectiveSizes = sourceSet.srcSet ? sizes : undefined
 
   return (
-    <div className={`media-shell ${className}`.trim()} style={wrapperStyle}>
+    <div
+      className={`media-shell ${uiCompatibility.simplifyMediaEffects ? 'media-shell--compat' : ''} ${className}`.trim()}
+      style={wrapperStyle}
+    >
       <span
         className={`media-skeleton ${showPlaceholder ? 'opacity-100' : 'opacity-0'}`}
         aria-hidden="true"
@@ -99,10 +104,12 @@ export default function SmartImage({
           style={{
             display: 'block',
             opacity: status === 'loaded' ? 1 : 0,
-            transition: 'opacity 260ms ease, transform 700ms cubic-bezier(0.22, 1, 0.36, 1)',
+            transition: uiCompatibility.simplifyMediaEffects
+              ? 'opacity 180ms ease'
+              : 'opacity 260ms ease, transform 700ms cubic-bezier(0.22, 1, 0.36, 1)',
             willChange: 'opacity',
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
+            backfaceVisibility: uiCompatibility.simplifyMediaEffects ? 'visible' : 'hidden',
+            WebkitBackfaceVisibility: uiCompatibility.simplifyMediaEffects ? 'visible' : 'hidden',
             ...imgStyle,
           }}
           onLoad={(event) => {

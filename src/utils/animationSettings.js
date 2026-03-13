@@ -1,3 +1,5 @@
+import { getUiCompatibilityFlags } from './uiCompatibility.js'
+
 const IMPORTABLE_ANIMATION_KEY_PATTERN = /^anim_[a-z0-9_]{1,80}$/i
 
 export const ANIMATION_CORE_SETTING_KEYS = [
@@ -197,9 +199,10 @@ export function getCinematicPresetSettings() {
 }
 
 export function getAnimationConfig(settings = {}, prefersReducedMotion = false) {
+  const uiCompatibility = getUiCompatibilityFlags()
   const reducedMotion = Boolean(prefersReducedMotion)
   const enabled = parseBooleanSetting(settings.anim_enabled, true)
-  const canAnimate = enabled && !reducedMotion
+  const canAnimate = enabled && !reducedMotion && !uiCompatibility.disableMotion
   const intensity = clampNumber(settings.anim_intensity, 0.4, 2.5, 1)
   const durationScale = clampNumber(settings.anim_duration_scale, 0.6, 2, 1)
   const sectionRevealType = normalizeRevealType(settings.anim_ui_scroll_reveal_type)
@@ -231,6 +234,10 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     enabled,
     canAnimate,
     reducedMotion,
+    compatDisableMotion: uiCompatibility.disableMotion,
+    compatSimplifyChrome: uiCompatibility.simplifySurfaceChrome,
+    compatSimplifyMedia: uiCompatibility.simplifyMediaEffects,
+    compatIsIosWebKit: uiCompatibility.isIosWebKit,
     profile: 'assets-only',
     easePreset: 'easeInOut',
     durationScale,
@@ -241,20 +248,20 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     sectionOnce,
     sectionViewportAmount,
     sectionStaggerMs,
-    cardHover: parseBooleanSetting(settings.anim_ui_card_tilt_enabled, true),
+    cardHover: parseBooleanSetting(settings.anim_ui_card_tilt_enabled, true) && !uiCompatibility.simplifySurfaceChrome,
     cardLiftPx: 8 * intensity,
     cardScale: cardTiltScale,
     cardTiltDeg: cardTiltMaxDeg,
-    cardTiltEnabled: parseBooleanSetting(settings.anim_ui_card_tilt_enabled, true),
+    cardTiltEnabled: parseBooleanSetting(settings.anim_ui_card_tilt_enabled, true) && !uiCompatibility.simplifySurfaceChrome,
     cardTiltMaxDeg,
     cardTiltScale,
-    cardTiltGlareEnabled: parseBooleanSetting(settings.anim_ui_card_tilt_glare_enabled, true),
-    buttonMicroEnabled: parseBooleanSetting(settings.anim_ui_button_micro_enabled, true),
+    cardTiltGlareEnabled: parseBooleanSetting(settings.anim_ui_card_tilt_glare_enabled, true) && !uiCompatibility.simplifySurfaceChrome,
+    buttonMicroEnabled: parseBooleanSetting(settings.anim_ui_button_micro_enabled, true) && !uiCompatibility.disableMotion,
     buttonHoverLiftPx,
     buttonPressScale,
     buttonGlowBoost,
-    buttonRippleEnabled: parseBooleanSetting(settings.anim_ui_button_ripple_enabled, true),
-    ctaPulse: parseBooleanSetting(settings.anim_ui_button_pulse_enabled, true),
+    buttonRippleEnabled: parseBooleanSetting(settings.anim_ui_button_ripple_enabled, true) && !uiCompatibility.disableMotion,
+    ctaPulse: parseBooleanSetting(settings.anim_ui_button_pulse_enabled, true) && !uiCompatibility.disableMotion,
     ctaPulseIntervalMs: buttonPulseIntervalMs / Math.max(0.7, intensity),
     buttonAssetEnabled: parseBooleanSetting(settings.anim_ui_button_asset_enabled, true),
     buttonAssetFit: normalizeAssetFit(settings.anim_ui_button_asset_fit),
@@ -263,18 +270,18 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     buttonAssetPrimaryUrl: toTrimmedString(settings.anim_ui_button_asset_primary_url),
     buttonAssetSecondaryUrl: toTrimmedString(settings.anim_ui_button_asset_secondary_url),
     buttonAssetGhostUrl: toTrimmedString(settings.anim_ui_button_asset_ghost_url),
-    cursorEnabled: parseBooleanSetting(settings.anim_cursor_enabled, false),
+    cursorEnabled: parseBooleanSetting(settings.anim_cursor_enabled, false) && !uiCompatibility.disableMotion,
     cursorSizePx,
     cursorRingSizePx,
     cursorSmoothness,
     cursorIdleOpacity,
-    statsCounterEnabled: parseBooleanSetting(settings.anim_stats_counter_enabled, true),
+    statsCounterEnabled: parseBooleanSetting(settings.anim_stats_counter_enabled, true) && !uiCompatibility.disableMotion,
     statsCounterDurationMs,
-    feedbackParticlesEnabled: parseBooleanSetting(settings.anim_feedback_particles_enabled, true),
+    feedbackParticlesEnabled: parseBooleanSetting(settings.anim_feedback_particles_enabled, true) && !uiCompatibility.disableMotion,
     feedbackParticlesCount,
     feedbackParticlesSpreadPx,
     feedbackParticlesDurationMs,
-    pageTransitionEnabled: parseBooleanSetting(settings.anim_page_transition_enabled, true),
+    pageTransitionEnabled: parseBooleanSetting(settings.anim_page_transition_enabled, true) && !uiCompatibility.disableMotion,
     pageTransitionDurationMs,
     pageTransitionOverlayOpacity,
     loaderSpinnerAssetUrl: toTrimmedString(settings.anim_loader_spinner_asset_url),
@@ -332,7 +339,7 @@ export function getAnimationConfig(settings = {}, prefersReducedMotion = false) 
     spriteAssetWanderUrl: toTrimmedString(settings.anim_sprite_asset_wander_url),
     spriteAssetSideLeftUrl: toTrimmedString(settings.anim_sprite_asset_side_left_url),
     spriteAssetSideRightUrl: toTrimmedString(settings.anim_sprite_asset_side_right_url),
-    scrollProgressEnabled: parseBooleanSetting(settings.anim_ui_scroll_progress_enabled, true),
+    scrollProgressEnabled: parseBooleanSetting(settings.anim_ui_scroll_progress_enabled, true) && !uiCompatibility.disableMotion,
     scrollProgressThickness,
   }
 }
