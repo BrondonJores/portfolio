@@ -1,4 +1,4 @@
-﻿/* Page de detail d'un article de blog */
+/* Page de detail d'un article de blog */
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
@@ -15,6 +15,8 @@ import {
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import Button from '../components/ui/Button.jsx'
+import Card from '../components/ui/Card.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
 import RecaptchaNotice from '../components/ui/RecaptchaNotice.jsx'
@@ -48,22 +50,10 @@ import {
   readLikedArticlesMap,
 } from './articleDetail/articleDetailUtils.js'
 
-/**
- * Normalise une valeur de tag pour la comparaison.
- * @param {unknown} tag Tag source.
- * @returns {string} Tag normalise.
- */
 function normalizeTag(tag) {
   return String(tag || '').trim().toLowerCase()
 }
 
-/**
- * Classe les articles similaires selon tags partages puis recence.
- * @param {object} currentArticle Article courant.
- * @param {Array<object>} candidates Articles candidats.
- * @param {number} maxItems Nombre max de resultats.
- * @returns {Array<object>} Articles tries.
- */
 function rankRelatedArticles(currentArticle, candidates, maxItems = 3) {
   const sourceTags = new Set((currentArticle?.tags || []).map(normalizeTag).filter(Boolean))
 
@@ -90,6 +80,14 @@ function rankRelatedArticles(currentArticle, candidates, maxItems = 3) {
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.max(1, maxItems))
     .map((entry) => entry.candidate)
+}
+
+function buildArticleLead(article) {
+  const excerpt = typeof article?.excerpt === 'string' ? article.excerpt.trim() : ''
+  if (excerpt) {
+    return excerpt
+  }
+  return 'Une lecture approfondie pour partager le contexte, les decisions et les enseignements utiles de ce sujet.'
 }
 
 export default function ArticleDetail() {
@@ -179,7 +177,6 @@ export default function ArticleDetail() {
       .catch(() => {})
   }, [article])
 
-  /* Copie du lien dans le presse-papiers */
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href)
       .then(() => {
@@ -189,7 +186,6 @@ export default function ArticleDetail() {
       .catch(() => {})
   }
 
-  /* Toggle like persiste cote API + navigateur */
   const handleLike = async () => {
     if (!article?.slug || likePending) return
 
@@ -249,6 +245,29 @@ export default function ArticleDetail() {
   const readingTime = estimateReadingTime(article.content)
   const tocHeadings = extractTocHeadings(article.content)
   const canonicalUrl = typeof window !== 'undefined' ? window.location.href : ''
+  const articleLead = buildArticleLead(article)
+  const articleTags = Array.isArray(article.tags) ? article.tags.filter(Boolean).slice(0, 8) : []
+  const articleMetaCards = [
+    {
+      key: 'publication',
+      label: 'Publication',
+      value: article.published_at ? formatDate(article.published_at) : 'Bientot',
+      helper: article.author_name || settings.site_name || 'Portfolio',
+    },
+    {
+      key: 'lecture',
+      label: 'Lecture',
+      value: `${readingTime} ${articleReadingSuffix}`,
+      helper: tocHeadings.length > 0 ? `${tocHeadings.length} reperes de lecture` : 'Lecture continue',
+    },
+    {
+      key: 'impact',
+      label: 'Impact',
+      value: article.views != null ? `${article.views} ${articleViewsSuffix}` : `${likesCount} appreciations`,
+      helper: `${likesCount} signal${likesCount > 1 ? 's' : ''} de lecture`,
+    },
+  ]
+
   const articleStructuredData = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -279,7 +298,7 @@ export default function ArticleDetail() {
         <meta property="og:description" content={article.excerpt || ''} />
         <meta property="og:image" content={article.cover_image || ''} />
         <meta property="og:type" content="article" />
-        <meta property="og:url" content={window.location.href} />
+        <meta property="og:url" content={canonicalUrl} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={article.title} />
         <meta name="twitter:description" content={article.excerpt || ''} />
@@ -290,41 +309,173 @@ export default function ArticleDetail() {
       <Navbar />
       <BackToTopButton label={articleBackToTopLabel} />
 
-      <main className="pt-24 pb-16 min-h-screen" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-        {/* Cover image hero pleine largeur */}
-        {article.cover_image && (
-          <div className="relative w-full h-56 sm:h-72 md:h-96 overflow-hidden -mt-24 mb-0">
-            <img
-              src={article.cover_image}
-              alt={article.title}
-              className="w-full h-full object-cover"
-              decoding="async"
-              fetchPriority="high"
-              width="1600"
-              height="900"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[var(--color-bg-primary)]" />
-          </div>
-        )}
-
-        <div className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 ${article.cover_image ? 'mt-4' : ''}`}>
-          {/* Bouton retour */}
+      <main className="min-h-screen pb-16 pt-28" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <button
             onClick={() => navigate('/blog')}
-            className="inline-flex items-center gap-2 text-sm mb-8 transition-colors focus:outline-none"
+            className="mb-8 inline-flex items-center gap-2 text-sm transition-colors focus:outline-none"
             style={{ color: 'var(--color-text-secondary)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-text-primary)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+            onMouseEnter={(event) => { event.currentTarget.style.color = 'var(--color-text-primary)' }}
+            onMouseLeave={(event) => { event.currentTarget.style.color = 'var(--color-text-secondary)' }}
           >
             <ArrowLeftIcon className="h-4 w-4" aria-hidden="true" />
             {articleBackToBlogLabel}
           </button>
 
-          {/* Layout principal : sidebar gauche + contenu + TOC droite */}
-          <div className="lg:flex lg:gap-8 lg:items-start">
+          <section className="mb-10 grid gap-8 xl:grid-cols-[minmax(0,1.04fr)_320px] xl:items-end">
+            <div>
+              <p
+                className="mb-4 text-[11px] uppercase tracking-[0.22em]"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Journal de fond
+              </p>
 
-            {/* Sidebar de partage â€” desktop uniquement */}
-            <aside className="hidden lg:flex flex-col items-center gap-3 sticky top-28 h-fit flex-shrink-0 w-12 pt-16">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span
+                  className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--color-border) 72%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)',
+                    color: 'var(--color-accent-light)',
+                  }}
+                >
+                  Lecture approfondie
+                </span>
+                {article.published_at && <Badge>{formatDate(article.published_at)}</Badge>}
+              </div>
+
+              <h1
+                className="max-w-4xl text-4xl font-semibold leading-tight tracking-tight md:text-5xl"
+                style={{ color: 'var(--color-text-primary)' }}
+              >
+                {article.title}
+              </h1>
+
+              <p
+                className="mt-6 max-w-3xl text-base leading-relaxed md:text-lg"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {articleLead}
+              </p>
+
+              <div
+                className="mt-6 flex flex-wrap items-center gap-4 text-sm"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {article.published_at && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarIcon className="h-4 w-4" aria-hidden="true" />
+                    <time dateTime={article.published_at}>{formatDate(article.published_at)}</time>
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5">
+                  <ClockIcon className="h-4 w-4" aria-hidden="true" />
+                  {readingTime} {articleReadingSuffix}
+                </span>
+                {article.views != null && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <EyeIcon className="h-4 w-4" aria-hidden="true" />
+                    {article.views} {articleViewsSuffix}
+                  </span>
+                )}
+              </div>
+
+              {articleTags.length > 0 && (
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {articleTags.map((tag) => (
+                    <Badge key={`${article.id}-${tag}`}>{tag}</Badge>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-8 flex flex-wrap gap-3 lg:hidden">
+                <Button variant="ghost" onClick={handleCopyLink}>
+                  <LinkIcon className="h-4 w-4" aria-hidden="true" />
+                  {copied ? articleCopyShortCopiedLabel : articleCopyShortLabel}
+                </Button>
+                <Button
+                  variant="secondary"
+                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(canonicalUrl)}&text=${encodeURIComponent(article.title)}`}
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.264 5.632L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
+                  </svg>
+                  X
+                </Button>
+                <Button
+                  variant="secondary"
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(canonicalUrl)}`}
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                  </svg>
+                  LinkedIn
+                </Button>
+                <button
+                  onClick={handleLike}
+                  disabled={likePending}
+                  className="inline-flex min-h-[var(--ui-control-height)] items-center gap-2 rounded-[var(--ui-radius-xl)] border px-[var(--ui-button-px)] py-[var(--ui-button-py)] text-[length:var(--ui-button-font-size)] font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  style={{
+                    borderColor: liked ? '#ef4444' : 'color-mix(in srgb, var(--color-border) 70%, transparent)',
+                    color: liked ? '#ef4444' : 'var(--color-text-secondary)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
+                  }}
+                >
+                  <HeartIcon className="h-4 w-4" style={{ fill: liked ? '#ef4444' : 'none' }} aria-hidden="true" />
+                  {liked ? articleLikeOnLabel : articleLikeOffLabel} - {likesCount}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              {articleMetaCards.map((card) => (
+                <Card key={card.key} className="h-full">
+                  <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    {card.label}
+                  </p>
+                  <p className="mt-3 text-lg font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                    {card.value}
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    {card.helper}
+                  </p>
+                </Card>
+              ))}
+            </div>
+          </section>
+
+          {article.cover_image && (
+            <section className="mb-12">
+              <div
+                className="overflow-hidden rounded-[2rem] border p-2"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--color-border) 78%, var(--color-accent))',
+                  background:
+                    'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-secondary) 86%, transparent), color-mix(in srgb, var(--color-accent-glow) 24%, transparent))',
+                  boxShadow: '0 32px 72px -42px color-mix(in srgb, var(--color-accent-glow) 42%, transparent)',
+                }}
+              >
+                <div
+                  className="overflow-hidden rounded-[1.5rem]"
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 84%, transparent)' }}
+                >
+                  <img
+                    src={article.cover_image}
+                    alt={article.title}
+                    className="max-h-[42rem] w-full object-cover object-center"
+                    decoding="async"
+                    fetchPriority="high"
+                    width="1600"
+                    height="900"
+                  />
+                </div>
+              </div>
+            </section>
+          )}
+
+          <section className="grid gap-8 lg:grid-cols-[88px_minmax(0,1fr)] xl:grid-cols-[88px_minmax(0,1fr)_240px] xl:items-start">
+            <aside className="hidden lg:block lg:sticky lg:top-28 lg:h-fit">
               <ShareSidebar
                 article={article}
                 liked={liked}
@@ -346,149 +497,78 @@ export default function ArticleDetail() {
               />
             </aside>
 
-            {/* Contenu principal */}
-            <div className="flex-1 min-w-0">
-
-              {/* En-tÃªte */}
-              <header className="mb-10">
-                <h1
-                  className="text-4xl font-bold mb-4 leading-tight"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  {article.title}
-                </h1>
-
-                {/* MÃ©tadonnÃ©es : date, temps de lecture, vues */}
-                <div
-                  className="flex flex-wrap items-center gap-4 text-sm mb-4"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  {article.published_at && (
-                    <span className="flex items-center gap-1.5">
-                      <CalendarIcon className="h-4 w-4" aria-hidden="true" />
-                      <time dateTime={article.published_at}>{formatDate(article.published_at)}</time>
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1.5">
-                    <ClockIcon className="h-4 w-4" aria-hidden="true" />
-                    {readingTime} {articleReadingSuffix}
-                  </span>
-                  {article.views != null && (
-                    <span className="flex items-center gap-1.5">
-                      <EyeIcon className="h-4 w-4" aria-hidden="true" />
-                      {article.views} {articleViewsSuffix}
-                    </span>
-                  )}
-                </div>
-
-                {Array.isArray(article.tags) && article.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {article.tags.map((tag) => (
-                      <Badge key={tag}>{tag}</Badge>
-                    ))}
-                  </div>
-                )}
-
-                {/* Boutons de partage mobiles (lg: masquÃ©s) */}
-                <div className="flex flex-wrap items-center gap-2 mt-4 lg:hidden">
-                  <button
-                    onClick={handleCopyLink}
-                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors focus:outline-none"
-                    style={{
-                      borderColor: 'var(--color-border)',
-                      color: 'var(--color-text-secondary)',
-                      backgroundColor: 'var(--color-bg-card)',
-                    }}
-                  >
-                    <LinkIcon className="h-4 w-4" aria-hidden="true" />
-                    {copied ? articleCopyShortCopiedLabel : articleCopyShortLabel}
-                  </button>
-                  <a
-                    href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(article.title)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors"
-                    style={{
-                      borderColor: 'var(--color-border)',
-                      color: 'var(--color-text-secondary)',
-                      backgroundColor: 'var(--color-bg-card)',
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.747l7.73-8.835L1.254 2.25H8.08l4.264 5.632L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
-                    </svg>
-                    X
-                  </a>
-                  <a
-                    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors"
-                    style={{
-                      borderColor: 'var(--color-border)',
-                      color: 'var(--color-text-secondary)',
-                      backgroundColor: 'var(--color-bg-card)',
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                    </svg>
-                    LinkedIn
-                  </a>
-                </div>
-              </header>
-
-              {/* Contenu de l'article */}
-              <BlockRenderer content={article.content} />
-
-              {/* Bouton Like (fin d'article) */}
+            <div className="min-w-0">
               <div
-                className="flex items-center gap-3 mt-10 pt-6 border-t"
-                style={{ borderColor: 'var(--color-border)' }}
+                className="rounded-[var(--ui-radius-2xl)] border p-6 md:p-8"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--color-border) 78%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 88%, transparent)',
+                }}
               >
-                <div className="relative inline-flex">
-                  <motion.button
-                    key={likeAnimKey}
-                    onClick={handleLike}
-                    initial={{ scale: 1 }}
-                    animate={{ scale: [1, 1.4, 1] }}
-                    whileTap={{ scale: 0.8 }}
-                    transition={{ duration: 0.3 }}
-                    disabled={likePending}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full border transition-colors focus:outline-none disabled:opacity-60"
-                    style={{
-                      borderColor: liked ? '#ef4444' : 'var(--color-border)',
-                      color: liked ? '#ef4444' : 'var(--color-text-secondary)',
-                      backgroundColor: 'var(--color-bg-card)',
-                    }}
-                    aria-label={liked ? likeRemoveLabel : likeAddLabel}
-                  >
-                    <HeartIcon
-                      className="h-5 w-5"
-                      style={{ fill: liked ? '#ef4444' : 'none' }}
-                      aria-hidden="true"
+                <BlockRenderer content={article.content} />
+              </div>
+
+              <section
+                className="mt-8 rounded-[var(--ui-radius-2xl)] border p-6 md:p-7"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
+                }}
+              >
+                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                  <div className="max-w-xl">
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      Ressenti de lecture
+                    </p>
+                    <p className="mt-3 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Ce contenu t'a aide ? Tu peux le signaler en un clic.
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                      Les retours rapides me permettent d'identifier les sujets qui meritent d'etre pousses plus loin.
+                    </p>
+                  </div>
+                  <div className="relative inline-flex">
+                    <motion.button
+                      key={likeAnimKey}
+                      onClick={handleLike}
+                      initial={{ scale: 1 }}
+                      animate={{ scale: [1, 1.4, 1] }}
+                      whileTap={{ scale: 0.8 }}
+                      transition={{ duration: 0.3 }}
+                      disabled={likePending}
+                      className="flex items-center gap-2 rounded-full border px-5 py-3 transition-colors focus:outline-none disabled:opacity-60"
+                      style={{
+                        borderColor: liked ? '#ef4444' : 'var(--color-border)',
+                        color: liked ? '#ef4444' : 'var(--color-text-secondary)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 86%, transparent)',
+                      }}
+                      aria-label={liked ? likeRemoveLabel : likeAddLabel}
+                    >
+                      <HeartIcon
+                        className="h-5 w-5"
+                        style={{ fill: liked ? '#ef4444' : 'none' }}
+                        aria-hidden="true"
+                      />
+                      {liked ? articleLikeOnLabel : articleLikeOffLabel} - {likesCount}
+                    </motion.button>
+                    <ParticleBurst
+                      triggerKey={likeBurstKey}
+                      active={animationConfig.feedbackParticlesEnabled}
+                      count={animationConfig.feedbackParticlesCount}
+                      spreadPx={animationConfig.feedbackParticlesSpreadPx}
+                      durationMs={animationConfig.feedbackParticlesDurationMs}
                     />
-                    {liked ? articleLikeOnLabel : articleLikeOffLabel} - {likesCount}
-                  </motion.button>
-                  <ParticleBurst
-                    triggerKey={likeBurstKey}
-                    active={animationConfig.feedbackParticlesEnabled}
-                    count={animationConfig.feedbackParticlesCount}
-                    spreadPx={animationConfig.feedbackParticlesSpreadPx}
-                    durationMs={animationConfig.feedbackParticlesDurationMs}
-                  />
+                  </div>
                 </div>
                 {likeError && (
-                  <p className="text-sm" style={{ color: '#ef4444' }}>
+                  <p className="mt-4 text-sm" style={{ color: '#ef4444' }}>
                     {likeError}
                   </p>
                 )}
-              </div>
+              </section>
 
-              {/* Carte auteur */}
               <AuthorCard article={article} />
 
-              {/* Newsletter CTA */}
               <NewsletterCTA
                 successLabel={articleNewsletterSuccess}
                 titleLabel={articleNewsletterTitle}
@@ -498,87 +578,86 @@ export default function ArticleDetail() {
                 genericErrorLabel={articleGenericErrorLabel}
               />
 
-              {/* Section commentaires */}
-              <section className="mt-12">
-                <h2
-                  className="text-xl font-semibold mb-6"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  {comments.length === 0
-                    ? articleCommentsTitle
-                    : `${comments.length} ${articleCommentWord}${comments.length > 1 ? 's' : ''}`}
-                </h2>
+              <section
+                className="mt-12 rounded-[var(--ui-radius-2xl)] border p-6 md:p-7"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 86%, transparent)',
+                }}
+              >
+                <div className="mb-8 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      Discussion
+                    </p>
+                    <h2 className="mt-3 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      {comments.length === 0
+                        ? articleCommentsTitle
+                        : `${comments.length} ${articleCommentWord}${comments.length > 1 ? 's' : ''}`}
+                    </h2>
+                  </div>
+                  <p className="max-w-md text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    Partage ton retour, une question ou un angle complementaire. Les commentaires passent en moderation avant publication.
+                  </p>
+                </div>
 
-                {/* Liste des commentaires */}
                 {comments.length > 0 && (
-                  <div className="space-y-4 mb-8">
-                    {comments.map((c, idx) => (
+                  <div className="mb-8 space-y-4">
+                    {comments.map((comment, index) => (
                       <motion.div
-                        key={c.id}
+                        key={comment.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className="p-4 rounded-xl border"
+                        transition={{ delay: index * 0.05 }}
+                        className="rounded-[var(--ui-radius-xl)] border p-5"
                         style={{
-                          backgroundColor: 'var(--color-bg-card)',
-                          borderColor: 'var(--color-border)',
+                          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 62%, transparent)',
+                          borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
                         }}
                       >
-                        <div className="flex items-center gap-3 mb-2">
-                          {/* Avatar avec initiale */}
+                        <div className="mb-3 flex items-center gap-3">
                           <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                            style={{ backgroundColor: getAvatarColor(c.author_name) }}
+                            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl text-xs font-bold text-white"
+                            style={{ backgroundColor: getAvatarColor(comment.author_name) }}
                             aria-hidden="true"
                           >
-                            {c.author_name ? c.author_name[0].toUpperCase() : '?'}
+                            {comment.author_name ? comment.author_name[0].toUpperCase() : '?'}
                           </div>
-                          <span
-                            className="font-semibold text-sm"
-                            style={{ color: 'var(--color-text-primary)' }}
-                          >
-                            {c.author_name}
-                          </span>
-                          <span
-                            className="text-xs"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                          >
-                            {c.created_at ? formatRelativeDate(c.created_at) : ''}
-                          </span>
+                          <div className="min-w-0">
+                            <span className="block text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                              {comment.author_name}
+                            </span>
+                            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                              {comment.created_at ? formatRelativeDate(comment.created_at) : ''}
+                            </span>
+                          </div>
                         </div>
-                        <p
-                          className="text-sm leading-relaxed pl-11"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                        >
-                          {c.content}
+                        <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                          {comment.content}
                         </p>
                       </motion.div>
                     ))}
                   </div>
                 )}
 
-                {/* Formulaire d'ajout de commentaire */}
                 <div
-                  className="relative p-6 rounded-xl border"
+                  className="relative rounded-[var(--ui-radius-xl)] border p-5 md:p-6"
                   style={{
-                    backgroundColor: 'var(--color-bg-card)',
-                    borderColor: 'var(--color-border)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 66%, transparent)',
+                    borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
                   }}
                 >
-                  <h3
-                    className="text-base font-medium mb-4"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
+                  <h3 className="text-base font-medium" style={{ color: 'var(--color-text-primary)' }}>
                     {articleLeaveCommentLabel}
                   </h3>
                   {submitSuccess ? (
-                    <p className="text-sm" style={{ color: 'var(--color-accent)' }}>
+                    <p className="mt-3 text-sm" style={{ color: 'var(--color-accent)' }}>
                       {articleCommentPendingLabel}
                     </p>
                   ) : (
                     <form
-                      onSubmit={async (e) => {
-                        e.preventDefault()
+                      onSubmit={async (event) => {
+                        event.preventDefault()
                         setSubmitting(true)
                         setSubmitError('')
                         try {
@@ -599,40 +678,42 @@ export default function ArticleDetail() {
                           setSubmitting(false)
                         }
                       }}
-                      className="space-y-4"
+                      className="mt-5 space-y-4"
                     >
-                      <input
-                        type="text"
-                        placeholder={articleCommentNamePlaceholder}
-                        value={commentForm.author_name}
-                        onChange={(e) => setCommentForm((prev) => ({ ...prev, author_name: e.target.value }))}
-                        required
-                        className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                        style={{
-                          backgroundColor: 'var(--color-bg-primary)',
-                          borderColor: 'var(--color-border)',
-                          color: 'var(--color-text-primary)',
-                        }}
-                      />
-                      <input
-                        type="email"
-                        placeholder={articleCommentEmailPlaceholder}
-                        value={commentForm.author_email}
-                        onChange={(e) => setCommentForm((prev) => ({ ...prev, author_email: e.target.value }))}
-                        className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                        style={{
-                          backgroundColor: 'var(--color-bg-primary)',
-                          borderColor: 'var(--color-border)',
-                          color: 'var(--color-text-primary)',
-                        }}
-                      />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <input
+                          type="text"
+                          placeholder={articleCommentNamePlaceholder}
+                          value={commentForm.author_name}
+                          onChange={(event) => setCommentForm((prev) => ({ ...prev, author_name: event.target.value }))}
+                          required
+                          className="w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          style={{
+                            backgroundColor: 'var(--color-bg-primary)',
+                            borderColor: 'var(--color-border)',
+                            color: 'var(--color-text-primary)',
+                          }}
+                        />
+                        <input
+                          type="email"
+                          placeholder={articleCommentEmailPlaceholder}
+                          value={commentForm.author_email}
+                          onChange={(event) => setCommentForm((prev) => ({ ...prev, author_email: event.target.value }))}
+                          className="w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          style={{
+                            backgroundColor: 'var(--color-bg-primary)',
+                            borderColor: 'var(--color-border)',
+                            color: 'var(--color-text-primary)',
+                          }}
+                        />
+                      </div>
                       <textarea
                         placeholder={articleCommentContentPlaceholder}
                         value={commentForm.content}
-                        onChange={(e) => setCommentForm((prev) => ({ ...prev, content: e.target.value }))}
+                        onChange={(event) => setCommentForm((prev) => ({ ...prev, content: event.target.value }))}
                         required
-                        rows={4}
-                        className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-none"
+                        rows={5}
+                        className="w-full resize-none rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                         style={{
                           backgroundColor: 'var(--color-bg-primary)',
                           borderColor: 'var(--color-border)',
@@ -648,7 +729,7 @@ export default function ArticleDetail() {
                       <button
                         type="submit"
                         disabled={submitting}
-                        className="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
+                        className="rounded-xl px-5 py-3 text-sm font-medium transition-colors focus:outline-none disabled:opacity-50"
                         style={{ backgroundColor: 'var(--color-accent)', color: '#fff' }}
                       >
                         {submitting ? articleCommentSubmittingLabel : articleCommentSubmitLabel}
@@ -666,88 +747,95 @@ export default function ArticleDetail() {
               </section>
             </div>
 
-            {/* Table des matiÃ¨res â€” xl+ uniquement */}
             {tocHeadings.length > 0 && (
-              <aside className="hidden xl:block flex-shrink-0 w-52 sticky top-28 h-fit pt-16">
+              <aside className="hidden xl:block xl:sticky xl:top-28 xl:h-fit">
                 <TableOfContents headings={tocHeadings} title={articleTocTitle} />
               </aside>
             )}
-          </div>
+          </section>
 
-          {/* Articles similaires */}
           {relatedArticles.length > 0 && (
             <section className="mt-16">
-              <h2
-                className="text-xl font-semibold mb-6"
-                style={{ color: 'var(--color-text-primary)' }}
-              >
-                {articleRelatedTitle}
-              </h2>
-              {/* Mobile: scroll horizontal â€” Desktop: grille 3 colonnes */}
+              <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    A poursuivre
+                  </p>
+                  <h2 className="mt-3 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    {articleRelatedTitle}
+                  </h2>
+                </div>
+                <p className="max-w-md text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                  Une selection d'articles proches pour prolonger la lecture sans casser le rythme.
+                </p>
+              </div>
+
               <div className="flex gap-4 overflow-x-auto snap-x pb-2 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
-                {relatedArticles.map((a, idx) => (
+                {relatedArticles.map((relatedArticle, index) => (
                   <motion.div
-                    key={a.slug}
+                    key={relatedArticle.slug}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="flex-shrink-0 w-72 snap-start md:w-auto"
+                    transition={{ delay: index * 0.1 }}
+                    className="w-72 flex-shrink-0 snap-start md:w-auto"
                   >
-                    <Link
-                      to={`/blog/${a.slug}`}
-                      className="block h-full rounded-xl overflow-hidden border"
-                      style={{
-                        backgroundColor: 'var(--color-bg-card)',
-                        borderColor: 'var(--color-border)',
-                      }}
-                    >
-                      {a.cover_image ? (
-                        <img
-                          src={a.cover_image}
-                          alt={a.title}
-                          className="w-full h-32 object-cover"
-                          loading="lazy"
-                          decoding="async"
-                          width="1200"
-                          height="675"
-                        />
-                      ) : (
-                        <div
-                          className="w-full h-32 flex items-center justify-center"
-                          style={{ backgroundColor: 'var(--color-bg-secondary)' }}
-                        >
-                          <DocumentTextIcon
-                            className="h-10 w-10"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                            aria-hidden="true"
-                          />
-                        </div>
-                      )}
-                      <div className="p-4">
-                        <p
-                          className="font-semibold text-sm mb-2 line-clamp-2"
-                          style={{ color: 'var(--color-text-primary)' }}
-                        >
-                          {a.title}
-                        </p>
-                        {Array.isArray(a.tags) && a.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {a.tags.slice(0, 3).map((tag) => (
-                              <Badge key={tag}>{tag}</Badge>
-                            ))}
+                    <Link to={`/blog/${relatedArticle.slug}`} className="block h-full">
+                      <Card className="h-full overflow-hidden p-0">
+                        {relatedArticle.cover_image ? (
+                          <div className="overflow-hidden">
+                            <img
+                              src={relatedArticle.cover_image}
+                              alt={relatedArticle.title}
+                              className="h-44 w-full object-cover"
+                              loading="lazy"
+                              decoding="async"
+                              width="1200"
+                              height="675"
+                            />
                           </div>
-                        )}
-                        {a.published_at && (
+                        ) : (
                           <div
-                            className="flex items-center gap-1 text-xs"
-                            style={{ color: 'var(--color-text-secondary)' }}
+                            className="flex h-44 w-full items-center justify-center"
+                            style={{ backgroundColor: 'var(--color-bg-secondary)' }}
                           >
-                            <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                            <time dateTime={a.published_at}>{formatDate(a.published_at)}</time>
+                            <DocumentTextIcon
+                              className="h-10 w-10"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                              aria-hidden="true"
+                            />
                           </div>
                         )}
-                      </div>
+                        <div className="p-5">
+                          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                            Article lie
+                          </p>
+                          <p className="mt-3 line-clamp-2 text-lg font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                            {relatedArticle.title}
+                          </p>
+                          {relatedArticle.excerpt && (
+                            <p className="mt-3 line-clamp-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                              {relatedArticle.excerpt}
+                            </p>
+                          )}
+                          {Array.isArray(relatedArticle.tags) && relatedArticle.tags.length > 0 && (
+                            <div className="mt-4 flex flex-wrap gap-1.5">
+                              {relatedArticle.tags.slice(0, 3).map((tag) => (
+                                <Badge key={`${relatedArticle.id}-${tag}`}>{tag}</Badge>
+                              ))}
+                            </div>
+                          )}
+                          {relatedArticle.published_at && (
+                            <div
+                              className="mt-4 inline-flex items-center gap-1.5 text-xs"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                            >
+                              <CalendarIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                              <time dateTime={relatedArticle.published_at}>{formatDate(relatedArticle.published_at)}</time>
+                            </div>
+                          )}
+                        </div>
+                      </Card>
                     </Link>
                   </motion.div>
                 ))}
@@ -760,8 +848,3 @@ export default function ArticleDetail() {
     </>
   )
 }
-
-
-
-
-

@@ -201,16 +201,6 @@ export default function Hero({ homeMetrics = [] }) {
               >
                 {bio}
               </p>
-
-              <div
-                className="rounded-[var(--ui-radius-2xl)] border p-4"
-                style={{
-                  borderColor: 'color-mix(in srgb, var(--color-border) 78%, transparent)',
-                  backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
-                }}
-              >
-                
-              </div>
             </motion.div>
 
             <motion.div
