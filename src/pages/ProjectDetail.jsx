@@ -15,6 +15,7 @@ import Button from '../components/ui/Button.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import Card from '../components/ui/Card.jsx'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
+import SmartImage from '../components/ui/SmartImage.jsx'
 import { getProjectBySlug } from '../services/projectService.js'
 import { useSettings } from '../context/SettingsContext.jsx'
 import { buildPageTitle } from '../utils/seoSettings.js'
@@ -259,15 +260,27 @@ export default function ProjectDetail() {
                   className="overflow-hidden rounded-[1.1rem] sm:rounded-[1.5rem]"
                   style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 84%, transparent)' }}
                 >
-                  <img
+                  <SmartImage
                     src={project.image_url}
                     alt={project.title}
-                    className="max-h-[18rem] w-full object-contain object-top sm:max-h-[24rem] lg:max-h-[30rem] xl:max-h-[42rem]"
+                    className="w-full"
+                    imgClassName="max-h-[18rem] w-full object-contain object-top sm:max-h-[24rem] lg:max-h-[30rem] xl:max-h-[42rem]"
                     loading="eager"
                     fetchPriority="high"
-                    decoding="async"
-                    width="1600"
-                    height="900"
+                    width="1800"
+                    height="1100"
+                    sizes="(min-width: 1280px) 1200px, 100vw"
+                    widths={[768, 1024, 1440, 1800, 2200]}
+                    maxWidth={2200}
+                    quality="auto:best"
+                    fallback={(
+                      <SparklesIcon
+                        className="h-12 w-12"
+                        style={{ color: 'var(--color-accent)', opacity: 0.35 }}
+                        aria-hidden="true"
+                      />
+                    )}
+                    style={{ minHeight: '18rem' }}
                   />
                 </div>
               </div>

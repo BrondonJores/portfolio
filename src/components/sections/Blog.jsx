@@ -14,6 +14,7 @@ import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Badge from '../ui/Badge.jsx'
+import SmartImage from '../ui/SmartImage.jsx'
 import Spinner from '../ui/Spinner.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
@@ -133,24 +134,35 @@ export default function Blog({ articles = [], loading = false }) {
               >
                 <Card className="h-full flex flex-col overflow-hidden !p-0">
                   {featuredArticle.cover_image ? (
-                    <div className="relative w-full h-56 md:h-72 overflow-hidden flex-shrink-0">
-                      <img
-                        src={featuredArticle.cover_image}
-                        alt={featuredArticle.title}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                        width="1600"
-                        height="900"
-                      />
-                      <div
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                          background:
-                            'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-secondary) 90%, transparent) 100%)',
-                        }}
-                      />
-                    </div>
+                    <SmartImage
+                      src={featuredArticle.cover_image}
+                      alt={featuredArticle.title}
+                      className="h-56 w-full flex-shrink-0 md:h-72"
+                      imgClassName="h-full w-full object-cover"
+                      loading="lazy"
+                      width="1600"
+                      height="900"
+                      sizes="(min-width: 1280px) 720px, (min-width: 768px) 92vw, 100vw"
+                      widths={[640, 960, 1280, 1600]}
+                      maxWidth={1600}
+                      quality="auto:good"
+                      fallback={(
+                        <DocumentTextIcon
+                          className="h-12 w-12"
+                          style={{ color: 'var(--color-accent)', opacity: 0.35 }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      overlay={(
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            background:
+                              'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-secondary) 90%, transparent) 100%)',
+                          }}
+                        />
+                      )}
+                    />
                   ) : (
                     <div
                       className="w-full h-56 md:h-72 flex items-center justify-center flex-shrink-0"
@@ -241,17 +253,26 @@ export default function Blog({ articles = [], loading = false }) {
                 <Link to={`/blog/${article.slug}`} className="block h-full group" aria-label={`${blogReadLabel} - ${article.title}`}>
                   <Card className="h-full flex flex-col hover:border-[var(--color-accent)] transition-colors overflow-hidden !p-0">
                     {article.cover_image ? (
-                      <div className="w-full h-40 overflow-hidden flex-shrink-0">
-                        <img
-                          src={article.cover_image}
-                          alt={article.title}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                          decoding="async"
-                          width="1200"
-                          height="675"
-                        />
-                      </div>
+                      <SmartImage
+                        src={article.cover_image}
+                        alt={article.title}
+                        className="h-40 w-full flex-shrink-0"
+                        imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                        width="1200"
+                        height="675"
+                        sizes="(min-width: 1280px) 420px, (min-width: 768px) 50vw, 100vw"
+                        widths={[480, 720, 960, 1200]}
+                        maxWidth={1200}
+                        quality="auto:good"
+                        fallback={(
+                          <DocumentTextIcon
+                            className="h-8 w-8"
+                            style={{ color: 'var(--color-accent)', opacity: 0.3 }}
+                            aria-hidden="true"
+                          />
+                        )}
+                      />
                     ) : (
                       <div
                         className="w-full h-40 flex items-center justify-center flex-shrink-0"

@@ -15,6 +15,7 @@ import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import SectionTitle from '../ui/SectionTitle.jsx'
 import Card from '../ui/Card.jsx'
 import Button from '../ui/Button.jsx'
+import SmartImage from '../ui/SmartImage.jsx'
 import Spinner from '../ui/Spinner.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
@@ -227,30 +228,39 @@ export default function Projects({ projects = [], loading = false }) {
               <Card className="group h-full overflow-hidden !p-0">
                 <article className="flex h-full flex-col">
                   {heroProject.image_url ? (
-                    <div
-                      className="relative h-60 md:h-72 lg:h-[26rem] overflow-hidden"
+                    <SmartImage
+                      src={heroProject.image_url}
+                      alt={heroProject.title}
+                      className="h-60 md:h-72 lg:h-[26rem]"
+                      imgClassName="h-full w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.04]"
+                      loading="lazy"
+                      width="1600"
+                      height="900"
+                      sizes="(min-width: 1280px) 720px, (min-width: 768px) 92vw, 100vw"
+                      widths={[640, 960, 1280, 1600]}
+                      maxWidth={1600}
+                      quality="auto:good"
+                      fallback={(
+                        <FolderOpenIcon
+                          className="h-12 w-12"
+                          style={{ color: 'var(--color-accent)', opacity: 0.45 }}
+                          aria-hidden="true"
+                        />
+                      )}
                       style={{
                         background:
                           'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-primary) 84%, transparent), color-mix(in srgb, var(--color-accent-glow) 32%, transparent))',
                       }}
-                    >
-                      <img
-                        src={heroProject.image_url}
-                        alt={heroProject.title}
-                        className="h-full w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.04]"
-                        loading="lazy"
-                        decoding="async"
-                        width="1600"
-                        height="900"
-                      />
-                      <div
-                        className="pointer-events-none absolute inset-0"
-                        style={{
-                          background:
-                            'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-primary) 14%, transparent) 100%)',
-                        }}
-                      />
-                    </div>
+                      overlay={(
+                        <div
+                          className="pointer-events-none absolute inset-0"
+                          style={{
+                            background:
+                              'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-primary) 14%, transparent) 100%)',
+                          }}
+                        />
+                      )}
+                    />
                   ) : (
                     <div
                       className="h-56 md:h-72 lg:h-[24rem] flex items-center justify-center"
@@ -432,30 +442,39 @@ export default function Projects({ projects = [], loading = false }) {
                 >
                   <Card className="group h-full flex flex-col overflow-hidden !p-0">
                     {project.image_url ? (
-                      <div
-                        className="relative w-full h-48 md:h-52 overflow-hidden flex-shrink-0"
+                      <SmartImage
+                        src={project.image_url}
+                        alt={project.title}
+                        className="h-48 w-full flex-shrink-0 md:h-52"
+                        imgClassName="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.05]"
+                        loading="lazy"
+                        width="1200"
+                        height="675"
+                        sizes="(min-width: 1280px) 420px, (min-width: 768px) 50vw, 100vw"
+                        widths={[480, 720, 960, 1200]}
+                        maxWidth={1200}
+                        quality="auto:good"
+                        fallback={(
+                          <FolderOpenIcon
+                            className="h-9 w-9"
+                            style={{ color: 'var(--color-accent)', opacity: 0.35 }}
+                            aria-hidden="true"
+                          />
+                        )}
                         style={{
                           background:
                             'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-primary) 84%, transparent), color-mix(in srgb, var(--color-accent-glow) 28%, transparent))',
                         }}
-                      >
-                        <img
-                          src={project.image_url}
-                          alt={project.title}
-                          className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.05]"
-                          loading="lazy"
-                          decoding="async"
-                          width="1200"
-                          height="675"
-                        />
-                        <div
-                          className="pointer-events-none absolute inset-0"
-                          style={{
-                            background:
-                              'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-primary) 18%, transparent) 100%)',
-                          }}
-                        />
-                      </div>
+                        overlay={(
+                          <div
+                            className="pointer-events-none absolute inset-0"
+                            style={{
+                              background:
+                                'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-primary) 18%, transparent) 100%)',
+                            }}
+                          />
+                        )}
+                      />
                     ) : (
                       <div
                         className="w-full h-44 md:h-48 flex items-center justify-center flex-shrink-0"

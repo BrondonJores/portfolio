@@ -5,6 +5,7 @@ import { ClipboardIcon, ClipboardDocumentCheckIcon } from '@heroicons/react/24/o
 import DOMPurify from 'dompurify'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
+import SmartImage from './SmartImage.jsx'
 
 const SECTION_LAYOUT_COLUMNS = {
   '1-col': 1,
@@ -210,12 +211,19 @@ function ImageBlock({ block }) {
   if (!safeUrl) return null
   return (
     <figure className="mb-6">
-      <img
+      <SmartImage
         src={safeUrl}
         alt={block.caption || ''}
-        className="rounded-lg w-full object-cover"
-        style={{ borderColor: 'var(--color-border)' }}
+        className="min-h-[14rem] rounded-lg border"
+        imgClassName="w-full rounded-lg object-cover"
+        width={1400}
+        height={840}
         loading="lazy"
+        sizes="(min-width: 1280px) 900px, (min-width: 768px) 80vw, 100vw"
+        widths={[480, 768, 1024, 1400]}
+        maxWidth={1400}
+        quality="auto:good"
+        style={{ borderColor: 'var(--color-border)' }}
       />
       {block.caption && (
         <figcaption

@@ -19,6 +19,7 @@ import Button from '../components/ui/Button.jsx'
 import Card from '../components/ui/Card.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import BlockRenderer from '../components/ui/BlockRenderer.jsx'
+import SmartImage from '../components/ui/SmartImage.jsx'
 import RecaptchaNotice from '../components/ui/RecaptchaNotice.jsx'
 import ParticleBurst from '../components/ui/ParticleBurst.jsx'
 import {
@@ -472,24 +473,37 @@ export default function ArticleDetail() {
                     'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-secondary) 86%, transparent), color-mix(in srgb, var(--color-accent-glow) 24%, transparent))',
                   boxShadow: '0 32px 72px -42px color-mix(in srgb, var(--color-accent-glow) 42%, transparent)',
                 }}
-              >
-                <div
-                  className="overflow-hidden rounded-[1.5rem]"
-                  style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 84%, transparent)' }}
                 >
-                  <img
-                    src={article.cover_image}
-                    alt={article.title}
-                    className="max-h-[42rem] w-full object-cover object-center"
-                    decoding="async"
-                    fetchPriority="high"
-                    width="1600"
-                    height="900"
-                  />
+                  <div
+                    className="overflow-hidden rounded-[1.5rem]"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 84%, transparent)' }}
+                  >
+                    <SmartImage
+                      src={article.cover_image}
+                      alt={article.title}
+                      className="w-full"
+                      imgClassName="max-h-[42rem] w-full object-cover object-center"
+                      loading="eager"
+                      fetchPriority="high"
+                      width="1800"
+                      height="1012"
+                      sizes="(min-width: 1280px) 1200px, 100vw"
+                      widths={[768, 1024, 1440, 1800, 2200]}
+                      maxWidth={2200}
+                      quality="auto:best"
+                      fallback={(
+                        <DocumentTextIcon
+                          className="h-14 w-14"
+                          style={{ color: 'var(--color-accent)', opacity: 0.42 }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      style={{ minHeight: '18rem' }}
+                    />
+                  </div>
                 </div>
-              </div>
-            </section>
-          )}
+              </section>
+            )}
 
           <section className="mb-10">
             <Card>
@@ -872,20 +886,29 @@ export default function ArticleDetail() {
                     transition={{ delay: index * 0.1 }}
                     className="w-72 flex-shrink-0 snap-start md:w-auto"
                   >
-                    <Link to={`/blog/${relatedArticle.slug}`} className="block h-full">
+                      <Link to={`/blog/${relatedArticle.slug}`} className="block h-full">
                       <Card className="h-full overflow-hidden p-0">
                         {relatedArticle.cover_image ? (
-                          <div className="overflow-hidden">
-                            <img
-                              src={relatedArticle.cover_image}
-                              alt={relatedArticle.title}
-                              className="h-44 w-full object-cover"
-                              loading="lazy"
-                              decoding="async"
-                              width="1200"
-                              height="675"
-                            />
-                          </div>
+                          <SmartImage
+                            src={relatedArticle.cover_image}
+                            alt={relatedArticle.title}
+                            className="h-44"
+                            imgClassName="h-44 w-full object-cover"
+                            loading="lazy"
+                            width="1200"
+                            height="675"
+                            sizes="(min-width: 768px) 33vw, 18rem"
+                            widths={[480, 720, 960, 1200]}
+                            maxWidth={1200}
+                            quality="auto:good"
+                            fallback={(
+                              <DocumentTextIcon
+                                className="h-10 w-10"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                                aria-hidden="true"
+                              />
+                            )}
+                          />
                         ) : (
                           <div
                             className="flex h-44 w-full items-center justify-center"

@@ -13,6 +13,7 @@ import SectionTitle from '../components/ui/SectionTitle.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
 import Button from '../components/ui/Button.jsx'
+import SmartImage from '../components/ui/SmartImage.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import Navbar from '../components/sections/Navbar.jsx'
 import Footer from '../components/sections/Footer.jsx'
@@ -370,15 +371,26 @@ export default function ProjectsPage() {
                         }}
                       >
                         {spotlightProject.image_url ? (
-                          <img
+                          <SmartImage
                             src={spotlightProject.image_url}
                             alt={spotlightProject.title}
-                            className="h-full w-full object-cover object-top"
+                            className="h-full w-full"
+                            imgClassName="h-full w-full object-cover object-top"
                             loading="eager"
                             fetchPriority="high"
-                            decoding="async"
                             width="1600"
                             height="900"
+                            sizes="(min-width: 1280px) 760px, 100vw"
+                            widths={[768, 1024, 1440, 1800]}
+                            maxWidth={1800}
+                            quality="auto:best"
+                            fallback={(
+                              <FolderOpenIcon
+                                className="h-14 w-14"
+                                style={{ color: 'var(--color-accent)', opacity: 0.42 }}
+                                aria-hidden="true"
+                              />
+                            )}
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center">
@@ -544,23 +556,30 @@ export default function ProjectsPage() {
                         >
                           <Card className="group h-full flex flex-col overflow-hidden !p-0">
                             {project.image_url ? (
-                              <div
-                                className="relative h-52 overflow-hidden"
+                              <SmartImage
+                                src={project.image_url}
+                                alt={project.title}
+                                className="h-52"
+                                imgClassName="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.05]"
+                                loading="lazy"
+                                width="1200"
+                                height="675"
+                                sizes="(min-width: 1280px) 360px, (min-width: 768px) 50vw, 100vw"
+                                widths={[480, 720, 960, 1200]}
+                                maxWidth={1200}
+                                quality="auto:good"
+                                fallback={(
+                                  <FolderOpenIcon
+                                    className="h-10 w-10"
+                                    style={{ color: 'var(--color-accent)', opacity: 0.3 }}
+                                    aria-hidden="true"
+                                  />
+                                )}
                                 style={{
                                   background:
                                     'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-primary) 86%, transparent), color-mix(in srgb, var(--color-accent-glow) 28%, transparent))',
                                 }}
-                              >
-                                <img
-                                  src={project.image_url}
-                                  alt={project.title}
-                                  className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.05]"
-                                  loading="lazy"
-                                  decoding="async"
-                                  width="1200"
-                                  height="675"
-                                />
-                              </div>
+                              />
                             ) : (
                               <div
                                 className="flex h-48 items-center justify-center"

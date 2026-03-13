@@ -13,6 +13,7 @@ import Footer from '../components/sections/Footer.jsx'
 import SectionTitle from '../components/ui/SectionTitle.jsx'
 import Card from '../components/ui/Card.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import SmartImage from '../components/ui/SmartImage.jsx'
 import Spinner from '../components/ui/Spinner.jsx'
 import { useSettings } from '../context/SettingsContext.jsx'
 import { usePublicArticles } from '../hooks/usePublicArticles.js'
@@ -157,15 +158,26 @@ export default function BlogPage() {
                         }}
                       >
                         {spotlightArticle.cover_image ? (
-                          <img
+                          <SmartImage
                             src={spotlightArticle.cover_image}
                             alt={spotlightArticle.title}
-                            className="h-full w-full object-cover"
+                            className="h-full w-full"
+                            imgClassName="h-full w-full object-cover"
                             loading="eager"
                             fetchPriority="high"
-                            decoding="async"
                             width="1600"
                             height="900"
+                            sizes="(min-width: 1280px) 760px, 100vw"
+                            widths={[768, 1024, 1440, 1800]}
+                            maxWidth={1800}
+                            quality="auto:best"
+                            fallback={(
+                              <DocumentTextIcon
+                                className="h-14 w-14"
+                                style={{ color: 'var(--color-accent)', opacity: 0.42 }}
+                                aria-hidden="true"
+                              />
+                            )}
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center">
@@ -358,17 +370,26 @@ export default function BlogPage() {
                           >
                             <Card className="h-full flex flex-col overflow-hidden !p-0">
                               {article.cover_image ? (
-                                <div className="h-48 overflow-hidden">
-                                  <img
-                                    src={article.cover_image}
-                                    alt={article.title}
-                                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                    loading="lazy"
-                                    decoding="async"
-                                    width="1200"
-                                    height="675"
-                                  />
-                                </div>
+                                <SmartImage
+                                  src={article.cover_image}
+                                  alt={article.title}
+                                  className="h-48"
+                                  imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                  loading="lazy"
+                                  width="1200"
+                                  height="675"
+                                  sizes="(min-width: 1280px) 360px, (min-width: 768px) 50vw, 100vw"
+                                  widths={[480, 720, 960, 1200]}
+                                  maxWidth={1200}
+                                  quality="auto:good"
+                                  fallback={(
+                                    <DocumentTextIcon
+                                      className="h-10 w-10"
+                                      style={{ color: 'var(--color-accent)', opacity: 0.4 }}
+                                      aria-hidden="true"
+                                    />
+                                  )}
+                                />
                               ) : (
                                 <div
                                   className="flex h-44 items-center justify-center"
