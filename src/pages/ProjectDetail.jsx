@@ -117,11 +117,11 @@ export default function ProjectDetail() {
         <title>{buildPageTitle(settings, project.title)}</title>
       </Helmet>
       <Navbar />
-      <main className="min-h-screen pb-16 pt-28" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+      <main className="min-h-screen pb-16 pt-24 sm:pt-28" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <button
             onClick={() => navigate(-1)}
-            className="mb-8 inline-flex items-center gap-2 text-sm transition-colors focus:outline-none"
+            className="mb-6 inline-flex items-center gap-2 text-sm transition-colors focus:outline-none sm:mb-8"
             style={{ color: 'var(--color-text-secondary)' }}
             onMouseEnter={(event) => { event.currentTarget.style.color = 'var(--color-text-primary)' }}
             onMouseLeave={(event) => { event.currentTarget.style.color = 'var(--color-text-secondary)' }}
@@ -130,7 +130,7 @@ export default function ProjectDetail() {
             {projectBackLabel}
           </button>
 
-          <section className="mb-10 grid gap-8 lg:grid-cols-[minmax(0,1.04fr)_320px] lg:items-end">
+          <section className="mb-8 grid gap-6 lg:mb-10 lg:grid-cols-[minmax(0,1.04fr)_320px] lg:items-end">
             <div>
               <p
                 className="mb-4 text-[11px] uppercase tracking-[0.22em]"
@@ -155,14 +155,14 @@ export default function ProjectDetail() {
               </div>
 
               <h1
-                className="max-w-4xl text-4xl font-semibold leading-tight tracking-tight md:text-5xl"
+                className="max-w-4xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl md:text-5xl"
                 style={{ color: 'var(--color-text-primary)' }}
               >
                 {project.title}
               </h1>
 
               <p
-                className="mt-6 max-w-3xl text-base leading-relaxed md:text-lg"
+                className="mt-5 max-w-3xl text-sm leading-relaxed sm:text-base md:mt-6 md:text-lg"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
                 {description}
@@ -176,7 +176,7 @@ export default function ProjectDetail() {
                 </div>
               )}
 
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
                 {project.github_url && (
                   <Button variant="secondary" href={project.github_url} className="w-full justify-center sm:w-auto">
                     <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
@@ -196,9 +196,9 @@ export default function ProjectDetail() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-1">
               {metaCards.map((card) => (
-                <Card key={card.key} className="h-full">
+                <Card key={card.key} className="min-w-[15rem] snap-start sm:min-w-0 sm:h-full">
                   <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
                     {card.label}
                   </p>
@@ -214,9 +214,9 @@ export default function ProjectDetail() {
           </section>
 
           {project.image_url && (
-            <section className="mb-12">
+            <section className="mb-10 sm:mb-12">
               <div
-                className="overflow-hidden rounded-[1.5rem] border p-2 sm:rounded-[2rem]"
+                className="-mx-4 overflow-hidden rounded-[1.35rem] border p-2 sm:mx-0 sm:rounded-[2rem]"
                 style={{
                   borderColor: 'color-mix(in srgb, var(--color-border) 78%, var(--color-accent))',
                   background:
@@ -231,7 +231,7 @@ export default function ProjectDetail() {
                   <img
                     src={project.image_url}
                     alt={project.title}
-                    className="max-h-[22rem] w-full object-contain object-top sm:max-h-[30rem] xl:max-h-[42rem]"
+                    className="max-h-[18rem] w-full object-contain object-top sm:max-h-[24rem] lg:max-h-[30rem] xl:max-h-[42rem]"
                     loading="eager"
                     fetchPriority="high"
                     decoding="async"
@@ -243,9 +243,9 @@ export default function ProjectDetail() {
             </section>
           )}
 
-          <section className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start xl:grid-cols-[minmax(0,1fr)_300px]">
+          <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-10 xl:grid-cols-[minmax(0,1fr)_300px]">
             <div
-              className="rounded-[var(--ui-radius-2xl)] border p-6 md:p-8"
+              className="rounded-[var(--ui-radius-2xl)] border p-5 sm:p-6 md:p-8"
               style={{
                 borderColor: 'color-mix(in srgb, var(--color-border) 78%, transparent)',
                 backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 88%, transparent)',
@@ -254,7 +254,7 @@ export default function ProjectDetail() {
               <BlockRenderer content={project.content} />
             </div>
 
-            <aside className="order-first grid gap-4 lg:order-none">
+            <aside className="grid gap-4 sm:grid-cols-2 lg:sticky lg:top-28 lg:grid-cols-1">
               {taxonomy.technologies.length > 0 && (
                 <Card>
                   <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>

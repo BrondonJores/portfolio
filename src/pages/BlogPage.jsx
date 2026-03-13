@@ -98,10 +98,10 @@ export default function BlogPage() {
         <title>{pageTitle}</title>
       </Helmet>
       <Navbar />
-      <main className="min-h-screen pb-16 pt-28" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+      <main className="min-h-screen pb-16 pt-24 sm:pt-28" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <section className="mb-10">
-            <div className="grid gap-8 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] xl:items-end">
+          <section className="mb-8 sm:mb-10">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] xl:items-end xl:gap-8">
               <div>
                 <p
                   className="mb-4 text-[11px] uppercase tracking-[0.22em]"
@@ -115,9 +115,9 @@ export default function BlogPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
                 {pageSummary.map((item) => (
-                  <Card key={item.key} className="h-full">
+                  <Card key={item.key} className="min-w-[14.5rem] snap-start sm:min-w-0 sm:h-full">
                     <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
                       {item.label}
                     </p>
@@ -152,7 +152,7 @@ export default function BlogPage() {
                   <Card className="overflow-hidden !p-0">
                     <div className="grid gap-0 lg:grid-cols-[minmax(0,1.02fr)_minmax(320px,0.98fr)]">
                       <div
-                        className="relative min-h-[320px] overflow-hidden"
+                        className="relative min-h-[240px] overflow-hidden sm:min-h-[320px]"
                         style={{
                           background:
                             'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-secondary) 84%, transparent), color-mix(in srgb, var(--color-accent-glow) 28%, transparent))',
@@ -187,7 +187,7 @@ export default function BlogPage() {
                         />
                       </div>
 
-                      <div className="flex flex-col gap-5 p-6 md:p-8">
+                      <div className="flex flex-col gap-5 p-5 sm:p-6 md:p-8">
                         <div className="flex flex-wrap items-center gap-2">
                           <span
                             className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
@@ -273,7 +273,7 @@ export default function BlogPage() {
                 <section className="mb-10">
                   <Card>
                     <div className="flex flex-col gap-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                         <div>
                           <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
                             Themes dominants
@@ -286,7 +286,7 @@ export default function BlogPage() {
                           {topTags.length} tags visibles
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="-mx-1 flex flex-nowrap gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
                         {topTags.map((tag) => (
                           <Badge key={tag}>{tag}</Badge>
                         ))}
@@ -298,7 +298,7 @@ export default function BlogPage() {
 
               {secondaryArticles.length > 0 && (
                 <section>
-                  <div className="mb-5 flex items-center justify-between gap-3">
+                  <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                       Catalogue
                     </p>
@@ -307,7 +307,7 @@ export default function BlogPage() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
                     {secondaryArticles.map((article, index) => (
                       <motion.div
                         key={article.id}
@@ -398,23 +398,25 @@ export default function BlogPage() {
               )}
 
               {pagination && pagination.pages > 1 && (
-                <div className="mt-12 flex justify-center gap-2">
-                  {Array.from({ length: pagination.pages }, (_, index) => index + 1).map((nextPage) => (
-                    <button
-                      key={nextPage}
-                      type="button"
-                      onClick={() => setPage(nextPage)}
-                      className="h-10 min-w-10 rounded-full px-3 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                      style={{
-                        backgroundColor: nextPage === page ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-bg-card) 88%, transparent)',
-                        color: nextPage === page ? '#ffffff' : 'var(--color-text-secondary)',
-                        border: '1px solid var(--color-border)',
-                      }}
-                      aria-current={nextPage === page ? 'page' : undefined}
-                    >
-                      {nextPage}
-                    </button>
-                  ))}
+                <div className="mt-10 overflow-x-auto pb-1">
+                  <div className="flex min-w-max justify-center gap-2">
+                    {Array.from({ length: pagination.pages }, (_, index) => index + 1).map((nextPage) => (
+                      <button
+                        key={nextPage}
+                        type="button"
+                        onClick={() => setPage(nextPage)}
+                        className="h-10 min-w-10 rounded-full px-3 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={{
+                          backgroundColor: nextPage === page ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-bg-card) 88%, transparent)',
+                          color: nextPage === page ? '#ffffff' : 'var(--color-text-secondary)',
+                          border: '1px solid var(--color-border)',
+                        }}
+                        aria-current={nextPage === page ? 'page' : undefined}
+                      >
+                        {nextPage}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </>

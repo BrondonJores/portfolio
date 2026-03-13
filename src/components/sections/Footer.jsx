@@ -51,9 +51,9 @@ export default function Footer() {
           'linear-gradient(180deg, color-mix(in srgb, var(--color-bg-primary) 30%, transparent), color-mix(in srgb, var(--color-bg-secondary) 94%, transparent))',
       }}
     >
-      <div className="mx-auto max-w-6xl px-4 pb-8 pt-8 sm:px-6 lg:px-8 lg:pt-10">
+      <div className="mx-auto max-w-6xl px-4 pb-8 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
         <section
-          className="overflow-hidden rounded-[var(--ui-radius-2xl)] border p-6 md:p-7"
+          className="overflow-hidden rounded-[var(--ui-radius-2xl)] border p-5 sm:p-6 md:p-7"
           style={{
             borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
             background:
@@ -76,7 +76,7 @@ export default function Footer() {
                 {siteTagline}
               </p>
               {(contactEmail || contactLocation) && (
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="-mx-1 mt-5 flex flex-nowrap gap-3 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
                   {contactEmail && (
                     <span
                       className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
@@ -107,15 +107,15 @@ export default function Footer() {
               )}
             </div>
 
-            <div className="flex flex-wrap gap-3 lg:justify-end">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap lg:justify-end">
               {contactEmail && (
-                <Button variant="primary" href={`mailto:${contactEmail}`}>
+                <Button variant="primary" href={`mailto:${contactEmail}`} className="w-full justify-center sm:w-auto">
                   <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
                   Ecrire
                 </Button>
               )}
               {socialLinks[0] && (
-                <Button variant="secondary" href={socialLinks[0].href}>
+                <Button variant="secondary" href={socialLinks[0].href} className="w-full justify-center sm:w-auto">
                   <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
                   {socialLinks[0].label}
                 </Button>
@@ -124,7 +124,7 @@ export default function Footer() {
           </div>
         </section>
 
-        <div className="mt-8 grid gap-8 border-t pt-8 md:grid-cols-3" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+        <div className="mt-8 grid gap-8 border-t pt-8 sm:grid-cols-2 lg:grid-cols-3" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
               Signature
@@ -141,7 +141,7 @@ export default function Footer() {
             <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
               Navigation
             </p>
-            <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+            <ul className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
               {quickLinks.map((link) => (
                 <li key={link.to}>
                   <Link
@@ -161,14 +161,14 @@ export default function Footer() {
               Reseaux
             </p>
             {socialLinks.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-3">
+              <div className="mt-3 flex flex-wrap gap-2.5">
                 {socialLinks.map((social) => (
                   <a
                     key={social.label}
                     href={social.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors"
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors"
                     style={{
                       color: 'var(--color-text-primary)',
                       borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
