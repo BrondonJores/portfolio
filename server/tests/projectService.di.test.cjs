@@ -74,39 +74,63 @@ async function main() {
     )
   })
 
-  await runCase('getAllPublicProjects applies tag filter with injected operator', async () => {
-    const fakeLike = '$like$'
-    let capturedWhere = null
+  await runCase('getAllPublicProjects applies taxonomy filters in memory', async () => {
+    let findAllCalls = 0
+    let findAndCountCalls = 0
 
     const fakeProjectModel = {
-      findAndCountAll: async ({ where }) => {
-        capturedWhere = where
+      findAndCountAll: async () => {
+        findAndCountCalls += 1
         return { count: 0, rows: [] }
       },
-      findAll: async () => [],
+      findAll: async ({ where }) => {
+        findAllCalls += 1
+        assert.equal(where.published, true)
+        assert.equal(where.featured, true)
+        return [
+          {
+            id: 1,
+            title: 'Projet React',
+            tags: ['Application web', 'React', 'Open source'],
+            taxonomy: {
+              type: 'Application web',
+              stack: ['Frontend SPA'],
+              technologies: ['React'],
+              domains: ['Open source'],
+              labels: [],
+            },
+          },
+          {
+            id: 2,
+            title: 'Projet API',
+            tags: ['API backend', 'Node.js'],
+            taxonomy: {
+              type: 'API backend',
+              stack: ['Microservices'],
+              technologies: ['Node.js'],
+              domains: ['Fintech'],
+              labels: [],
+            },
+          },
+        ]
+      },
     }
 
-    const service = createProjectService({
-      projectModel: fakeProjectModel,
-      likeOperator: fakeLike,
-    })
+    const service = createProjectService({ projectModel: fakeProjectModel })
 
     const result = await service.getAllPublicProjects({
       page: '1',
       limit: '10',
-      tag: 'react',
+      type: 'Application web',
+      technology: 'React',
       featured: 'true',
     })
 
-    assert.equal(result.pagination.total, 0)
-    assert.equal(capturedWhere.published, true)
-    assert.equal(capturedWhere.featured, true)
-    const andSymbol = Object.getOwnPropertySymbols(capturedWhere).find((symbol) =>
-      String(symbol).includes('and')
-    )
-    assert.ok(andSymbol)
-    assert.ok(Array.isArray(capturedWhere[andSymbol]))
-    assert.equal(capturedWhere[andSymbol][0].tags[fakeLike], '%"react"%')
+    assert.equal(findAllCalls, 1)
+    assert.equal(findAndCountCalls, 0)
+    assert.equal(result.pagination.total, 1)
+    assert.equal(result.data.length, 1)
+    assert.equal(result.data[0].title, 'Projet React')
     assert.equal(result.facets, undefined)
   })
 

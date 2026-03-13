@@ -82,7 +82,7 @@ export default function Footer() {
                 {siteTagline}
               </p>
               {(contactEmail || contactLocation || contactAvailability) && (
-                <div className="-mx-1 mt-5 flex flex-nowrap gap-3 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+                <div className="mt-5 grid gap-2 sm:flex sm:flex-wrap sm:gap-3">
                   {contactEmail && (
                     <span
                       className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
@@ -122,7 +122,28 @@ export default function Footer() {
                 </div>
               )}
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="-mx-1 mt-6 flex gap-2 overflow-x-auto px-1 pb-1 sm:hidden">
+                {CONTACT_INTENT_PRESETS.map((preset) => (
+                  <Link
+                    key={`mobile-${preset.id}`}
+                    to={getContactIntentHref(preset.id)}
+                    className="min-w-[12rem] rounded-[var(--ui-radius-xl)] border px-4 py-3 transition-all"
+                    style={{
+                      borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                    }}
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      {preset.label}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                      {preset.title}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="mt-6 hidden gap-3 sm:grid sm:grid-cols-3">
                 {CONTACT_INTENT_PRESETS.map((preset) => (
                   <Link
                     key={preset.id}
@@ -176,7 +197,97 @@ export default function Footer() {
           </div>
         </section>
 
-        <div className="mt-8 grid gap-8 border-t pt-8 sm:grid-cols-2 lg:grid-cols-3" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+        <div className="mt-8 border-t pt-6 sm:hidden" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+          <div className="grid gap-6">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                Signature
+              </p>
+              <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                {footerText}
+              </p>
+              <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)', opacity: 0.82 }}>
+                {footerCredits}
+              </p>
+            </div>
+
+            <nav aria-label="Navigation pied de page mobile">
+              <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                Navigation
+              </p>
+              <ul className="mt-3 grid grid-cols-2 gap-2.5">
+                {quickLinks.map((link) => (
+                  <li key={`mobile-${link.to}`}>
+                    <Link
+                      to={link.to}
+                      className="flex min-h-11 items-center rounded-[var(--ui-radius-xl)] border px-3 py-2.5 text-sm"
+                      style={{
+                        color: 'var(--color-text-primary)',
+                        borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+                      }}
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                Reseaux
+              </p>
+              {socialLinks.length > 0 ? (
+                <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
+                  {socialLinks.map((social) => (
+                    <a
+                      key={`mobile-${social.label}`}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-10 flex-shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm"
+                      style={{
+                        color: 'var(--color-text-primary)',
+                        borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+                      }}
+                    >
+                      {social.label}
+                      <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                  Les points de contact directs sont centralises sur la page contact.
+                </p>
+              )}
+            </div>
+
+            <div className="grid gap-2.5">
+              {CONTACT_REASSURANCE_POINTS.slice(0, 2).map((point) => (
+                <div
+                  key={`mobile-${point.key}`}
+                  className="rounded-[var(--ui-radius-xl)] border px-4 py-3"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+                  }}
+                >
+                  <p className="text-xs font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                    {point.label}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    {point.detail}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 hidden gap-8 border-t pt-8 sm:grid sm:grid-cols-2 lg:grid-cols-3" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
               Signature

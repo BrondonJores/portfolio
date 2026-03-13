@@ -1,5 +1,4 @@
 /* Service metier project : regles applicatives et acces donnees. */
-const { Op } = require('sequelize')
 const slugifyLib = require('slugify')
 const { Project } = require('../models')
 const { createHttpError } = require('../utils/httpError')
@@ -8,6 +7,7 @@ const {
   normalizeProjectTaxonomy,
   buildProjectTagsFromTaxonomy,
   buildProjectFacets,
+  matchesProjectFilters,
 } = require('../utils/projectTaxonomy')
 
 const MAX_IMPORT_ITEMS = 200
@@ -168,7 +168,6 @@ function resolveProjectsToImport(payload) {
 function createProjectService(deps = {}) {
   const projectModel = deps.projectModel || Project
   const slugify = deps.slugify || slugifyLib
-  const likeOperator = deps.likeOperator || Op.like
   const facetsCacheTtlMs = parsePositiveInt(
     process.env.PROJECT_PUBLIC_FACETS_CACHE_TTL_MS,
     FACETS_CACHE_DEFAULT_TTL_MS
@@ -238,46 +237,45 @@ function createProjectService(deps = {}) {
     const safeLimit = Math.min(parsePositiveInt(limit, 10), MAX_PUBLIC_PROJECT_LIMIT)
     const offset = (safePage - 1) * safeLimit
     const baseWhere = { published: true }
+    const activeFilters = { tag, type, stack, technology, domain, label }
+    const hasActiveContentFilters = [
+      tag,
+      type,
+      stack,
+      technology,
+      domain,
+      label,
+    ].some((value) => parseQueryFilterValues(value, 12).length > 0)
 
     if (featured === 'true') {
       baseWhere.featured = true
     }
 
-    const tagFilters = []
-    const filterGroups = [
-      parseQueryFilterValues(tag, 8),
-      parseQueryFilterValues(type, 4),
-      parseQueryFilterValues(stack, 8),
-      parseQueryFilterValues(technology, 12),
-      parseQueryFilterValues(domain, 8),
-      parseQueryFilterValues(label, 8),
-    ]
+    let rows = []
+    let total = 0
 
-    for (const group of filterGroups) {
-      if (group.length === 0) continue
-
-      if (group.length === 1) {
-        tagFilters.push({ tags: { [likeOperator]: `%"${group[0]}"%` } })
-        continue
-      }
-
-      tagFilters.push({
-        [Op.or]: group.map((entry) => ({ tags: { [likeOperator]: `%"${entry}"%` } })),
+    if (hasActiveContentFilters) {
+      const allRows = await projectModel.findAll({
+        where: baseWhere,
+        order: [['created_at', 'DESC']],
+        attributes: PUBLIC_PROJECT_LIST_ATTRIBUTES,
       })
-    }
 
-    const where = {
-      ...baseWhere,
-      ...(tagFilters.length > 0 ? { [Op.and]: tagFilters } : {}),
-    }
+      const filteredRows = allRows.filter((item) => matchesProjectFilters(item, activeFilters))
+      total = filteredRows.length
+      rows = filteredRows.slice(offset, offset + safeLimit)
+    } else {
+      const result = await projectModel.findAndCountAll({
+        where: baseWhere,
+        limit: safeLimit,
+        offset,
+        order: [['created_at', 'DESC']],
+        attributes: PUBLIC_PROJECT_LIST_ATTRIBUTES,
+      })
 
-    const result = await projectModel.findAndCountAll({
-      where,
-      limit: safeLimit,
-      offset,
-      order: [['created_at', 'DESC']],
-      attributes: PUBLIC_PROJECT_LIST_ATTRIBUTES,
-    })
+      rows = result.rows
+      total = result.count
+    }
 
     let facets
     if (toBoolean(includeFacets, false)) {
@@ -285,12 +283,12 @@ function createProjectService(deps = {}) {
     }
 
     return {
-      data: result.rows.map(toProjectPayload),
+      data: rows.map(toProjectPayload),
       pagination: {
-        total: result.count,
+        total,
         page: safePage,
         limit: safeLimit,
-        pages: Math.ceil(result.count / safeLimit),
+        pages: Math.ceil(total / safeLimit),
       },
       ...(facets ? { facets } : {}),
     }

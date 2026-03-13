@@ -92,22 +92,52 @@ export default function Contact() {
         />
 
         <motion.div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-12"
+          className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12"
           variants={containerVariants}
           initial={canAnimate ? 'hidden' : false}
           whileInView={canAnimate ? 'visible' : false}
           viewport={{ once: animationConfig.sectionOnce }}
         >
           {/* Colonne gauche : informations de contact */}
-          <motion.div variants={itemVariants}>
+          <motion.div variants={itemVariants} className="order-2 lg:order-1">
             <p
-              className="text-base leading-relaxed mb-8"
+              className="mb-6 text-sm leading-relaxed sm:mb-8 sm:text-base"
               style={{ color: 'var(--color-text-secondary)' }}
             >
               {contactIntro}
             </p>
 
-            <div className="grid gap-3 sm:grid-cols-3 mb-8">
+            <div className="-mx-1 mb-6 flex gap-2 overflow-x-auto px-1 pb-1 sm:hidden">
+              {CONTACT_INTENT_PRESETS.map((preset) => {
+                const isActive = activeIntent?.id === preset.id
+
+                return (
+                  <button
+                    key={`mobile-${preset.id}`}
+                    type="button"
+                    onClick={() => handleIntentSelect(preset)}
+                    className="min-w-[11.5rem] rounded-[var(--ui-radius-xl)] border px-4 py-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                    style={{
+                      borderColor: isActive
+                        ? 'color-mix(in srgb, var(--color-accent) 56%, var(--color-border))'
+                        : 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                      backgroundColor: isActive
+                        ? 'color-mix(in srgb, var(--color-accent-glow) 16%, transparent)'
+                        : 'color-mix(in srgb, var(--color-bg-card) 72%, transparent)',
+                    }}
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      {preset.label}
+                    </p>
+                    <p className="mt-2 text-sm font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                      {preset.title}
+                    </p>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="mb-8 hidden gap-3 sm:grid sm:grid-cols-3">
               {CONTACT_INTENT_PRESETS.map((preset) => {
                 const isActive = activeIntent?.id === preset.id
 
@@ -205,7 +235,7 @@ export default function Contact() {
               ))}
             </div>
 
-            <div className="mt-8 grid gap-3">
+            <div className="mt-6 grid gap-3 sm:mt-8">
               {CONTACT_REASSURANCE_POINTS.map((point) => (
                 <div
                   key={point.key}
@@ -227,8 +257,15 @@ export default function Contact() {
           </motion.div>
 
           {/* Colonne droite : formulaire de contact */}
-          <motion.form onSubmit={handleSubmit} noValidate variants={itemVariants}>
-            <div className="space-y-4">
+          <motion.form onSubmit={handleSubmit} noValidate variants={itemVariants} className="order-1 lg:order-2">
+            <div
+              className="space-y-4 rounded-[var(--ui-radius-2xl)] border p-4 sm:p-5"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                background:
+                  'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-card) 88%, transparent), color-mix(in srgb, var(--color-accent-glow) 14%, transparent))',
+              }}
+            >
               {activeIntent && (
                 <div
                   className="rounded-[var(--ui-radius-xl)] border px-4 py-4"
@@ -363,7 +400,23 @@ export default function Contact() {
 
               {/* Bouton de soumission */}
               <motion.div variants={itemVariants} className="flex flex-col gap-4">
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 sm:hidden">
+                  {CONTACT_BRIEF_CHECKLIST.slice(0, 3).map((item) => (
+                    <span
+                      key={`mobile-${item}`}
+                      className="rounded-full border px-3 py-1.5 text-xs"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                      }}
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="hidden flex-wrap gap-2 sm:flex">
                   {CONTACT_BRIEF_CHECKLIST.map((item) => (
                     <span
                       key={item}
@@ -380,7 +433,10 @@ export default function Contact() {
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="max-w-md text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                  <p className="max-w-md text-sm leading-relaxed sm:hidden" style={{ color: 'var(--color-text-secondary)' }}>
+                    Besoin, timing, contexte. Trois infos suffisent pour lancer la discussion.
+                  </p>
+                  <p className="hidden max-w-md text-sm leading-relaxed sm:block" style={{ color: 'var(--color-text-secondary)' }}>
                     Un brief simple suffit. Si tu bloques, choisis un format ci-contre et je pre-remplis la base pour toi.
                   </p>
                   <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">

@@ -181,13 +181,46 @@ export default function ContactPage() {
               </p>
 
               <p
-                className="mt-6 max-w-3xl text-base leading-relaxed md:text-lg"
+                className="mt-5 max-w-3xl text-sm leading-relaxed sm:text-base md:mt-6 md:text-lg"
                 style={{ color: 'var(--color-text-secondary)' }}
               >
                 {contactIntro}
               </p>
 
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              <div className="-mx-1 mt-6 flex gap-2 overflow-x-auto px-1 pb-1 sm:hidden">
+                {CONTACT_INTENT_PRESETS.map((preset) => {
+                  const isActive = activeIntentId === preset.id
+
+                  return (
+                    <button
+                      key={`mobile-hero-${preset.id}`}
+                      type="button"
+                      onClick={() => handleIntentSelect(preset)}
+                      className="min-w-[11.5rem] rounded-[var(--ui-radius-xl)] border px-4 py-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                      style={{
+                        borderColor: isActive
+                          ? 'color-mix(in srgb, var(--color-accent) 56%, var(--color-border))'
+                          : 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                        backgroundColor: isActive
+                          ? 'color-mix(in srgb, var(--color-accent-glow) 16%, transparent)'
+                          : 'color-mix(in srgb, var(--color-bg-card) 74%, transparent)',
+                        boxShadow: isActive
+                          ? '0 20px 42px -30px color-mix(in srgb, var(--color-accent-glow) 36%, transparent)'
+                          : 'none',
+                      }}
+                    >
+                      <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        {preset.label}
+                      </p>
+                      <p className="mt-2 text-sm font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                        {preset.title}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="mt-8 hidden gap-3 sm:grid sm:grid-cols-3">
                 {CONTACT_INTENT_PRESETS.map((preset) => {
                   const isActive = activeIntentId === preset.id
 
@@ -223,7 +256,23 @@ export default function ContactPage() {
                 })}
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-6 flex flex-wrap gap-2 sm:hidden">
+                {CONTACT_BRIEF_CHECKLIST.slice(0, 3).map((item) => (
+                  <span
+                    key={`mobile-hero-${item}`}
+                    className="rounded-full border px-3 py-1.5 text-xs font-medium"
+                    style={{
+                      color: 'var(--color-text-secondary)',
+                      borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                    }}
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-6 hidden flex-wrap gap-2 sm:flex">
                 {CONTACT_BRIEF_CHECKLIST.map((item) => (
                   <span
                     key={item}
@@ -290,7 +339,7 @@ export default function ContactPage() {
           <section className="grid gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] xl:gap-10">
             <div className="grid gap-4">
               <div
-                className="overflow-hidden rounded-[var(--ui-radius-2xl)] border p-6 md:p-7"
+                className="overflow-hidden rounded-[var(--ui-radius-2xl)] border p-4 sm:p-6 md:p-7"
                 style={{
                   borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
                   background:
@@ -349,7 +398,37 @@ export default function ContactPage() {
                   </div>
                 )}
 
-                <div className="mb-6 grid gap-3 sm:grid-cols-3">
+                <div className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1 sm:hidden">
+                  {CONTACT_INTENT_PRESETS.map((preset) => {
+                    const isActive = activeIntentId === preset.id
+
+                    return (
+                      <button
+                        key={`mobile-form-${preset.id}`}
+                        type="button"
+                        onClick={() => handleIntentSelect(preset)}
+                        className="min-w-[11rem] rounded-[var(--ui-radius-xl)] border px-4 py-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={{
+                          borderColor: isActive
+                            ? 'color-mix(in srgb, var(--color-accent) 56%, var(--color-border))'
+                            : 'color-mix(in srgb, var(--color-border) 72%, transparent)',
+                          backgroundColor: isActive
+                            ? 'color-mix(in srgb, var(--color-accent-glow) 16%, transparent)'
+                            : 'color-mix(in srgb, var(--color-bg-primary) 64%, transparent)',
+                        }}
+                      >
+                        <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          {preset.label}
+                        </p>
+                        <p className="mt-2 text-sm font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                          {preset.title}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="mb-6 hidden gap-3 sm:grid sm:grid-cols-3">
                   {CONTACT_INTENT_PRESETS.map((preset) => {
                     const isActive = activeIntentId === preset.id
 
@@ -480,7 +559,23 @@ export default function ContactPage() {
                     </Button>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 sm:hidden">
+                    {CONTACT_BRIEF_CHECKLIST.slice(0, 3).map((item) => (
+                      <span
+                        key={`mobile-form-${item}`}
+                        className="rounded-full border px-3 py-1.5 text-xs"
+                        style={{
+                          color: 'var(--color-text-secondary)',
+                          borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                        }}
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="hidden flex-wrap gap-2 sm:flex">
                     {CONTACT_BRIEF_CHECKLIST.map((item) => (
                       <span
                         key={`form-${item}`}
