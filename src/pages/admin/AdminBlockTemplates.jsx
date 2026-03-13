@@ -42,9 +42,19 @@ const CONTEXT_LABELS = {
   all: 'Global',
 }
 
+const panelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 78%, transparent)',
+}
+
+const metricCardStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 56%, transparent)',
+}
+
 const inputStyle = {
-  backgroundColor: 'var(--color-bg-primary)',
-  borderColor: 'var(--color-border)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 88%, transparent)',
+  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
   color: 'var(--color-text-primary)',
 }
 
@@ -297,6 +307,14 @@ export default function AdminBlockTemplates() {
   const selectedReleaseComparison = useMemo(
     () => buildTemplateReleaseComparison(selectedTemplate, selectedComparedRelease),
     [selectedTemplate, selectedComparedRelease]
+  )
+  const activeContextsCount = useMemo(
+    () => new Set(templates.map((template) => template.context).filter(Boolean)).size,
+    [templates]
+  )
+  const versionedTemplatesCount = useMemo(
+    () => Object.values(templateReleasesById).filter((releases) => Array.isArray(releases) && releases.length > 0).length,
+    [templateReleasesById]
   )
 
   const loadTemplates = async (requestedPage = page) => {
@@ -720,59 +738,96 @@ export default function AdminBlockTemplates() {
       </Helmet>
 
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            Templates de blocs
-          </h1>
+        <section
+          className="overflow-hidden rounded-[32px] border px-5 py-5 sm:px-6 sm:py-6"
+          style={panelStyle}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <span
+                className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em]"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                Template studio
+              </span>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl" style={{ color: 'var(--color-text-primary)' }}>
+                  Des blocs reutilisables, mais enfin presentes comme un vrai systeme.
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 sm:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                  Cree, versionne, importe et compare tes templates depuis un studio plus lisible,
+                  avec une meilleure separation entre catalogue, edition et historique.
+                </p>
+              </div>
+            </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-              <input
-                type="checkbox"
-                checked={replaceExistingImport}
-                onChange={(event) => setReplaceExistingImport(event.target.checked)}
-                style={{ accentColor: 'var(--color-accent)' }}
-              />
-              Remplacer les doublons
-            </label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+              <label className="inline-flex items-center justify-between gap-3 rounded-[20px] border px-4 py-3 text-sm" style={metricCardStyle}>
+                <span style={{ color: 'var(--color-text-primary)' }}>Remplacer les doublons</span>
+                <input
+                  type="checkbox"
+                  checked={replaceExistingImport}
+                  onChange={(event) => setReplaceExistingImport(event.target.checked)}
+                  style={{ accentColor: 'var(--color-accent)' }}
+                />
+              </label>
 
-            <Button variant="secondary" onClick={openImportPicker} disabled={importing}>
-              {importing ? <Spinner size="sm" /> : null}
-              Importer JSON
-            </Button>
+              <Button variant="secondary" onClick={openImportPicker} disabled={importing}>
+                {importing ? <Spinner size="sm" /> : null}
+                Importer JSON
+              </Button>
 
-            <Button
-              variant="primary"
-              onClick={() =>
-                openTemplateEditor('new', () => {
-                  startCreate()
-                })
-              }
-            >
-              <PlusIcon className="h-4 w-4" aria-hidden="true" />
-              Nouveau template
-            </Button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={handleImportFile}
-            />
+              <Button
+                variant="primary"
+                onClick={() =>
+                  openTemplateEditor('new', () => {
+                    startCreate()
+                  })
+                }
+              >
+                <PlusIcon className="h-4 w-4" aria-hidden="true" />
+                Nouveau template
+              </Button>
+            </div>
           </div>
-        </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: 'Templates actifs', value: pagination.total },
+              { label: 'Contextes couverts', value: activeContextsCount },
+              { label: 'Avec historique', value: versionedTemplatesCount },
+            ].map((metric) => (
+              <article key={metric.label} className="rounded-[24px] border px-4 py-4" style={metricCardStyle}>
+                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {metric.label}
+                </p>
+                <p className="mt-3 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {metric.value}
+                </p>
+              </article>
+            ))}
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+        </section>
 
         {loading ? (
-          <div className="flex justify-center py-20">
+          <div className="flex justify-center rounded-[28px] border py-20" style={panelStyle}>
             <Spinner size="lg" />
           </div>
         ) : (
           <div className="grid gap-6 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-            <section
-              className="rounded-xl border p-4 space-y-3 h-fit"
-              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
-            >
+            <section className="h-fit rounded-[28px] border p-4 space-y-3" style={panelStyle}>
               <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 Templates existants
               </p>
@@ -783,87 +838,85 @@ export default function AdminBlockTemplates() {
                 </p>
               ) : (
                 <>
-                <div className="space-y-2">
-                  {templates.map((template) => (
-                    <article
-                      key={template.id}
-                      className="rounded-lg border p-3"
-                      style={{
-                        borderColor: editingId === template.id ? 'var(--color-accent)' : 'var(--color-border)',
-                        backgroundColor: 'var(--color-bg-primary)',
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                            {template.name}
-                          </p>
-                          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                            {CONTEXT_LABELS[template.context] || template.context} ·{' '}
-                            {Array.isArray(template.blocks) ? template.blocks.length : 0} bloc(s)
-                          </p>
+                  <div className="space-y-3">
+                    {templates.map((template) => (
+                      <article
+                        key={template.id}
+                        className="rounded-[24px] border p-4 transition-transform duration-200 hover:-translate-y-0.5"
+                        style={{
+                          borderColor: editingId === template.id
+                            ? 'color-mix(in srgb, var(--color-accent) 72%, var(--color-border))'
+                            : 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                              {template.name}
+                            </p>
+                            <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                              {CONTEXT_LABELS[template.context] || template.context} · {Array.isArray(template.blocks) ? template.blocks.length : 0} bloc(s)
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openTemplateEditor(template.id, () => {
+                                  startEdit(template)
+                                })
+                              }
+                              className="p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                              aria-label={`Modifier ${template.name}`}
+                            >
+                              <PencilSquareIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmId(template.id)}
+                              className="p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                              style={{ color: 'var(--color-text-secondary)' }}
+                              aria-label={`Supprimer ${template.name}`}
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-1">
-                          <button
+                        {template.description && (
+                          <p className="mt-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                            {template.description}
+                          </p>
+                        )}
+
+                        <div className="mt-3">
+                          <Button
                             type="button"
-                            onClick={() =>
-                              openTemplateEditor(template.id, () => {
-                                startEdit(template)
-                              })
-                            }
-                            className="p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                            aria-label={`Modifier ${template.name}`}
+                            variant="ghost"
+                            onClick={() => handleExportTemplatePackage(template)}
+                            className="w-full justify-center"
                           >
-                            <PencilSquareIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmId(template.id)}
-                            className="p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                            aria-label={`Supprimer ${template.name}`}
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
+                            <ArrowDownTrayIcon className="h-4 w-4" />
+                            Export package
+                          </Button>
                         </div>
-                      </div>
-
-                      {template.description && (
-                        <p className="text-xs mt-2" style={{ color: 'var(--color-text-secondary)' }}>
-                          {template.description}
-                        </p>
-                      )}
-
-                      <div className="mt-3">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => handleExportTemplatePackage(template)}
-                          className="w-full justify-center"
-                        >
-                          <ArrowDownTrayIcon className="h-4 w-4" />
-                          Export package
-                        </Button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-                <AdminPagination
-                  total={pagination.total}
-                  limit={pagination.limit}
-                  offset={pagination.offset}
-                  onPageChange={(nextPage) => setPage(nextPage)}
-                />
+                      </article>
+                    ))}
+                  </div>
+                  <AdminPagination
+                    total={pagination.total}
+                    limit={pagination.limit}
+                    offset={pagination.offset}
+                    onPageChange={(nextPage) => setPage(nextPage)}
+                  />
                 </>
               )}
             </section>
 
-            <section
-              className="rounded-xl border p-4 space-y-4 min-w-0"
-              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
-            >
+            <section className="min-w-0 rounded-[28px] border p-5 space-y-4" style={panelStyle}>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
@@ -873,7 +926,7 @@ export default function AdminBlockTemplates() {
                     type="text"
                     value={form.name}
                     onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                    className="w-full px-4 py-2.5 rounded-2xl border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                     style={inputStyle}
                     placeholder="Ex: Case study complet"
                   />
@@ -886,7 +939,7 @@ export default function AdminBlockTemplates() {
                   <select
                     value={form.context}
                     onChange={(event) => setForm((prev) => ({ ...prev, context: event.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                    className="w-full px-4 py-2.5 rounded-2xl border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                     style={inputStyle}
                   >
                     {CONTEXT_OPTIONS.map((option) => (
@@ -906,7 +959,7 @@ export default function AdminBlockTemplates() {
                   value={form.description}
                   onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
                   rows={2}
-                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-none"
+                  className="w-full px-4 py-2.5 rounded-2xl border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-none"
                   style={inputStyle}
                 />
               </div>

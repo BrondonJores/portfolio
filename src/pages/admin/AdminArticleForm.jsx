@@ -2,7 +2,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import {
+  PlusIcon,
+  SparklesIcon,
+  TagIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -40,10 +45,23 @@ const AUTOSAVE_DEBOUNCE_MS = 800
 const LOCAL_DRAFT_PREFIX = 'portfolio_article_form_draft'
 
 const inputStyle = {
-  backgroundColor: 'var(--color-bg-primary)',
-  borderColor: 'var(--color-border)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 88%, transparent)',
+  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
   color: 'var(--color-text-primary)',
 }
+
+const panelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 78%, transparent)',
+}
+
+const insetPanelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+}
+
+const textInputClassName = 'w-full rounded-2xl border px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]'
+const textareaClassName = `${textInputClassName} min-h-[108px] resize-y`
 
 /**
  * Genere un slug lisible a partir du titre.
@@ -85,6 +103,27 @@ function parseContent(content) {
  */
 function getLocalDraftKey(isEdit, articleId) {
   return isEdit ? `${LOCAL_DRAFT_PREFIX}_edit_${articleId}` : `${LOCAL_DRAFT_PREFIX}_new`
+}
+
+/**
+ * Retourne la tonalite du statut de publication.
+ * @param {boolean} published Statut publication.
+ * @returns {{color:string, backgroundColor:string, borderColor:string}} Styles badge.
+ */
+function getPublishedTone(published) {
+  if (published) {
+    return {
+      color: '#4ade80',
+      backgroundColor: 'rgba(74, 222, 128, 0.12)',
+      borderColor: 'rgba(74, 222, 128, 0.28)',
+    }
+  }
+
+  return {
+    color: '#f59e0b',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.28)',
+  }
 }
 
 export default function AdminArticleForm() {
@@ -330,6 +369,7 @@ export default function AdminArticleForm() {
   }
 
   const slug = toSlug(form.title)
+  const publishedTone = getPublishedTone(form.published)
 
   return (
     <>
@@ -337,125 +377,247 @@ export default function AdminArticleForm() {
         <title>{isEdit ? "Modifier l'article" : 'Nouvel article'} - Administration</title>
       </Helmet>
 
-      <div className="max-w-7xl">
-        <h1 className="text-2xl font-bold mb-8" style={{ color: 'var(--color-text-primary)' }}>
-          {isEdit ? "Modifier l'article" : 'Nouvel article'}
-        </h1>
+      <div className="max-w-7xl space-y-6">
+        <section
+          className="overflow-hidden rounded-[32px] border px-5 py-5 sm:px-6 sm:py-6"
+          style={panelStyle}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <span
+                className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em]"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                <TagIcon className="h-4 w-4" aria-hidden="true" />
+                Editorial cockpit
+              </span>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl" style={{ color: 'var(--color-text-primary)' }}>
+                  {isEdit ? 'Affiner l article sans perdre la vue d ensemble.' : 'Monter un article comme une vraie piece editoriale.'}
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 sm:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                  Le titre, la structure, les tags et la preview sont maintenant regroupes dans un
+                  cockpit plus lisible pour les allers-retours d edition.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <span
+                className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]"
+                style={publishedTone}
+              >
+                {form.published ? 'Publie' : 'Brouillon'}
+              </span>
+              <span
+                className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                {autosaveLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: 'Slug live', value: slug || 'a-definir', mono: true },
+              { label: 'Tags actifs', value: form.tags.length },
+              { label: 'Blocs de contenu', value: blocks.length },
+            ].map((metric) => (
+              <article key={metric.label} className="rounded-[24px] border px-4 py-4" style={insetPanelStyle}>
+                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {metric.label}
+                </p>
+                <p
+                  className={`mt-3 text-sm font-semibold sm:text-base ${metric.mono ? 'font-mono' : ''}`}
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  {metric.value}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
             <div className="space-y-5 min-w-0">
-              <div>
-                <label htmlFor="af-title" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                  Titre <span style={{ color: '#f87171' }}>*</span>
-                </label>
-                <input
-                  id="af-title"
-                  name="title"
-                  type="text"
-                  value={form.title}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                  style={inputStyle}
-                />
-                {form.title && (
-                  <p className="text-xs mt-1 font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-                    Slug : {slug}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="af-excerpt" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                  Extrait
-                </label>
-                <textarea
-                  id="af-excerpt"
-                  name="excerpt"
-                  value={form.excerpt}
-                  onChange={handleChange}
-                  rows={2}
-                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all resize-none"
-                  style={inputStyle}
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                    Contenu <span style={{ color: '#f87171' }}>*</span>
-                  </label>
-                  <Button type="button" variant="ghost" onClick={openVisualBuilder}>
-                    Builder visuel
-                  </Button>
-                </div>
-                <BlockEditor
-                  blocks={blocks}
-                  onChange={handleBlocksChange}
-                  templates={editorTemplates}
-                />
-              </div>
-
-              <ImageUploader
-                label="Image de couverture"
-                value={form.cover_image}
-                onUpload={(url) => setForm((prev) => ({ ...prev, cover_image: url }))}
-              />
-
-              <div>
-                <label htmlFor="af-tag" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                  Tags
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="af-tag"
-                    type="text"
-                    value={tagInput}
-                    onChange={(event) => setTagInput(event.target.value)}
-                    onKeyDown={handleTagKeyDown}
-                    className="flex-1 px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                    style={inputStyle}
-                    placeholder="Appuyer sur Entree pour ajouter"
-                  />
-                  <Button type="button" variant="secondary" onClick={addTag}>
-                    <PlusIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-                {form.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {form.tags.map((tag) => (
-                      <span key={tag} className="inline-flex items-center gap-1">
-                        <Badge>{tag}</Badge>
-                        <button
-                          type="button"
-                          onClick={() => removeTag(tag)}
-                          className="text-xs focus:outline-none"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                          aria-label={`Supprimer le tag ${tag}`}
-                        >
-                          <XMarkIcon className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
-                    ))}
+              <section className="rounded-[28px] border p-5 sm:p-6" style={panelStyle}>
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Fondations editoriales
+                    </h2>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      Pose le titre, le chapô et la base du storytelling avant le travail de structure.
+                    </p>
                   </div>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={openVisualBuilder}
+                    className="inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-medium transition hover:-translate-y-0.5"
+                    style={insetPanelStyle}
+                  >
+                    <SparklesIcon className="h-4 w-4" aria-hidden="true" />
+                    Ouvrir le builder visuel
+                  </button>
+                </div>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  name="published"
-                  type="checkbox"
-                  checked={form.published}
-                  onChange={handleChange}
-                  style={{ accentColor: 'var(--color-accent)' }}
-                />
-                <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                  Publie
-                </span>
-              </label>
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="af-title" className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                      Titre <span style={{ color: '#f87171' }}>*</span>
+                    </label>
+                    <input
+                      id="af-title"
+                      name="title"
+                      type="text"
+                      value={form.title}
+                      onChange={handleChange}
+                      required
+                      className={textInputClassName}
+                      style={inputStyle}
+                    />
+                    {form.title && (
+                      <p className="text-xs font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+                        Slug: {slug}
+                      </p>
+                    )}
+                  </div>
 
-              <div className="flex items-center gap-3 pt-2">
+                  <div className="space-y-2">
+                    <label htmlFor="af-excerpt" className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                      Extrait
+                    </label>
+                    <textarea
+                      id="af-excerpt"
+                      name="excerpt"
+                      value={form.excerpt}
+                      onChange={handleChange}
+                      rows={3}
+                      className={textareaClassName}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-[28px] border p-5 sm:p-6" style={panelStyle}>
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Structure du contenu
+                    </h2>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      Compose l article comme une succession de sections premium, avec rendu live a droite.
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium" style={insetPanelStyle}>
+                    {blocks.length} bloc{blocks.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <div className="rounded-[24px] border p-3 sm:p-4" style={insetPanelStyle}>
+                  <BlockEditor
+                    blocks={blocks}
+                    onChange={handleBlocksChange}
+                    templates={editorTemplates}
+                  />
+                </div>
+              </section>
+
+              <section className="rounded-[28px] border p-5 sm:p-6" style={panelStyle}>
+                <div className="mb-5">
+                  <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    Distribution et taxonomie
+                  </h2>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    Gere la couverture, les tags et le statut de publication depuis un meme espace.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <div className="rounded-[24px] border p-4" style={insetPanelStyle}>
+                    <ImageUploader
+                      label="Image de couverture"
+                      value={form.cover_image}
+                      onUpload={(url) => setForm((prev) => ({ ...prev, cover_image: url }))}
+                    />
+                  </div>
+
+                  <div className="space-y-4 rounded-[24px] border p-4" style={insetPanelStyle}>
+                    <div>
+                      <label htmlFor="af-tag" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                        Tags
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="af-tag"
+                          type="text"
+                          value={tagInput}
+                          onChange={(event) => setTagInput(event.target.value)}
+                          onKeyDown={handleTagKeyDown}
+                          className={`${textInputClassName} flex-1`}
+                          style={inputStyle}
+                          placeholder="Appuyer sur Entree pour ajouter"
+                        />
+                        <Button type="button" variant="secondary" onClick={addTag}>
+                          <PlusIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {form.tags.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {form.tags.map((tag) => (
+                            <span key={tag} className="inline-flex items-center gap-1">
+                              <Badge>{tag}</Badge>
+                              <button
+                                type="button"
+                                onClick={() => removeTag(tag)}
+                                className="p-1 rounded"
+                                style={{ color: 'var(--color-text-secondary)' }}
+                                aria-label={`Supprimer le tag ${tag}`}
+                              >
+                                <XMarkIcon className="h-3.5 w-3.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <label
+                      className="flex cursor-pointer items-center justify-between rounded-2xl border px-4 py-3"
+                      style={inputStyle}
+                    >
+                      <div>
+                        <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                          Publication
+                        </p>
+                        <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          Active la publication quand l article est pret a etre visible.
+                        </p>
+                      </div>
+                      <input
+                        name="published"
+                        type="checkbox"
+                        checked={form.published}
+                        onChange={handleChange}
+                        style={{ accentColor: 'var(--color-accent)' }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </section>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
                 <Button type="submit" variant="primary" disabled={saving}>
                   {saving ? <Spinner size="sm" /> : isEdit ? 'Enregistrer' : "Creer l'article"}
                 </Button>
@@ -466,61 +628,74 @@ export default function AdminArticleForm() {
             </div>
 
             <aside className="space-y-4 xl:sticky xl:top-24 self-start">
-              <div
-                className="rounded-xl border p-3 space-y-1"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                }}
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-                  Autosave local
-                </p>
-                <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
-                  {autosaveLabel}
-                </p>
+              <section className="rounded-[28px] border p-5" style={panelStyle}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      Pulse
+                    </p>
+                    <h2 className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Etat de l article
+                    </h2>
+                  </div>
+                  <span
+                    className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                    style={publishedTone}
+                  >
+                    {form.published ? 'Live' : 'Draft'}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {[
+                    { label: 'Autosave local', value: autosaveLabel },
+                    { label: 'Slug', value: slug || 'a-definir', mono: true },
+                    { label: 'Tags actifs', value: `${form.tags.length} selectionnes` },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[22px] border px-4 py-3" style={insetPanelStyle}>
+                      <p className="text-[11px] uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        {item.label}
+                      </p>
+                      <p className={`mt-2 text-sm font-medium ${item.mono ? 'font-mono' : ''}`} style={{ color: 'var(--color-text-primary)' }}>
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
                 {localDraftRestored && (
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                  <p className="mt-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                     Un brouillon local a ete restaure automatiquement.
                   </p>
                 )}
-              </div>
+              </section>
 
-              <div
-                className="rounded-xl border overflow-hidden"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                }}
-              >
-                <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              <section className="overflow-hidden rounded-[28px] border" style={panelStyle}>
+                <div className="border-b px-5 py-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+                  <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    Preview
+                  </p>
+                  <h2 className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                     Apercu live article
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    Rendu en temps reel du contenu.
-                  </p>
+                  </h2>
                 </div>
 
-                <div className="p-4 max-h-[72vh] overflow-y-auto space-y-4">
+                <div className="max-h-[72vh] space-y-4 overflow-y-auto p-5">
                   {form.cover_image && (
                     <img
                       src={form.cover_image}
                       alt=""
-                      className="w-full h-40 object-cover rounded-lg border"
-                      style={{ borderColor: 'var(--color-border)' }}
+                      className="h-48 w-full rounded-[22px] border object-cover"
+                      style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}
                     />
                   )}
 
-                  <section
-                    className="rounded-lg border p-3"
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
-                  >
-                    <h2 className="text-xl font-semibold break-words" style={{ color: 'var(--color-text-primary)' }}>
+                  <section className="rounded-[22px] border p-4" style={insetPanelStyle}>
+                    <h2 className="break-words text-2xl font-semibold tracking-[-0.03em]" style={{ color: 'var(--color-text-primary)' }}>
                       {form.title.trim() || "Titre de l'article..."}
                     </h2>
                     {form.excerpt.trim() && (
-                      <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      <p className="mt-3 text-sm leading-7" style={{ color: 'var(--color-text-secondary)' }}>
                         {form.excerpt}
                       </p>
                     )}
@@ -534,10 +709,7 @@ export default function AdminArticleForm() {
                     </div>
                   )}
 
-                  <article
-                    className="rounded-lg border p-3"
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
-                  >
+                  <article className="rounded-[22px] border p-4" style={insetPanelStyle}>
                     {blocks.length > 0 ? (
                       <BlockRenderer content={previewContent} />
                     ) : (
@@ -547,7 +719,7 @@ export default function AdminArticleForm() {
                     )}
                   </article>
                 </div>
-              </div>
+              </section>
             </aside>
           </div>
         </form>
