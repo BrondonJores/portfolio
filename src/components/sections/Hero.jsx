@@ -1,7 +1,11 @@
-/* Section Hero avec animations personnalisables */
 import { motion, useReducedMotion } from 'framer-motion'
 import { useMemo } from 'react'
-import { ArrowDownIcon, BoltIcon, MapPinIcon } from '@heroicons/react/24/outline'
+import {
+  ArrowDownIcon,
+  BoltIcon,
+  MapPinIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline'
 import Button from '../ui/Button.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
 import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
@@ -24,7 +28,12 @@ function buildInitials(name) {
     .toUpperCase()
 }
 
-export default function Hero() {
+function toMetricValue(rawValue, fallback) {
+  const value = String(rawValue ?? '').trim()
+  return value || fallback
+}
+
+export default function Hero({ homeMetrics = [] }) {
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
@@ -33,16 +42,11 @@ export default function Hero() {
   )
 
   const heroNameRaw = settings.hero_name || 'Brondon Jores'
-  const nameParts = heroNameRaw.split(' ')
-  const firstName = nameParts[0] || 'Brondon'
-  const lastName = nameParts.slice(1).join(' ') || 'Jores'
   const initials = buildInitials(heroNameRaw)
-
   const heroTitleRaw = settings.hero_title || 'Developpeur\nFull Stack'
   const titleLines = heroTitleRaw.includes('\n')
     ? heroTitleRaw.split('\n').filter((line) => line.trim().length > 0)
     : [heroTitleRaw]
-
   const bio = settings.hero_bio || 'Je construis des applications web modernes, performantes et securisees.'
   const availability = settings.contact_availability || 'Disponible pour des projets'
   const location = settings.contact_location || 'Remote'
@@ -53,22 +57,38 @@ export default function Hero() {
   const avatarUrl = settings.avatar_url || ''
   const heroCtaProjects = settings.ui_hero_cta_projects || 'Voir mes projets'
   const heroCtaContact = settings.ui_hero_cta_contact || 'Me contacter'
-  const stats = [
+
+  const proofMetrics = homeMetrics.length > 0
+    ? homeMetrics
+    : [
+        { value: '12', label: 'Projets', detail: 'showcases visibles' },
+        { value: '08', label: 'Articles', detail: 'retours terrain' },
+        { value: '06', label: 'Certifications', detail: 'preuves officielles' },
+      ]
+
+  const sideStats = [
     {
-      value: settings.stat_1_value || '3+',
+      value: toMetricValue(settings.stat_1_value, '3+'),
       label: settings.stat_1_label || "ans d'experience",
     },
     {
-      value: settings.stat_2_value || '20+',
+      value: toMetricValue(settings.stat_2_value, '20+'),
       label: settings.stat_2_label || 'projets livres',
     },
     {
-      value: settings.stat_3_value || '10+',
+      value: toMetricValue(settings.stat_3_value, '10+'),
       label: settings.stat_3_label || 'clients satisfaits',
     },
   ]
+
+  const contextRows = [
+    { label: 'Disponibilite', value: availability },
+    { label: 'Base', value: location },
+    { label: 'Focus', value: photoStack },
+  ]
+
   const canAnimate = animationConfig.canAnimate
-  const revealDuration = Math.max(0.2, 0.6 * animationConfig.durationScale)
+  const revealDuration = Math.max(0.22, 0.62 * animationConfig.durationScale)
   const containerVariants = useMemo(
     () => buildSectionContainerVariants('hero', animationConfig),
     [animationConfig]
@@ -81,86 +101,87 @@ export default function Hero() {
   return (
     <section
       id="hero"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
+      className="relative overflow-hidden px-4 pb-20 pt-32 sm:px-6 lg:px-8 lg:pb-28 lg:pt-36"
     >
       <AnimatedMascots scope="hero" sceneKey="hero" />
       <AnimatedSceneAsset scope="hero" sceneKey="hero" />
 
       <div
-        className="absolute inset-0 -z-10"
+        className="absolute inset-0 -z-20"
         style={{
           backgroundColor: 'var(--color-bg-primary)',
-          backgroundImage: 'radial-gradient(ellipse at 22% 46%, var(--color-accent-glow) 0%, transparent 62%)',
+          backgroundImage: `
+            radial-gradient(circle at 14% 18%, color-mix(in srgb, var(--color-accent-glow) 92%, transparent), transparent 28%),
+            radial-gradient(circle at 84% 24%, color-mix(in srgb, var(--color-accent-glow) 70%, transparent), transparent 24%),
+            linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 44%, transparent), transparent 42%)
+          `,
+        }}
+      />
+      <div
+        className="absolute inset-0 -z-10 opacity-45"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, color-mix(in srgb, var(--color-border) 32%, transparent) 1px, transparent 1px),
+            linear-gradient(to bottom, color-mix(in srgb, var(--color-border) 26%, transparent) 1px, transparent 1px)
+          `,
+          backgroundSize: '120px 120px',
+          maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.62), transparent 92%)',
         }}
       />
 
-      <div
-        className="absolute w-96 h-96 rounded-full -z-10 opacity-40 pointer-events-none"
-        style={{
-          top: '10%',
-          left: '5%',
-          background: 'var(--color-accent-glow)',
-          filter: 'blur(var(--ui-hero-blur))',
-        }}
-      />
-      <div
-        className="absolute w-80 h-80 rounded-full -z-10 opacity-30 pointer-events-none"
-        style={{
-          top: '50%',
-          right: '5%',
-          background: 'var(--color-accent-glow)',
-          filter: 'blur(calc(var(--ui-hero-blur) * 0.88))',
-        }}
-      />
-      <div
-        className="absolute w-64 h-64 rounded-full -z-10 opacity-20 pointer-events-none"
-        style={{
-          bottom: '15%',
-          left: '40%',
-          background: 'var(--color-accent-glow)',
-          filter: 'blur(calc(var(--ui-hero-blur) * 0.75))',
-        }}
-      />
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 relative z-20">
+      <div className="relative z-20 mx-auto max-w-6xl">
         <motion.div
           variants={containerVariants}
           initial={canAnimate ? 'hidden' : false}
           animate={canAnimate ? 'visible' : false}
-          className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] items-center gap-12 lg:gap-16"
+          className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.18fr)_minmax(330px,0.82fr)] xl:gap-14"
         >
-          <div className="text-center lg:text-left">
-            <motion.div variants={itemVariants} transition={{ duration: revealDuration }} className="mb-6">
+          <div className="order-2 flex flex-col justify-end lg:order-1">
+            <motion.div
+              variants={itemVariants}
+              transition={{ duration: revealDuration }}
+              className="mb-6 flex flex-wrap items-center gap-3"
+            >
               <span
-                className="inline-flex items-center gap-2 text-sm font-medium px-4 py-1.5 rounded-full border"
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium"
                 style={{
                   color: 'var(--color-accent-light)',
-                  borderColor: 'var(--color-accent)',
-                  backgroundColor: 'var(--color-accent-glow)',
+                  borderColor: 'color-mix(in srgb, var(--color-accent) 62%, var(--color-border))',
+                  backgroundColor: 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
                 }}
               >
                 <span
-                  className={`w-2 h-2 rounded-full ${canAnimate ? 'animate-pulse' : ''}`}
+                  className={`h-2.5 w-2.5 rounded-full ${canAnimate ? 'animate-pulse' : ''}`}
                   style={{ backgroundColor: 'var(--color-accent)' }}
                 />
                 {availability}
               </span>
-            </motion.div>
-
-            <motion.div variants={itemVariants} transition={{ duration: revealDuration }} className="mb-2">
-              <span className="text-3xl sm:text-4xl font-bold gradient-text">
-                {`${firstName} ${lastName}`.trim() || heroNameRaw}
+              <span
+                className="inline-flex items-center gap-2 text-sm"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                <MapPinIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                {location}
               </span>
             </motion.div>
+
+            <motion.p
+              variants={itemVariants}
+              transition={{ duration: revealDuration }}
+              className="mb-4 text-[11px] uppercase tracking-[0.28em]"
+              style={{ color: 'var(--color-text-secondary)' }}
+            >
+              {heroNameRaw}
+            </motion.p>
 
             <motion.h1
               variants={itemVariants}
               transition={{ duration: revealDuration }}
-              className="text-5xl sm:text-7xl font-black mb-6 leading-none tracking-tight"
+              className="max-w-4xl text-[clamp(3.6rem,8vw,7rem)] font-semibold leading-[0.92] tracking-[-0.05em]"
               style={{ color: 'var(--color-text-primary)' }}
             >
               {titleLines.map((line, index) => {
-                const isLastLine = index === titleLines.length - 1 && titleLines.length > 1
+                const isLastLine = index === titleLines.length - 1
                 return (
                   <span key={`${line}-${index}`} className="block">
                     {isLastLine ? <span className="gradient-text">{line}</span> : line}
@@ -169,24 +190,58 @@ export default function Hero() {
               })}
             </motion.h1>
 
-            <motion.p
+            <motion.div
               variants={itemVariants}
               transition={{ duration: revealDuration }}
-              className="text-lg sm:text-xl max-w-2xl lg:max-w-xl lg:mx-0 mx-auto mb-10 leading-relaxed"
-              style={{ color: 'var(--color-text-secondary)' }}
+              className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.42fr)]"
             >
-              {bio}
-            </motion.p>
+              <p
+                className="max-w-2xl text-base leading-relaxed sm:text-lg"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                {bio}
+              </p>
+
+              <div
+                className="rounded-[var(--ui-radius-2xl)] border p-4"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--color-border) 78%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
+                }}
+              >
+                <p
+                  className="text-[11px] uppercase tracking-[0.22em]"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Cadre d intervention
+                </p>
+                <div className="mt-4 space-y-3">
+                  {contextRows.map((row) => (
+                    <div key={row.label}>
+                      <p
+                        className="text-[11px] uppercase tracking-[0.16em]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {row.label}
+                      </p>
+                      <p className="mt-1 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                        {row.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
 
             <motion.div
               variants={itemVariants}
               transition={{ duration: revealDuration }}
-              className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4"
+              className="mt-8 flex flex-col items-start gap-3 sm:flex-row"
             >
-              <Button variant="primary" href="projets">
+              <Button variant="primary" href="#projects">
                 {heroCtaProjects}
               </Button>
-              <Button variant="secondary" href="contact">
+              <Button variant="secondary" href="#contact">
                 {heroCtaContact}
               </Button>
             </motion.div>
@@ -194,27 +249,28 @@ export default function Hero() {
             <motion.div
               variants={itemVariants}
               transition={{ duration: revealDuration }}
-              className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto lg:mx-0"
+              className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3"
             >
-              {stats.map((stat) => (
+              {proofMetrics.map((metric) => (
                 <div
-                  key={stat.label}
-                  className="rounded-xl border px-4 py-3 text-left"
+                  key={metric.label}
+                  className="rounded-[var(--ui-radius-xl)] border px-4 py-4"
                   style={{
-                    borderColor: 'var(--color-border)',
-                    backgroundColor: 'var(--color-bg-card)',
+                    borderColor: 'color-mix(in srgb, var(--color-border) 78%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 76%, transparent)',
                   }}
                 >
-                  <AnimatedCounter
-                    value={stat.value}
-                    enabled={animationConfig.statsCounterEnabled}
-                    durationMs={animationConfig.statsCounterDurationMs}
-                    className="text-2xl font-black"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  />
-                  <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    {stat.label}
-                  </div>
+                  <p className="text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    {metric.value}
+                  </p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.16em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    {metric.label}
+                  </p>
+                  {metric.detail && (
+                    <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                      {metric.detail}
+                    </p>
+                  )}
                 </div>
               ))}
             </motion.div>
@@ -223,91 +279,143 @@ export default function Hero() {
           <motion.div
             variants={itemVariants}
             transition={{ duration: revealDuration }}
-            className="relative mx-auto w-full max-w-md"
+            className="order-1 lg:order-2"
           >
-            <div
-              className="absolute -inset-8 rounded-[2.5rem] opacity-65 -z-10 pointer-events-none"
-              style={{
-                background: 'radial-gradient(circle at 20% 20%, var(--color-accent-glow) 0%, transparent 65%)',
-              }}
-            />
-
-            <div
-              className="rounded-[2rem] border p-3 backdrop-blur-sm"
-              style={{
-                borderColor: 'var(--color-border)',
-                backgroundColor: 'var(--color-bg-secondary)',
-              }}
-            >
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_190px]">
               <div
-                className="relative overflow-hidden rounded-[1.6rem] border"
-                style={{ borderColor: 'var(--color-border)' }}
+                className="relative overflow-hidden rounded-[2rem] border p-3"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--color-border) 82%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 88%, transparent)',
+                  boxShadow: '0 32px 56px -36px color-mix(in srgb, var(--color-accent-glow) 42%, transparent)',
+                }}
               >
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={photoAlt}
-                    className="w-full aspect-[4/5] object-cover"
-                    style={{ objectPosition: photoObjectPosition }}
-                    loading="eager"
-                    fetchPriority="high"
-                    decoding="async"
-                    width="560"
-                    height="700"
-                  />
-                ) : (
+                <div
+                  className="absolute inset-x-0 top-0 h-32"
+                  style={{
+                    background:
+                      'linear-gradient(180deg, color-mix(in srgb, var(--color-accent-glow) 36%, transparent), transparent)',
+                  }}
+                />
+                <div
+                  className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--color-border) 72%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 72%, transparent)',
+                    color: 'var(--color-text-primary)',
+                  }}
+                >
+                  <SparklesIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                  {photoStatus}
+                </div>
+
+                <div
+                  className="relative overflow-hidden rounded-[1.55rem] border"
+                  style={{ borderColor: 'color-mix(in srgb, var(--color-border) 70%, transparent)' }}
+                >
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={photoAlt}
+                      className="w-full aspect-[4/5] object-cover"
+                      style={{ objectPosition: photoObjectPosition }}
+                      loading="eager"
+                      fetchPriority="high"
+                      decoding="async"
+                      width="620"
+                      height="760"
+                    />
+                  ) : (
+                    <div
+                      className="flex aspect-[4/5] w-full items-center justify-center text-8xl font-black select-none"
+                      style={{
+                        background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-light))',
+                        color: '#ffffff',
+                      }}
+                      aria-label={`Avatar de ${heroNameRaw} avec initiales ${initials}`}
+                    >
+                      {initials}
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className="absolute bottom-4 left-4 right-4 rounded-[var(--ui-radius-xl)] border px-4 py-3"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--color-border) 70%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 84%, transparent)',
+                    backdropFilter: 'blur(var(--ui-surface-blur))',
+                    WebkitBackdropFilter: 'blur(var(--ui-surface-blur))',
+                  }}
+                >
+                  <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    Stack de predilection
+                  </p>
+                  <p className="mt-2 text-sm font-medium leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
+                    {photoStack}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4">
+                {sideStats.map((stat) => (
                   <div
-                    className="w-full aspect-[4/5] flex items-center justify-center text-8xl font-black select-none"
+                    key={stat.label}
+                    className="rounded-[var(--ui-radius-2xl)] border px-4 py-4"
                     style={{
-                      background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-light))',
-                      color: '#ffffff',
+                      borderColor: 'color-mix(in srgb, var(--color-border) 78%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 88%, transparent)',
                     }}
-                    aria-label={`Avatar de ${heroNameRaw} avec initiales ${initials}`}
                   >
-                    {initials}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p
+                          className="text-[11px] uppercase tracking-[0.18em]"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          Signal
+                        </p>
+                        <AnimatedCounter
+                          value={stat.value}
+                          enabled={animationConfig.statsCounterEnabled}
+                          durationMs={animationConfig.statsCounterDurationMs}
+                          className="mt-2 text-2xl font-semibold"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        />
+                      </div>
+                      <span
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border"
+                        style={{
+                          borderColor: 'color-mix(in srgb, var(--color-accent) 36%, var(--color-border))',
+                          backgroundColor: 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
+                        }}
+                      >
+                        <BoltIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                      {stat.label}
+                    </p>
                   </div>
-                )}
-              </div>
-            </div>
-
-            <div
-              className="absolute -top-4 -right-3 sm:right-0 rounded-xl border px-3 py-2 text-xs font-semibold shadow-lg max-w-[190px]"
-              style={{
-                borderColor: 'var(--color-border)',
-                backgroundColor: 'var(--color-bg-card)',
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <BoltIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
-                <span>{photoStatus}</span>
-              </div>
-              <div style={{ color: 'var(--color-text-secondary)' }}>{photoStack}</div>
-            </div>
-
-            <div
-              className="absolute -bottom-4 -left-3 sm:left-0 rounded-xl border px-3 py-2 text-xs font-semibold shadow-lg"
-              style={{
-                borderColor: 'var(--color-border)',
-                backgroundColor: 'var(--color-bg-card)',
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              <div className="flex items-center gap-1.5">
-                <MapPinIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
-                <span>{location}</span>
+                ))}
               </div>
             </div>
           </motion.div>
         </motion.div>
       </div>
 
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
-        <ArrowDownIcon
-          className="h-6 w-6"
-          style={{ color: 'var(--color-text-secondary)' }}
-          aria-hidden="true"
-        />
+      <div className="pointer-events-none absolute bottom-7 left-1/2 -translate-x-1/2">
+        <div
+          className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs uppercase tracking-[0.22em]"
+          style={{
+            borderColor: 'color-mix(in srgb, var(--color-border) 70%, transparent)',
+            color: 'var(--color-text-secondary)',
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 80%, transparent)',
+          }}
+        >
+          Explorer
+          <ArrowDownIcon className="h-4 w-4" aria-hidden="true" />
+        </div>
       </div>
     </section>
   )

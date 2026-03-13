@@ -1,6 +1,7 @@
 /* Page d'accueil regroupant toutes les sections */
 import Navbar from '../components/sections/Navbar.jsx'
 import Hero from '../components/sections/Hero.jsx'
+import HomeSignalBoard from '../components/sections/HomeSignalBoard.jsx'
 import About from '../components/sections/About.jsx'
 import Skills from '../components/sections/Skills.jsx'
 import Certifications from '../components/sections/Certifications.jsx'
@@ -26,16 +27,40 @@ export default function Home() {
   const { certifications, badgeImages, loading: certificationsLoading } = usePublicCertifications()
   const { projects, loading: projectsLoading } = usePublicProjects(HOME_PROJECT_PARAMS)
   const { skillGroups, loading: skillsLoading } = usePublicSkills()
+  const homeMetrics = [
+    {
+      value: projectsLoading ? '...' : String(projects.length),
+      label: 'Projets',
+      detail: 'showcases et etudes de cas visibles',
+    },
+    {
+      value: articlesLoading ? '...' : String(articles.length),
+      label: 'Articles',
+      detail: 'retours terrain et prises de position',
+    },
+    {
+      value: certificationsLoading ? '...' : String(certifications.length),
+      label: 'Certifications',
+      detail: certificationsLoading ? 'badges en chargement' : `${badgeImages.length} badges verifies`,
+    },
+  ]
 
   return (
     <>
       <Navbar />
-      <Hero />
-      <About />
-      <Skills skillGroups={skillGroups} loading={skillsLoading} />
-      <Certifications certifications={certifications} loading={certificationsLoading} />
+      <Hero homeMetrics={homeMetrics} />
+      <HomeSignalBoard
+        projects={projects}
+        articles={articles}
+        certifications={certifications}
+        badgeImages={badgeImages}
+        skillGroups={skillGroups}
+      />
       <Projects projects={projects} loading={projectsLoading} />
+      <Skills skillGroups={skillGroups} loading={skillsLoading} />
+      <About />
       <Blog articles={articles} loading={articlesLoading} />
+      <Certifications certifications={certifications} loading={certificationsLoading} />
       <CertificationBadgesShowcase badges={badgeImages} loading={certificationsLoading} />
       <Contact />
       <Footer />

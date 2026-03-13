@@ -7,6 +7,7 @@ import AnimatedMascots from '../ui/AnimatedMascots.jsx'
 import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
 import Card from '../ui/Card.jsx'
 import AnimatedCounter from '../ui/AnimatedCounter.jsx'
+import SectionTitle from '../ui/SectionTitle.jsx'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
@@ -35,6 +36,7 @@ export default function About() {
   const aboutPhotoBadge = settings.about_photo_badge || 'Disponible pour missions freelance'
   const aboutPhotoCaption = settings.about_photo_caption || 'De la conception au deploiement, je prends en charge le cycle complet.'
   const aboutTitle = settings.ui_about_title || 'A propos de moi'
+  const aboutSubtitle = settings.tagline || 'Une approche produit, design et engineering de bout en bout.'
   const initials = heroName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
   const canAnimate = animationConfig.canAnimate
   const containerVariants = useMemo(
@@ -51,7 +53,7 @@ export default function About() {
       id="about"
       sectionKey="about"
       className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
-      style={{ backgroundColor: 'var(--color-bg-secondary)' }}
+      style={{ backgroundColor: 'var(--color-bg-primary)' }}
     >
       <AnimatedMascots scope="about" sceneKey="about" />
       <AnimatedSceneAsset scope="about" sceneKey="about" />
@@ -138,16 +140,7 @@ export default function About() {
 
           {/* Colonne droite : bio et statistiques */}
           <motion.div variants={itemVariants}>
-            <h2
-              className="text-4xl font-bold mb-4"
-              style={{ color: 'var(--color-text-primary)' }}
-            >
-              {aboutTitle}
-            </h2>
-            <div
-              className="h-1 w-16 rounded mb-6"
-              style={{ backgroundColor: 'var(--color-accent)' }}
-            />
+            <SectionTitle title={aboutTitle} subtitle={aboutSubtitle} />
             <p
               className="text-base leading-relaxed mb-8"
               style={{ color: 'var(--color-text-secondary)' }}

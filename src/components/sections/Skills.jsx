@@ -1,7 +1,6 @@
 /* Section Competences avec grille animee */
 import { useMemo } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import { WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 import AnimatedSection from '../ui/AnimatedSection.jsx'
 import AnimatedMascots from '../ui/AnimatedMascots.jsx'
 import AnimatedSceneAsset from '../ui/AnimatedSceneAsset.jsx'
@@ -52,17 +51,10 @@ export default function Skills({ skillGroups = [], loading = false }) {
       <AnimatedSceneAsset scope="skills" sceneKey="skills" />
 
       <div className="max-w-6xl mx-auto relative z-20">
-        <div className="flex items-center gap-3 mb-2">
-          <WrenchScrewdriverIcon
-            className="h-7 w-7"
-            style={{ color: 'var(--color-accent)' }}
-            aria-hidden="true"
-          />
-          <SectionTitle
-            title={skillsTitle}
-            subtitle={skillsSubtitle}
-          />
-        </div>
+        <SectionTitle
+          title={skillsTitle}
+          subtitle={skillsSubtitle}
+        />
 
         {skillGroups.length === 0 ? (
           <p style={{ color: 'var(--color-text-secondary)' }}>
