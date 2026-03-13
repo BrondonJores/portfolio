@@ -5,11 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { BellIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { useUnreadMessages } from '../../hooks/useUnreadMessages.js'
 
-/* Formate une date en temps relatif (ex: "il y a 2h") */
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const minutes = Math.floor(diff / 60_000)
-  if (minutes < 1) return "il y a quelques secondes"
+  if (minutes < 1) return 'il y a quelques secondes'
   if (minutes < 60) return `il y a ${minutes}min`
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return `il y a ${hours}h`
@@ -17,21 +16,16 @@ function timeAgo(dateStr) {
   return `il y a ${days}j`
 }
 
-/**
- * Cloche de notification avec badge et dropdown des messages non lus.
- * Se ferme au clic en dehors et apres navigation vers /admin/messages.
- */
 export default function NotificationBell() {
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
   const navigate = useNavigate()
   const { unreadMessages, unreadCount, markAsRead } = useUnreadMessages()
 
-  /* Fermeture au clic en dehors du composant */
   useEffect(() => {
-    if (!open) return
-    function handleClickOutside(e) {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
+    if (!open) return undefined
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
         setOpen(false)
       }
     }
@@ -44,26 +38,27 @@ export default function NotificationBell() {
     navigate('/admin/messages')
   }
 
-  /* Les 5 premiers messages non lus */
   const preview = unreadMessages.slice(0, 5)
 
   return (
     <div ref={containerRef} className="relative">
-      {/* Bouton cloche */}
       <motion.button
         onClick={() => setOpen((prev) => !prev)}
-        className="relative p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-        style={{ color: 'var(--color-text-secondary)' }}
-        aria-label={`Notifications — ${unreadCount} non lus`}
-        animate={unreadCount > 0 ? { rotate: [0, -15, 15, -10, 10, 0] } : {}}
+        className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+        style={{
+          color: 'var(--color-text-secondary)',
+          borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+        }}
+        aria-label={`Notifications - ${unreadCount} non lus`}
+        animate={unreadCount > 0 ? { rotate: [0, -12, 12, -8, 8, 0] } : {}}
         transition={{ duration: 0.5, repeat: unreadCount > 0 ? Infinity : 0, repeatDelay: 30 }}
       >
         <BellIcon className="h-5 w-5" />
 
-        {/* Badge rouge */}
         {unreadCount > 0 && (
           <span
-            className="absolute top-0.5 right-0.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white"
+            className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
             style={{ backgroundColor: '#ef4444' }}
           >
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -71,7 +66,6 @@ export default function NotificationBell() {
         )}
       </motion.button>
 
-      {/* Dropdown */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -79,84 +73,102 @@ export default function NotificationBell() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 z-50 mt-3 w-[22rem] overflow-hidden rounded-[var(--ui-radius-2xl)] border shadow-2xl sm:w-[25rem]"
             style={{
-              backgroundColor: 'var(--color-bg-card)',
-              borderColor: 'var(--color-border)',
+              background:
+                'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-card) 92%, transparent), color-mix(in srgb, var(--color-accent-glow) 14%, transparent))',
+              borderColor: 'color-mix(in srgb, var(--color-border) 72%, transparent)',
             }}
           >
-            {/* En-tete */}
-            <div
-              className="px-4 py-3 border-b text-sm font-semibold"
-              style={{
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              Notifications
+            <div className="border-b px-5 py-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    Inbox rapide
+                  </p>
+                  <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    Notifications
+                  </p>
+                </div>
+                <span
+                  className="rounded-full border px-3 py-1 text-xs font-medium"
+                  style={{
+                    color: 'var(--color-text-primary)',
+                    borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 56%, transparent)',
+                  }}
+                >
+                  {unreadCount} non lu{unreadCount > 1 ? 's' : ''}
+                </span>
+              </div>
             </div>
 
-            {/* Liste des messages */}
             {preview.length === 0 ? (
-              <p
-                className="px-4 py-6 text-sm text-center"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                Aucune nouvelle notification
-              </p>
+              <div className="px-5 py-8 text-center">
+                <p className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                  Inbox calme
+                </p>
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                  Aucun nouveau message a traiter pour le moment.
+                </p>
+              </div>
             ) : (
-              <ul>
-                {preview.map((msg) => (
-                  <li
-                    key={msg.id}
-                    className="flex items-start gap-3 px-4 py-3 border-b transition-colors hover:bg-[var(--color-bg-secondary)]"
-                    style={{ borderColor: 'var(--color-border)' }}
-                  >
-                    {/* Contenu du message */}
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-sm font-medium truncate"
-                        style={{ color: 'var(--color-text-primary)' }}
-                      >
-                        {msg.name}
-                      </p>
-                      <p
-                        className="text-xs truncate mt-0.5"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        {msg.message}
-                      </p>
-                      <p
-                        className="text-xs mt-1"
-                        style={{ color: 'var(--color-accent)' }}
-                      >
-                        {timeAgo(msg.created_at)}
-                      </p>
-                    </div>
-
-                    {/* Bouton marquer comme lu */}
-                    <button
-                      onClick={() => markAsRead(msg.id)}
-                      className="flex-shrink-0 p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                      aria-label="Marquer comme lu"
-                      title="Marquer comme lu"
+              <ul className="max-h-[24rem] space-y-2 overflow-y-auto px-3 py-3">
+                {preview.map((message) => (
+                  <li key={message.id}>
+                    <div
+                      className="rounded-[var(--ui-radius-xl)] border px-4 py-3"
+                      style={{
+                        borderColor: 'color-mix(in srgb, var(--color-border) 66%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 56%, transparent)',
+                      }}
                     >
-                      <CheckIcon className="h-4 w-4" />
-                    </button>
+                      <div className="flex items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="truncate text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                              {message.name}
+                            </p>
+                            <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--color-accent)' }}>
+                              {timeAgo(message.created_at)}
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                            {message.message}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => markAsRead(message.id)}
+                          className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl border focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                          style={{
+                            color: 'var(--color-text-secondary)',
+                            borderColor: 'color-mix(in srgb, var(--color-border) 66%, transparent)',
+                            backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 74%, transparent)',
+                          }}
+                          aria-label="Marquer comme lu"
+                          title="Marquer comme lu"
+                        >
+                          <CheckIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ul>
             )}
 
-            {/* Pied de page */}
-            <div className="px-4 py-3">
+            <div className="border-t px-4 py-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
               <button
                 onClick={handleViewAll}
-                className="w-full text-sm font-medium text-center transition-colors focus:outline-none"
-                style={{ color: 'var(--color-accent)' }}
+                className="w-full rounded-[var(--ui-radius-xl)] border px-4 py-3 text-sm font-medium transition-colors focus:outline-none"
+                style={{
+                  color: 'var(--color-text-primary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
               >
-                Voir tous les messages →
+                Voir tous les messages
               </button>
             </div>
           </motion.div>

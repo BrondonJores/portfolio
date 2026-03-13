@@ -1,7 +1,7 @@
 /* Page de moderation des commentaires admin */
 import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { CheckIcon, TrashIcon, ChatBubbleLeftIcon } from '@heroicons/react/24/outline'
+import { CheckIcon, ChatBubbleLeftIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
@@ -75,131 +75,255 @@ export default function AdminComments() {
     }
   }
 
+  const pendingCount = comments.filter((comment) => !comment.approved).length
+  const approvedCount = comments.filter((comment) => comment.approved).length
+
   return (
     <>
       <Helmet>
         <title>Commentaires - Administration</title>
       </Helmet>
-      <div>
-        <div className="flex items-center gap-3 mb-6">
-          <ChatBubbleLeftIcon className="h-6 w-6" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Commentaires
-          </h1>
-        </div>
+      <div className="space-y-6">
+        <section
+          className="overflow-hidden rounded-[var(--ui-radius-2xl)] border p-6 md:p-7"
+          style={{
+            borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+            background:
+              'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-card) 90%, transparent), color-mix(in srgb, var(--color-accent-glow) 18%, transparent))',
+            boxShadow: '0 30px 68px -46px color-mix(in srgb, var(--color-accent-glow) 28%, transparent)',
+          }}
+        >
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.06fr)_320px] xl:items-end">
+            <div>
+              <div className="flex items-center gap-3">
+                <ChatBubbleLeftIcon className="h-6 w-6" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+                <p className="text-[11px] uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Moderation
+                </p>
+              </div>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+                Commentaires
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-relaxed md:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                Garde la conversation propre: approuve les retours utiles et supprime les messages a ecarter.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="rounded-[var(--ui-radius-xl)] border p-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 80%, transparent)' }}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Total
+                </p>
+                <p className="mt-2 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {pagination.total}
+                </p>
+              </div>
+              <div className="rounded-[var(--ui-radius-xl)] border p-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 80%, transparent)' }}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  En attente
+                </p>
+                <p className="mt-2 text-2xl font-semibold" style={{ color: pendingCount > 0 ? '#fb923c' : 'var(--color-text-primary)' }}>
+                  {pendingCount}
+                </p>
+              </div>
+              <div className="rounded-[var(--ui-radius-xl)] border p-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 80%, transparent)' }}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Approuves
+                </p>
+                <p className="mt-2 text-2xl font-semibold" style={{ color: approvedCount > 0 ? '#4ade80' : 'var(--color-text-primary)' }}>
+                  {approvedCount}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {loading ? (
           <div className="flex justify-center py-20">
             <Spinner size="lg" />
           </div>
         ) : comments.length === 0 ? (
-          <p style={{ color: 'var(--color-text-secondary)' }}>Aucun commentaire.</p>
-        ) : (
           <div
-            className="rounded-xl border overflow-hidden"
-            style={{ borderColor: 'var(--color-border)' }}
+            className="rounded-[var(--ui-radius-2xl)] border p-6"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--color-border) 70%, transparent)',
+              backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
+            }}
           >
-            <table className="w-full text-sm">
-              <thead
-                style={{
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  color: 'var(--color-text-secondary)',
-                }}
-              >
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Article ID</th>
-                  <th className="text-left px-4 py-3 font-medium">Auteur</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Commentaire</th>
-                  <th className="text-left px-4 py-3 font-medium">Statut</th>
-                  <th className="text-right px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comments.map((c, i) => (
-                  <tr
-                    key={c.id}
-                    style={{
-                      backgroundColor:
-                        i % 2 === 0 ? 'var(--color-bg-card)' : 'var(--color-bg-secondary)',
-                      borderTop: '1px solid var(--color-border)',
-                    }}
-                  >
-                    <td
-                      className="px-4 py-3 hidden md:table-cell text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
+            <p className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Aucun commentaire
+            </p>
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+              Rien a moderer pour le moment.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 lg:hidden">
+              {comments.map((comment) => (
+                <div
+                  key={comment.id}
+                  className="rounded-[var(--ui-radius-2xl)] border p-5"
+                  style={{
+                    borderColor: comment.approved ? 'color-mix(in srgb, var(--color-border) 70%, transparent)' : '#fb923c',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                        {comment.author_name}
+                      </p>
+                      <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        Article #{comment.article_id}
+                      </p>
+                    </div>
+                    <span
+                      className="rounded-full px-3 py-1 text-[11px] font-medium"
+                      style={{
+                        color: comment.approved ? '#4ade80' : '#fb923c',
+                        backgroundColor: comment.approved ? 'rgba(74, 222, 128, 0.1)' : 'rgba(251, 146, 60, 0.1)',
+                      }}
                     >
-                      {c.article_id}
-                    </td>
-                    <td
-                      className="px-4 py-3 font-medium"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      {c.author_name}
-                    </td>
-                    <td
-                      className="px-4 py-3 hidden lg:table-cell max-w-xs truncate text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      {c.content}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className="text-xs px-2 py-0.5 rounded"
+                      {comment.approved ? 'Approuve' : 'En attente'}
+                    </span>
+                  </div>
+
+                  <p className="mt-4 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    {comment.content}
+                  </p>
+
+                  <div className="mt-5 flex items-center gap-2">
+                    {!comment.approved && (
+                      <button
+                        onClick={() => handleApprove(comment.id)}
+                        className="inline-flex min-h-[var(--ui-control-height)] flex-1 items-center justify-center gap-2 rounded-[var(--ui-radius-xl)] border px-4 py-2.5 text-sm font-medium"
                         style={{
-                          color: c.approved ? '#4ade80' : '#fb923c',
-                          backgroundColor: c.approved
-                            ? 'rgba(74, 222, 128, 0.1)'
-                            : 'rgba(251, 146, 60, 0.1)',
+                          color: '#4ade80',
+                          borderColor: 'rgba(74, 222, 128, 0.34)',
+                          backgroundColor: 'rgba(74, 222, 128, 0.08)',
                         }}
                       >
-                        {c.approved ? 'Approuve' : 'En attente'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        {!c.approved && (
-                          <button
-                            onClick={() => handleApprove(c.id)}
-                            className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                            style={{ color: 'var(--color-text-secondary)' }}
-                            aria-label={`Approuver le commentaire de ${c.author_name}`}
-                            onMouseEnter={(e) => { e.currentTarget.style.color = '#4ade80' }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                          >
-                            <CheckIcon className="h-4 w-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setConfirmId(c.id)}
-                          className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                          aria-label={`Supprimer le commentaire de ${c.author_name}`}
-                          onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
-                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                        <CheckIcon className="h-4 w-4" aria-hidden="true" />
+                        Approuver
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setConfirmId(comment.id)}
+                      className="inline-flex min-h-[var(--ui-control-height)] items-center justify-center gap-2 rounded-[var(--ui-radius-xl)] border px-4 py-2.5 text-sm font-medium"
+                      style={{
+                        color: '#f87171',
+                        borderColor: 'rgba(248, 113, 113, 0.3)',
+                        backgroundColor: 'rgba(248, 113, 113, 0.08)',
+                      }}
+                    >
+                      <TrashIcon className="h-4 w-4" aria-hidden="true" />
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div
+              className="hidden overflow-hidden rounded-[var(--ui-radius-2xl)] border lg:block"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--color-border) 72%, transparent)',
+                backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
+              }}
+            >
+              <table className="w-full text-sm">
+                <thead
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 86%, transparent)',
+                    color: 'var(--color-text-secondary)',
+                  }}
+                >
+                  <tr>
+                    <th className="text-left px-5 py-4 font-medium">Article</th>
+                    <th className="text-left px-5 py-4 font-medium">Auteur</th>
+                    <th className="text-left px-5 py-4 font-medium">Commentaire</th>
+                    <th className="text-left px-5 py-4 font-medium">Statut</th>
+                    <th className="text-right px-5 py-4 font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {comments.map((comment, index) => (
+                    <tr
+                      key={comment.id}
+                      style={{
+                        backgroundColor:
+                          index % 2 === 0
+                            ? 'color-mix(in srgb, var(--color-bg-card) 82%, transparent)'
+                            : 'color-mix(in srgb, var(--color-bg-secondary) 66%, transparent)',
+                        borderTop: '1px solid color-mix(in srgb, var(--color-border) 62%, transparent)',
+                      }}
+                    >
+                      <td className="px-5 py-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        #{comment.article_id}
+                      </td>
+                      <td className="px-5 py-4 font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                        {comment.author_name}
+                      </td>
+                      <td className="px-5 py-4 max-w-sm truncate text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        {comment.content}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className="rounded-full px-3 py-1 text-[11px] font-medium"
+                          style={{
+                            color: comment.approved ? '#4ade80' : '#fb923c',
+                            backgroundColor: comment.approved ? 'rgba(74, 222, 128, 0.1)' : 'rgba(251, 146, 60, 0.1)',
+                          }}
+                        >
+                          {comment.approved ? 'Approuve' : 'En attente'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          {!comment.approved && (
+                            <button
+                              onClick={() => handleApprove(comment.id)}
+                              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border focus:outline-none"
+                              style={{
+                                color: '#4ade80',
+                                borderColor: 'rgba(74, 222, 128, 0.3)',
+                                backgroundColor: 'rgba(74, 222, 128, 0.08)',
+                              }}
+                              aria-label={`Approuver le commentaire de ${comment.author_name}`}
+                            >
+                              <CheckIcon className="h-4 w-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setConfirmId(comment.id)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border focus:outline-none"
+                            style={{
+                              color: '#f87171',
+                              borderColor: 'rgba(248, 113, 113, 0.3)',
+                              backgroundColor: 'rgba(248, 113, 113, 0.08)',
+                            }}
+                            aria-label={`Supprimer le commentaire de ${comment.author_name}`}
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
-        <div className="mt-4">
-          <AdminPagination
-            total={pagination.total}
-            limit={pagination.limit}
-            offset={pagination.offset}
-            disabled={loading}
-            onPageChange={(nextPage) => setPage(nextPage)}
-          />
-        </div>
+        <AdminPagination
+          total={pagination.total}
+          limit={pagination.limit}
+          offset={pagination.offset}
+          disabled={loading}
+          onPageChange={(nextPage) => setPage(nextPage)}
+        />
       </div>
 
       <ConfirmModal

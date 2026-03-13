@@ -11,10 +11,9 @@ import { normalizeAdminPagePayload, toOffsetFromPage } from '../../utils/adminPa
 
 const PAGE_LIMIT = 20
 
-/* Formatage de la date */
-function formatDate(d) {
-  if (!d) return '-'
-  return new Date(d).toLocaleString('fr-FR')
+function formatDate(dateValue) {
+  if (!dateValue) return '-'
+  return new Date(dateValue).toLocaleString('fr-FR')
 }
 
 export default function AdminMessages() {
@@ -58,14 +57,13 @@ export default function AdminMessages() {
     loadMessages(page)
   }, [page])
 
-  /* Ouverture du detail et marquage comme lu */
-  const handleOpen = async (msg) => {
-    setSelected(msg)
-    if (!msg.read_at) {
+  const handleOpen = async (message) => {
+    setSelected(message)
+    if (!message.read_at) {
       try {
-        await markMessageAsRead(msg.id)
+        await markMessageAsRead(message.id)
         setMessages((prev) =>
-          prev.map((m) => (m.id === msg.id ? { ...m, read_at: new Date().toISOString() } : m))
+          prev.map((item) => (item.id === message.id ? { ...item, read_at: new Date().toISOString() } : item))
         )
       } catch {
         /* Echec silencieux */
@@ -73,109 +71,151 @@ export default function AdminMessages() {
     }
   }
 
-  const unreadCount = messages.filter((m) => !m.read_at).length
+  const unreadCount = messages.filter((message) => !message.read_at).length
 
   return (
     <>
       <Helmet>
         <title>Messages - Administration</title>
       </Helmet>
-      <div>
-        <h1
-          className="text-2xl font-bold mb-2"
-          style={{ color: 'var(--color-text-primary)' }}
+      <div className="space-y-6">
+        <section
+          className="overflow-hidden rounded-[var(--ui-radius-2xl)] border p-6 md:p-7"
+          style={{
+            borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+            background:
+              'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-card) 90%, transparent), color-mix(in srgb, var(--color-accent-glow) 18%, transparent))',
+            boxShadow: '0 30px 68px -46px color-mix(in srgb, var(--color-accent-glow) 28%, transparent)',
+          }}
         >
-          Messages
-          {unreadCount > 0 && (
-            <span
-              className="ml-3 text-sm font-normal px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: '#f87171', color: '#fff' }}
-            >
-              {unreadCount} non {unreadCount > 1 ? 'lus' : 'lu'}
-            </span>
-          )}
-        </h1>
-        <p
-          className="text-sm mb-6"
-          style={{ color: 'var(--color-text-secondary)' }}
-        >
-          Cliquez sur un message pour le lire et le marquer comme lu.
-        </p>
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.06fr)_320px] xl:items-end">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+                Inbox
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+                Messages
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-relaxed md:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                Ouvre un message pour le lire, le marquer comme vu et garder une lecture propre de l'inbox.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="rounded-[var(--ui-radius-xl)] border p-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 80%, transparent)' }}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Total
+                </p>
+                <p className="mt-2 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {pagination.total}
+                </p>
+              </div>
+              <div className="rounded-[var(--ui-radius-xl)] border p-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 80%, transparent)' }}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Non lus
+                </p>
+                <p className="mt-2 text-2xl font-semibold" style={{ color: unreadCount > 0 ? '#f87171' : 'var(--color-text-primary)' }}>
+                  {unreadCount}
+                </p>
+              </div>
+              <div className="rounded-[var(--ui-radius-xl)] border p-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 80%, transparent)' }}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Etat
+                </p>
+                <p className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {unreadCount > 0 ? 'Action requise' : 'Inbox calme'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {loading ? (
           <div className="flex justify-center py-20">
             <Spinner size="lg" />
           </div>
         ) : messages.length === 0 ? (
-          <p style={{ color: 'var(--color-text-secondary)' }}>Aucun message.</p>
+          <div
+            className="rounded-[var(--ui-radius-2xl)] border p-6"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--color-border) 70%, transparent)',
+              backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
+            }}
+          >
+            <p className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Aucun message
+            </p>
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+              L'inbox est vide pour le moment.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-2">
-            {messages.map((msg) => (
-              <button
-                key={msg.id}
-                onClick={() => handleOpen(msg)}
-                className="w-full text-left flex items-start gap-4 p-4 rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                style={{
-                  backgroundColor: msg.read_at ? 'var(--color-bg-card)' : 'rgba(99, 102, 241, 0.05)',
-                  borderColor: msg.read_at ? 'var(--color-border)' : 'var(--color-accent)',
-                }}
-              >
-                {/* Icone lire/non-lue */}
-                {msg.read_at ? (
-                  <EnvelopeOpenIcon
-                    className="h-5 w-5 flex-shrink-0 mt-0.5"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <EnvelopeIcon
-                    className="h-5 w-5 flex-shrink-0 mt-0.5"
-                    style={{ color: '#f87171' }}
-                    aria-hidden="true"
-                  />
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-4">
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      {msg.name}
-                      {!msg.read_at && (
-                        <span
-                          className="ml-2 inline-block w-2 h-2 rounded-full align-middle"
-                          style={{ backgroundColor: '#f87171' }}
-                        />
-                      )}
-                    </p>
+          <div className="space-y-3">
+            {messages.map((message) => {
+              const unread = !message.read_at
+              return (
+                <button
+                  key={message.id}
+                  onClick={() => handleOpen(message)}
+                  className="w-full rounded-[var(--ui-radius-2xl)] border p-4 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] md:p-5"
+                  style={{
+                    borderColor: unread ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-border) 70%, transparent)',
+                    backgroundColor: unread
+                      ? 'color-mix(in srgb, var(--color-accent-glow) 10%, transparent)'
+                      : 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
+                  }}
+                >
+                  <div className="flex items-start gap-4">
                     <span
-                      className="text-xs flex-shrink-0"
-                      style={{ color: 'var(--color-text-secondary)' }}
+                      className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border"
+                      style={{
+                        borderColor: unread ? 'var(--color-accent)' : 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                      }}
                     >
-                      {formatDate(msg.created_at)}
+                      {unread ? (
+                        <EnvelopeIcon className="h-5 w-5" style={{ color: '#f87171' }} aria-hidden="true" />
+                      ) : (
+                        <EnvelopeOpenIcon className="h-5 w-5" style={{ color: 'var(--color-text-secondary)' }} aria-hidden="true" />
+                      )}
                     </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold md:text-base" style={{ color: 'var(--color-text-primary)' }}>
+                            {message.name}
+                          </p>
+                          <p className="mt-1 text-xs break-all md:text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                            {message.email}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {unread && (
+                            <span
+                              className="rounded-full px-3 py-1 text-[11px] font-medium"
+                              style={{ backgroundColor: 'rgba(248, 113, 113, 0.12)', color: '#f87171' }}
+                            >
+                              Non lu
+                            </span>
+                          )}
+                          <span className="text-xs whitespace-nowrap" style={{ color: 'var(--color-text-secondary)' }}>
+                            {formatDate(message.created_at)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="mt-3 line-clamp-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                        {message.message}
+                      </p>
+                    </div>
                   </div>
-                  <p
-                    className="text-xs mt-0.5"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {msg.email}
-                  </p>
-                  <p
-                    className="text-sm mt-1 truncate"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {msg.message}
-                  </p>
-                </div>
-              </button>
-            ))}
+                </button>
+              )
+            })}
           </div>
         )}
-      </div>
 
-      <div className="mt-4">
         <AdminPagination
           total={pagination.total}
           limit={pagination.limit}
@@ -185,7 +225,6 @@ export default function AdminMessages() {
         />
       </div>
 
-      {/* Modal de detail du message */}
       <Modal
         isOpen={!!selected}
         onClose={() => setSelected(null)}
@@ -208,10 +247,10 @@ export default function AdminMessages() {
               </p>
             </div>
             <div
-              className="p-4 rounded-lg border text-sm leading-relaxed whitespace-pre-wrap"
+              className="rounded-[var(--ui-radius-xl)] border p-4 text-sm leading-relaxed whitespace-pre-wrap"
               style={{
                 backgroundColor: 'var(--color-bg-primary)',
-                borderColor: 'var(--color-border)',
+                borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
                 color: 'var(--color-text-primary)',
               }}
             >
