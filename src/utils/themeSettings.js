@@ -475,6 +475,8 @@ export function applyThemeSettings(settings = {}) {
   rootStyle.setProperty('--anim-cta-pulse-ms', `${config.ctaPulseIntervalMs}ms`)
   rootStyle.setProperty('--anim-mascot-opacity', String(config.mascotOpacity))
   rootStyle.setProperty('--anim-scroll-progress-thickness', `${config.scrollProgressThickness}px`)
+
+  document.documentElement.dispatchEvent(new CustomEvent('portfolio:theme-updated'))
 }
 
 
