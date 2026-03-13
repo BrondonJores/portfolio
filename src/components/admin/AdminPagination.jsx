@@ -72,20 +72,27 @@ export default function AdminPagination({
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+      <p
+        className="inline-flex w-fit items-center rounded-full border px-3 py-1.5 text-xs font-medium"
+        style={{
+          color: 'var(--color-text-secondary)',
+          borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+        }}
+      >
         {from}-{to} sur {safeTotal}
       </p>
 
-      <div className="flex items-center gap-1 flex-wrap">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={disabled || currentPage <= 1}
-          className="px-3 py-1.5 rounded-lg border text-xs disabled:opacity-50"
+          className="rounded-xl border px-3 py-2 text-xs font-semibold disabled:opacity-50"
           style={{
-            borderColor: 'var(--color-border)',
+            borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
             color: 'var(--color-text-secondary)',
-            backgroundColor: 'var(--color-bg-primary)',
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
           }}
         >
           Prec
@@ -97,11 +104,15 @@ export default function AdminPagination({
             type="button"
             onClick={() => onPageChange(pageNumber)}
             disabled={disabled || pageNumber === currentPage}
-            className="px-3 py-1.5 rounded-lg border text-xs disabled:opacity-60"
+            className="rounded-xl border px-3 py-2 text-xs font-semibold disabled:opacity-60"
             style={{
-              borderColor: pageNumber === currentPage ? 'var(--color-accent)' : 'var(--color-border)',
+              borderColor: pageNumber === currentPage
+                ? 'var(--color-accent)'
+                : 'color-mix(in srgb, var(--color-border) 68%, transparent)',
               color: pageNumber === currentPage ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-              backgroundColor: 'var(--color-bg-primary)',
+              backgroundColor: pageNumber === currentPage
+                ? 'color-mix(in srgb, var(--color-accent-glow) 16%, transparent)'
+                : 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
             }}
           >
             {pageNumber}
@@ -112,11 +123,11 @@ export default function AdminPagination({
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={disabled || currentPage >= totalPages}
-          className="px-3 py-1.5 rounded-lg border text-xs disabled:opacity-50"
+          className="rounded-xl border px-3 py-2 text-xs font-semibold disabled:opacity-50"
           style={{
-            borderColor: 'var(--color-border)',
+            borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
             color: 'var(--color-text-secondary)',
-            backgroundColor: 'var(--color-bg-primary)',
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
           }}
         >
           Suiv

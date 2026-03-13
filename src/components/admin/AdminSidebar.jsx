@@ -1,50 +1,72 @@
 /* Barre laterale de navigation du tableau de bord */
-import { NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import {
-  HomeIcon,
-  FolderOpenIcon,
-  DocumentTextIcon,
-  WrenchScrewdriverIcon,
-  EnvelopeIcon,
-  ChatBubbleLeftRightIcon,
-  ArrowRightOnRectangleIcon,
-  ChatBubbleLeftIcon,
-  Cog6ToothIcon,
-  UsersIcon,
-  NewspaperIcon,
-  Squares2X2Icon,
-  PaintBrushIcon,
-  ShieldExclamationIcon,
-  RectangleStackIcon,
   AcademicCapIcon,
+  ArrowRightOnRectangleIcon,
+  ArrowTopRightOnSquareIcon,
+  ChatBubbleLeftIcon,
+  ChatBubbleLeftRightIcon,
+  Cog6ToothIcon,
+  DocumentTextIcon,
+  EnvelopeIcon,
+  FolderOpenIcon,
+  HomeIcon,
+  NewspaperIcon,
+  PaintBrushIcon,
+  RectangleStackIcon,
+  ShieldExclamationIcon,
+  SparklesIcon,
+  Squares2X2Icon,
+  UserGroupIcon,
+  WrenchScrewdriverIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../../hooks/useAuth.jsx'
 
-/* Liens de navigation admin */
-const NAV_ITEMS = [
-  { to: '/admin', label: 'Tableau de bord', icon: HomeIcon, end: true },
-  { to: '/admin/projets', label: 'Projets', icon: FolderOpenIcon },
-  { to: '/admin/articles', label: 'Articles', icon: DocumentTextIcon },
-  { to: '/admin/competences', label: 'Competences', icon: WrenchScrewdriverIcon },
-  { to: '/admin/certifications', label: 'Certifications', icon: AcademicCapIcon },
-  { to: '/admin/messages', label: 'Messages', icon: EnvelopeIcon },
-  { to: '/admin/temoignages', label: 'Temoignages', icon: ChatBubbleLeftRightIcon },
-  { to: '/admin/commentaires', label: 'Commentaires', icon: ChatBubbleLeftIcon },
-  { to: '/admin/newsletter', label: 'Newsletter', icon: NewspaperIcon },
-  { to: '/admin/pages', label: 'Pages CMS', icon: RectangleStackIcon },
-  { to: '/admin/templates', label: 'Marketplace Templates', icon: Squares2X2Icon },
-  { to: '/admin/themes', label: 'Marketplace Themes', icon: PaintBrushIcon },
-  { to: '/admin/security', label: 'Securite', icon: ShieldExclamationIcon },
-  { to: '/admin/subscribers', label: 'Abonnes', icon: UsersIcon },
-  { to: '/admin/parametres', label: 'Parametres', icon: Cog6ToothIcon },
+const NAV_SECTIONS = [
+  {
+    title: 'Pilotage',
+    items: [
+      { to: '/admin', label: 'Tableau de bord', icon: HomeIcon, end: true },
+      { to: '/admin/projets', label: 'Projets', icon: FolderOpenIcon },
+      { to: '/admin/articles', label: 'Articles', icon: DocumentTextIcon },
+      { to: '/admin/competences', label: 'Competences', icon: WrenchScrewdriverIcon },
+      { to: '/admin/certifications', label: 'Certifications', icon: AcademicCapIcon },
+      { to: '/admin/pages', label: 'Pages CMS', icon: RectangleStackIcon },
+    ],
+  },
+  {
+    title: 'Inbox',
+    items: [
+      { to: '/admin/messages', label: 'Messages', icon: EnvelopeIcon },
+      { to: '/admin/commentaires', label: 'Commentaires', icon: ChatBubbleLeftIcon },
+      { to: '/admin/temoignages', label: 'Temoignages', icon: ChatBubbleLeftRightIcon },
+      { to: '/admin/newsletter', label: 'Newsletter', icon: NewspaperIcon },
+      { to: '/admin/subscribers', label: 'Abonnes', icon: UserGroupIcon },
+    ],
+  },
+  {
+    title: 'Studio',
+    items: [
+      { to: '/admin/templates', label: 'Marketplace Templates', icon: Squares2X2Icon },
+      { to: '/admin/themes', label: 'Marketplace Themes', icon: PaintBrushIcon },
+      { to: '/admin/security', label: 'Securite', icon: ShieldExclamationIcon },
+      { to: '/admin/parametres', label: 'Parametres', icon: Cog6ToothIcon },
+    ],
+  },
 ]
 
-/**
- * Sidebar de navigation avec liens actifs et bouton de deconnexion.
- * Props : onClose (pour fermer en mobile).
- */
+function getInitials(value) {
+  return String(value || '')
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('') || 'A'
+}
+
 export default function AdminSidebar({ onClose }) {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -52,71 +74,152 @@ export default function AdminSidebar({ onClose }) {
     navigate('/admin/login')
   }
 
-  /* Styles du lien actif */
   const getLinkClass = ({ isActive }) => {
     const base =
-      'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150'
-    return isActive
-      ? `${base} text-white`
-      : `${base}`
+      'group flex items-center gap-3 rounded-[var(--ui-radius-xl)] border px-3.5 py-3 text-sm font-medium transition-all duration-150'
+    return isActive ? `${base}` : `${base}`
   }
 
-  const getLinkStyle = ({ isActive }) => {
-    if (isActive) {
-      return { backgroundColor: 'var(--color-accent)', color: '#fff' }
-    }
-    return { color: 'var(--color-text-secondary)' }
-  }
+  const getLinkStyle = ({ isActive }) => ({
+    color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+    borderColor: isActive
+      ? 'color-mix(in srgb, var(--color-accent) 42%, var(--color-border))'
+      : 'transparent',
+    backgroundColor: isActive
+      ? 'color-mix(in srgb, var(--color-accent-glow) 18%, transparent)'
+      : 'transparent',
+  })
+
+  const displayName = user?.username || user?.email || 'Administrateur'
+  const initials = getInitials(displayName)
 
   return (
     <aside
-      className="flex flex-col h-full w-64"
-      style={{ backgroundColor: 'var(--color-bg-secondary)' }}
+      className="flex h-full w-[18rem] flex-col overflow-hidden rounded-[calc(var(--ui-radius-2xl)+4px)] border"
+      style={{
+        borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+        background:
+          'linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 96%, transparent), color-mix(in srgb, var(--color-bg-card) 92%, transparent))',
+        boxShadow: '0 28px 72px -46px color-mix(in srgb, var(--color-accent-glow) 26%, transparent)',
+      }}
     >
-      {/* Logo */}
-      <div
-        className="h-16 flex items-center px-6 border-b flex-shrink-0"
-        style={{ borderColor: 'var(--color-border)' }}
-      >
-        <span
-          className="text-xl font-bold"
-          style={{ color: 'var(--color-accent)' }}
+      <div className="border-b p-5" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+              Admin studio
+            </p>
+            <p className="mt-2 text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              BJ Admin
+            </p>
+          </div>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border focus:outline-none"
+              style={{
+                color: 'var(--color-text-secondary)',
+                borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 56%, transparent)',
+              }}
+              aria-label="Fermer le menu"
+            >
+              <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
+        <div
+          className="mt-5 rounded-[var(--ui-radius-xl)] border p-4"
+          style={{
+            borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+          }}
         >
-          BJ Admin
-        </span>
+          <div className="flex items-center gap-3">
+            <span
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-semibold text-white"
+              style={{ background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-light))' }}
+            >
+              {initials}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                {displayName}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                Poste de pilotage actif
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-1" aria-label="Navigation admin">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={getLinkClass}
-              style={getLinkStyle}
-              onClick={onClose}
-            >
-              <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-              {item.label}
-            </NavLink>
-          )
-        })}
+      <nav className="flex-1 overflow-y-auto p-4" aria-label="Navigation admin">
+        <div className="space-y-5">
+          {NAV_SECTIONS.map((section) => (
+            <div key={section.title}>
+              <p className="px-2 text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                {section.title}
+              </p>
+              <div className="mt-2 space-y-1.5">
+                {section.items.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      className={getLinkClass}
+                      style={getLinkStyle}
+                      onClick={onClose}
+                    >
+                      <span
+                        className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl border"
+                        style={{
+                          borderColor: 'color-mix(in srgb, var(--color-border) 62%, transparent)',
+                          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)',
+                        }}
+                      >
+                        <Icon className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 truncate">{item.label}</span>
+                    </NavLink>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </nav>
 
-      {/* Bouton deconnexion */}
-      <div
-        className="p-4 border-t flex-shrink-0"
-        style={{ borderColor: 'var(--color-border)' }}
-      >
+      <div className="border-t p-4 space-y-3" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+        <Link
+          to="/"
+          onClick={onClose}
+          className="flex items-center justify-between rounded-[var(--ui-radius-xl)] border px-4 py-3 text-sm font-medium"
+          style={{
+            color: 'var(--color-text-primary)',
+            borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+          }}
+        >
+          <span className="inline-flex items-center gap-2">
+            <SparklesIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+            Voir le site
+          </span>
+          <ArrowTopRightOnSquareIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
+        </Link>
+
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-          style={{ color: 'var(--color-text-secondary)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171' }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-secondary)' }}
+          className="flex w-full items-center gap-3 rounded-[var(--ui-radius-xl)] border px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+          style={{
+            color: 'var(--color-text-secondary)',
+            borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+          }}
         >
           <ArrowRightOnRectangleIcon className="h-5 w-5" aria-hidden="true" />
           Deconnexion

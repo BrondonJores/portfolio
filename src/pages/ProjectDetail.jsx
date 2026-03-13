@@ -130,7 +130,7 @@ export default function ProjectDetail() {
             {projectBackLabel}
           </button>
 
-          <section className="mb-10 grid gap-8 xl:grid-cols-[minmax(0,1.04fr)_320px] xl:items-end">
+          <section className="mb-10 grid gap-8 lg:grid-cols-[minmax(0,1.04fr)_320px] lg:items-end">
             <div>
               <p
                 className="mb-4 text-[11px] uppercase tracking-[0.22em]"
@@ -178,25 +178,25 @@ export default function ProjectDetail() {
 
               <div className="mt-8 flex flex-wrap gap-3">
                 {project.github_url && (
-                  <Button variant="secondary" href={project.github_url}>
+                  <Button variant="secondary" href={project.github_url} className="w-full justify-center sm:w-auto">
                     <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
                     {projectViewCodeLabel}
                   </Button>
                 )}
                 {project.demo_url && (
-                  <Button variant="primary" href={project.demo_url}>
+                  <Button variant="primary" href={project.demo_url} className="w-full justify-center sm:w-auto">
                     <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
                     {projectViewDemoLabel}
                   </Button>
                 )}
-                <Button variant="ghost" onClick={handleCopyLink}>
+                <Button variant="ghost" onClick={handleCopyLink} className="w-full justify-center sm:w-auto">
                   <LinkIcon className="h-4 w-4" aria-hidden="true" />
                   {copied ? projectLinkCopiedLabel : projectCopyLinkLabel}
                 </Button>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               {metaCards.map((card) => (
                 <Card key={card.key} className="h-full">
                   <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
@@ -216,7 +216,7 @@ export default function ProjectDetail() {
           {project.image_url && (
             <section className="mb-12">
               <div
-                className="overflow-hidden rounded-[2rem] border p-2"
+                className="overflow-hidden rounded-[1.5rem] border p-2 sm:rounded-[2rem]"
                 style={{
                   borderColor: 'color-mix(in srgb, var(--color-border) 78%, var(--color-accent))',
                   background:
@@ -225,13 +225,13 @@ export default function ProjectDetail() {
                 }}
               >
                 <div
-                  className="overflow-hidden rounded-[1.5rem]"
+                  className="overflow-hidden rounded-[1.1rem] sm:rounded-[1.5rem]"
                   style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 84%, transparent)' }}
                 >
                   <img
                     src={project.image_url}
                     alt={project.title}
-                    className="max-h-[42rem] w-full object-contain object-top"
+                    className="max-h-[22rem] w-full object-contain object-top sm:max-h-[30rem] xl:max-h-[42rem]"
                     loading="eager"
                     fetchPriority="high"
                     decoding="async"
@@ -243,7 +243,7 @@ export default function ProjectDetail() {
             </section>
           )}
 
-          <section className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-start">
+          <section className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start xl:grid-cols-[minmax(0,1fr)_300px]">
             <div
               className="rounded-[var(--ui-radius-2xl)] border p-6 md:p-8"
               style={{
@@ -254,7 +254,7 @@ export default function ProjectDetail() {
               <BlockRenderer content={project.content} />
             </div>
 
-            <aside className="grid gap-4">
+            <aside className="order-first grid gap-4 lg:order-none">
               {taxonomy.technologies.length > 0 && (
                 <Card>
                   <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
@@ -287,18 +287,18 @@ export default function ProjectDetail() {
                 </p>
                 <div className="mt-4 flex flex-col gap-3">
                   {project.demo_url ? (
-                    <Button variant="primary" href={project.demo_url}>
+                    <Button variant="primary" href={project.demo_url} className="w-full justify-center">
                       <ArrowTopRightOnSquareIcon className="h-4 w-4" aria-hidden="true" />
                       {projectViewDemoLabel}
                     </Button>
                   ) : null}
                   {project.github_url ? (
-                    <Button variant="secondary" href={project.github_url}>
+                    <Button variant="secondary" href={project.github_url} className="w-full justify-center">
                       <CodeBracketIcon className="h-4 w-4" aria-hidden="true" />
                       {projectViewCodeLabel}
                     </Button>
                   ) : null}
-                  <Button variant="ghost" onClick={handleCopyLink}>
+                  <Button variant="ghost" onClick={handleCopyLink} className="w-full justify-center">
                     <LinkIcon className="h-4 w-4" aria-hidden="true" />
                     {copied ? projectLinkCopiedLabel : projectCopyLinkLabel}
                   </Button>

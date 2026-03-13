@@ -53,6 +53,15 @@ const inputStyle = {
   borderColor: 'var(--color-border)',
   color: 'var(--color-text-primary)',
 }
+const panelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 72%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 86%, transparent)',
+  boxShadow: '0 24px 56px -44px color-mix(in srgb, var(--color-accent-glow) 24%, transparent)',
+}
+const softPanelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 80%, transparent)',
+}
 
 /**
  * Genere un slug lisible a partir du titre.
@@ -381,55 +390,114 @@ export default function AdminProjectForm() {
         <title>{isEdit ? 'Modifier le projet' : 'Nouveau projet'} - Administration</title>
       </Helmet>
 
-      <div className="max-w-7xl">
-        <h1 className="text-2xl font-bold mb-8" style={{ color: 'var(--color-text-primary)' }}>
-          {isEdit ? 'Modifier le projet' : 'Nouveau projet'}
-        </h1>
+      <div className="max-w-7xl space-y-6">
+        <section
+          className="overflow-hidden rounded-[var(--ui-radius-2xl)] border p-6 md:p-7"
+          style={{
+            borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+            background:
+              'linear-gradient(145deg, color-mix(in srgb, var(--color-bg-card) 90%, transparent), color-mix(in srgb, var(--color-accent-glow) 18%, transparent))',
+            boxShadow: '0 30px 68px -46px color-mix(in srgb, var(--color-accent-glow) 28%, transparent)',
+          }}
+        >
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)] xl:items-end">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+                Admin studio
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+                {isEdit ? 'Modifier le projet' : 'Nouveau projet'}
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-relaxed md:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                Cadre l'histoire, la taxonomie, les liens et le rendu du projet dans un seul flux d'edition.
+              </p>
+              {form.title && (
+                <p className="mt-4 text-xs font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+                  Slug : {slug}
+                </p>
+              )}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="rounded-[var(--ui-radius-xl)] border p-4" style={softPanelStyle}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Statut
+                </p>
+                <p className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {form.published ? 'Publie' : 'Brouillon'}
+                </p>
+              </div>
+              <div className="rounded-[var(--ui-radius-xl)] border p-4" style={softPanelStyle}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Mise en avant
+                </p>
+                <p className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {form.featured ? 'Oui' : 'Non'}
+                </p>
+              </div>
+              <div className="rounded-[var(--ui-radius-xl)] border p-4" style={softPanelStyle}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Blocs
+                </p>
+                <p className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {blocks.length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
-            <div className="space-y-5 min-w-0">
-              <div>
-                <label htmlFor="pf-title" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                  Titre <span style={{ color: '#f87171' }}>*</span>
-                </label>
-                <input
-                  id="pf-title"
-                  name="title"
-                  type="text"
-                  value={form.title}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                  style={inputStyle}
-                />
-                {form.title && (
-                  <p className="text-xs mt-1 font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-                    Slug : {slug}
-                  </p>
-                )}
-              </div>
+            <div className="min-w-0 space-y-5">
+              <section className="rounded-[var(--ui-radius-2xl)] border p-5 md:p-6" style={panelStyle}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Essentiel
+                </p>
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <label htmlFor="pf-title" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                      Titre <span style={{ color: '#f87171' }}>*</span>
+                    </label>
+                    <input
+                      id="pf-title"
+                      name="title"
+                      type="text"
+                      value={form.title}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+                      style={inputStyle}
+                    />
+                  </div>
 
-              <div>
-                <label htmlFor="pf-desc" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                  Description
-                </label>
-                <textarea
-                  id="pf-desc"
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all resize-none"
-                  style={inputStyle}
-                />
-              </div>
+                  <div>
+                    <label htmlFor="pf-desc" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                      Description
+                    </label>
+                    <textarea
+                      id="pf-desc"
+                      name="description"
+                      value={form.description}
+                      onChange={handleChange}
+                      rows={4}
+                      className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all resize-none"
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+              </section>
 
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                    Contenu <span style={{ color: '#f87171' }}>*</span>
-                  </label>
+              <section className="rounded-[var(--ui-radius-2xl)] border p-5 md:p-6" style={panelStyle}>
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      Storytelling
+                    </p>
+                    <p className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Contenu et structure
+                    </p>
+                  </div>
                   <Button type="button" variant="ghost" onClick={openVisualBuilder}>
                     Builder visuel
                   </Button>
@@ -439,81 +507,95 @@ export default function AdminProjectForm() {
                   onChange={handleBlocksChange}
                   templates={editorTemplates}
                 />
-              </div>
+              </section>
 
-              <ProjectTaxonomyEditor
-                taxonomy={projectTaxonomy}
-                onChange={handleTaxonomyChange}
-                inputStyle={inputStyle}
-              />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="pf-github" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    URL GitHub
-                  </label>
-                  <input
-                    id="pf-github"
-                    name="github_url"
-                    type="url"
-                    value={form.github_url}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                    style={inputStyle}
+              <section className="rounded-[var(--ui-radius-2xl)] border p-5 md:p-6" style={panelStyle}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Taxonomie
+                </p>
+                <div className="mt-5">
+                  <ProjectTaxonomyEditor
+                    taxonomy={projectTaxonomy}
+                    onChange={handleTaxonomyChange}
+                    inputStyle={inputStyle}
                   />
                 </div>
-                <div>
-                  <label htmlFor="pf-demo" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    URL Demo
-                  </label>
-                  <input
-                    id="pf-demo"
-                    name="demo_url"
-                    type="url"
-                    value={form.demo_url}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                    style={inputStyle}
+              </section>
+
+              <section className="rounded-[var(--ui-radius-2xl)] border p-5 md:p-6" style={panelStyle}>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Liens et media
+                </p>
+                <div className="mt-5 space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="pf-github" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                        URL GitHub
+                      </label>
+                      <input
+                        id="pf-github"
+                        name="github_url"
+                        type="url"
+                        value={form.github_url}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="pf-demo" className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
+                        URL Demo
+                      </label>
+                      <input
+                        id="pf-demo"
+                        name="demo_url"
+                        type="url"
+                        value={form.demo_url}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+
+                  <ImageUploader
+                    label="Image du projet"
+                    value={form.image_url}
+                    onUpload={(url) => setForm((prev) => ({ ...prev, image_url: url }))}
                   />
+
+                  <div className="flex flex-wrap items-center gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        name="featured"
+                        type="checkbox"
+                        checked={form.featured}
+                        onChange={handleChange}
+                        className="rounded focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={{ accentColor: 'var(--color-accent)' }}
+                      />
+                      <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        Mis en avant
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        name="published"
+                        type="checkbox"
+                        checked={form.published}
+                        onChange={handleChange}
+                        className="rounded focus:ring-2 focus:ring-[var(--color-accent)]"
+                        style={{ accentColor: 'var(--color-accent)' }}
+                      />
+                      <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        Publie
+                      </span>
+                    </label>
+                  </div>
                 </div>
-              </div>
+              </section>
 
-              <ImageUploader
-                label="Image du projet"
-                value={form.image_url}
-                onUpload={(url) => setForm((prev) => ({ ...prev, image_url: url }))}
-              />
-
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    name="featured"
-                    type="checkbox"
-                    checked={form.featured}
-                    onChange={handleChange}
-                    className="rounded focus:ring-2 focus:ring-[var(--color-accent)]"
-                    style={{ accentColor: 'var(--color-accent)' }}
-                  />
-                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    Mis en avant
-                  </span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    name="published"
-                    type="checkbox"
-                    checked={form.published}
-                    onChange={handleChange}
-                    className="rounded focus:ring-2 focus:ring-[var(--color-accent)]"
-                    style={{ accentColor: 'var(--color-accent)' }}
-                  />
-                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    Publie
-                  </span>
-                </label>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Button type="submit" variant="primary" disabled={saving}>
                   {saving ? <Spinner size="sm" /> : isEdit ? 'Enregistrer' : 'Creer le projet'}
                 </Button>
@@ -523,62 +605,50 @@ export default function AdminProjectForm() {
               </div>
             </div>
 
-            <aside className="space-y-4 xl:sticky xl:top-24 self-start">
-              <div
-                className="rounded-xl border p-3 space-y-1"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                }}
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+            <aside className="space-y-4 self-start xl:sticky xl:top-24">
+              <div className="rounded-[var(--ui-radius-xl)] border p-4 space-y-1" style={softPanelStyle}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
                   Autosave local
                 </p>
                 <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
                   {autosaveLabel}
                 </p>
                 {localDraftRestored && (
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                     Un brouillon local a ete restaure automatiquement.
                   </p>
                 )}
               </div>
 
-              <div
-                className="rounded-xl border overflow-hidden"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                }}
-              >
-                <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="overflow-hidden rounded-[var(--ui-radius-2xl)] border" style={panelStyle}>
+                <div className="border-b px-5 py-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
                   <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                     Apercu live projet
                   </p>
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                  <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                     Rendu en temps reel du projet.
                   </p>
                 </div>
 
-                <div className="p-4 max-h-[72vh] overflow-y-auto space-y-4">
+                <div className="max-h-[72vh] space-y-4 overflow-y-auto p-5">
                   {form.image_url && (
                     <img
                       src={form.image_url}
                       alt=""
-                      className="w-full h-40 object-cover rounded-lg border"
-                      style={{ borderColor: 'var(--color-border)' }}
+                      className="h-40 w-full rounded-[var(--ui-radius-xl)] border object-cover"
+                      style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}
                     />
                   )}
 
                   <section
-                    className="rounded-lg border p-3"
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
+                    className="rounded-[var(--ui-radius-xl)] border p-4"
+                    style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)' }}
                   >
                     <h2 className="text-xl font-semibold break-words" style={{ color: 'var(--color-text-primary)' }}>
                       {form.title.trim() || 'Titre du projet...'}
                     </h2>
                     {form.description.trim() && (
-                      <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                         {form.description}
                       </p>
                     )}
@@ -594,8 +664,8 @@ export default function AdminProjectForm() {
 
                   {(form.github_url || form.demo_url) && (
                     <section
-                      className="rounded-lg border p-3 space-y-1"
-                      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
+                      className="rounded-[var(--ui-radius-xl)] border p-4 space-y-2"
+                      style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)' }}
                     >
                       {form.github_url && (
                         <p className="text-sm break-all" style={{ color: 'var(--color-text-secondary)' }}>
@@ -611,8 +681,8 @@ export default function AdminProjectForm() {
                   )}
 
                   <article
-                    className="rounded-lg border p-3"
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
+                    className="rounded-[var(--ui-radius-xl)] border p-4"
+                    style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)', backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)' }}
                   >
                     {blocks.length > 0 ? (
                       <BlockRenderer content={previewContent} />

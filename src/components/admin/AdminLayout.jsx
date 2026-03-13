@@ -24,9 +24,15 @@ export default function AdminLayout() {
 
   return (
     <AdminToastContext.Provider value={addToast}>
-      <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+      <div
+        className="flex h-screen overflow-hidden"
+        style={{
+          background:
+            'radial-gradient(circle at top left, color-mix(in srgb, var(--color-accent-glow) 16%, transparent), transparent 34%), linear-gradient(180deg, color-mix(in srgb, var(--color-bg-primary) 94%, transparent), color-mix(in srgb, var(--color-bg-secondary) 96%, transparent))',
+        }}
+      >
         {/* Sidebar fixe sur desktop */}
-        <div className="hidden lg:flex flex-shrink-0">
+        <div className="hidden lg:flex flex-shrink-0 p-3">
           <AdminSidebar />
         </div>
 
@@ -40,16 +46,24 @@ export default function AdminLayout() {
               aria-hidden="true"
             />
             {/* Contenu sidebar */}
-            <div className="relative z-10">
+            <div className="relative z-10 p-3">
               <AdminSidebar onClose={() => setSidebarOpen(false)} />
             </div>
           </div>
         )}
 
         {/* Zone principale */}
-        <div className="flex flex-col flex-1 min-w-0">
+        <div className="relative flex min-w-0 flex-1 flex-col">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                'radial-gradient(circle at top right, color-mix(in srgb, var(--color-accent-glow) 10%, transparent), transparent 30%)',
+            }}
+            aria-hidden="true"
+          />
           <AdminNavbar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <main className="relative flex-1 overflow-y-auto px-4 pb-8 pt-4 sm:px-6 lg:px-8 lg:pt-6">
             <Outlet />
           </main>
         </div>
