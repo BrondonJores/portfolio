@@ -1,5 +1,5 @@
 /* Contexte d'authentification pour l'espace administrateur */
-import { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { configureApi } from '../services/api.js'
 import {
   login as loginRequest,
@@ -64,9 +64,13 @@ export function AuthProvider({ children }) {
   /* Le token d'acces est stocke uniquement en memoire, jamais en localStorage */
   const [accessToken, setAccessToken] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  const refreshPromiseRef = useRef(null)
+  const authEpochRef = useRef(0)
 
   /* Deconnexion et suppression du cookie refresh token */
   const logout = useCallback(async () => {
+    authEpochRef.current += 1
+    refreshPromiseRef.current = null
     try {
       await logoutRequest()
     } catch {
@@ -78,32 +82,49 @@ export function AuthProvider({ children }) {
 
   /* Rafraichissement du token d'acces */
   const refreshToken = useCallback(async () => {
-    const data = await refreshRequest()
-    const derivedUser = data?.user || deriveUserFromAccessToken(data?.accessToken)
-    setAccessToken(data.accessToken)
-    setUser((currentUser) => derivedUser || currentUser || null)
-    return data.accessToken
+    if (!refreshPromiseRef.current) {
+      const authEpochAtStart = authEpochRef.current
+      refreshPromiseRef.current = refreshRequest()
+        .then((data) => {
+          const nextAccessToken = data?.accessToken || null
+          const derivedUser = data?.user || deriveUserFromAccessToken(nextAccessToken)
+
+          if (authEpochRef.current === authEpochAtStart) {
+            setAccessToken(nextAccessToken)
+            setUser((currentUser) => derivedUser || currentUser || null)
+          }
+
+          return nextAccessToken
+        })
+        .finally(() => {
+          refreshPromiseRef.current = null
+        })
+    }
+
+    return refreshPromiseRef.current
   }, [])
 
   /* Tentative de restauration silencieuse de la session au montage */
   useEffect(() => {
+    let active = true
+
     const restore = async () => {
       try {
-        const data = await refreshRequest()
-        const derivedUser = data?.user || deriveUserFromAccessToken(data?.accessToken)
-        if (data?.accessToken) {
-          setAccessToken(data.accessToken)
-          setUser(derivedUser || null)
-        }
+        await refreshToken()
       } catch {
         /* Echec silencieux : l'utilisateur n'est pas connecte */
       } finally {
-        setIsLoading(false)
+        if (active) {
+          setIsLoading(false)
+        }
       }
     }
 
     restore()
-  }, [])
+    return () => {
+      active = false
+    }
+  }, [refreshToken])
 
   /* Connexion avec email et mot de passe */
   const login = useCallback(async (email, password) => {
@@ -112,6 +133,8 @@ export function AuthProvider({ children }) {
       return data
     }
 
+    authEpochRef.current += 1
+    refreshPromiseRef.current = null
     setAccessToken(data.accessToken)
     setUser(data.user)
 
@@ -125,6 +148,8 @@ export function AuthProvider({ children }) {
       totpCode,
       recoveryCode,
     })
+    authEpochRef.current += 1
+    refreshPromiseRef.current = null
     setAccessToken(data.accessToken)
     setUser(data.user)
     return data

@@ -28,7 +28,7 @@ export function useUnreadMessages() {
     } catch {
       /* Erreur silencieuse : on ne bloque pas l'interface */
     }
-  }, [])
+  }, [accessToken, isAuthenticated])
 
   /* Polling toutes les 30 secondes + appel immediat au montage */
   useEffect(() => {

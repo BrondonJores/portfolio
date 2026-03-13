@@ -32,21 +32,13 @@ function createFakeAdmin(overrides = {}) {
     username: 'admin',
     email: 'admin@example.com',
     refresh_token_version: 0,
+    session_version: 0,
     two_factor_enabled: false,
     two_factor_secret_encrypted: null,
     two_factor_recovery_codes: null,
     comparePassword: async () => true,
     update: async function (payload) {
       Object.assign(this, payload)
-      return this
-    },
-    increment: async function (field, options) {
-      if (field === 'refresh_token_version') {
-        const by = Number(options?.by || 1)
-        this.refresh_token_version += by
-      }
-    },
-    reload: async function () {
       return this
     },
     ...overrides,
@@ -58,8 +50,8 @@ function createFakeAdmin(overrides = {}) {
  * @returns {Promise<void>} Promise resolue si succes.
  */
 async function main() {
-  await runCase('loginAdmin embeds refresh token version (rtv)', async () => {
-    const fakeAdmin = createFakeAdmin({ refresh_token_version: 7 })
+  await runCase('loginAdmin embeds session version in access token and refresh version in refresh token', async () => {
+    const fakeAdmin = createFakeAdmin({ refresh_token_version: 7, session_version: 11 })
     const signCalls = []
 
     const service = createAuthService({
@@ -84,7 +76,7 @@ async function main() {
     assert.equal(session.user.id, 1)
     assert.equal(signCalls.length, 2)
     assert.equal(signCalls[0].typ, 'access')
-    assert.equal(signCalls[0].rtv, 7)
+    assert.equal(signCalls[0].sv, 11)
     assert.equal(signCalls[1].rtv, 7)
     assert.equal(signCalls[1].typ, 'refresh')
   })
@@ -92,6 +84,7 @@ async function main() {
   await runCase('loginAdmin returns MFA challenge when 2FA is enabled', async () => {
     const fakeAdmin = createFakeAdmin({
       refresh_token_version: 4,
+      session_version: 9,
       two_factor_enabled: true,
     })
     const signCalls = []
@@ -114,20 +107,20 @@ async function main() {
       },
       twoFactorService: {
         isTwoFactorEnabled: () => true,
-        signLoginChallengeToken: ({ adminId, tokenVersion }) => `mfa-${adminId}-${tokenVersion}`,
+        signLoginChallengeToken: ({ adminId, sessionVersion }) => `mfa-${adminId}-${sessionVersion}`,
       },
     })
 
     const result = await service.loginAdmin({ email: 'admin@example.com', password: 'secret' })
 
     assert.equal(result.mfaRequired, true)
-    assert.equal(result.mfaToken, 'mfa-1-4')
+    assert.equal(result.mfaToken, 'mfa-1-9')
     assert.equal(result.user.id, 1)
     assert.equal(signCalls.length, 0)
   })
 
-  await runCase('refreshAdminSession rotates refresh token version', async () => {
-    const fakeAdmin = createFakeAdmin({ refresh_token_version: 2 })
+  await runCase('refreshAdminSession rotates refresh token version without changing access session version', async () => {
+    const fakeAdmin = createFakeAdmin({ refresh_token_version: 2, session_version: 9 })
     const signCalls = []
 
     const service = createAuthService({
@@ -150,9 +143,10 @@ async function main() {
     const session = await service.refreshAdminSession('refresh-token')
     assert.equal(session.user.id, 1)
     assert.equal(fakeAdmin.refresh_token_version, 3)
+    assert.equal(fakeAdmin.session_version, 9)
     assert.equal(signCalls.length, 2)
     assert.equal(signCalls[0].typ, 'access')
-    assert.equal(signCalls[0].rtv, 3)
+    assert.equal(signCalls[0].sv, 9)
     assert.equal(signCalls[1].rtv, 3)
     assert.equal(signCalls[1].typ, 'refresh')
   })
@@ -217,8 +211,8 @@ async function main() {
     )
   })
 
-  await runCase('logoutAdminSession revokes version when token is current', async () => {
-    const fakeAdmin = createFakeAdmin({ refresh_token_version: 4 })
+  await runCase('logoutAdminSession revokes refresh and access token versions when token is current', async () => {
+    const fakeAdmin = createFakeAdmin({ refresh_token_version: 4, session_version: 2 })
 
     const service = createAuthService({
       adminModel: {
@@ -237,6 +231,7 @@ async function main() {
     const result = await service.logoutAdminSession('valid-token')
     assert.equal(result.revoked, true)
     assert.equal(fakeAdmin.refresh_token_version, 5)
+    assert.equal(fakeAdmin.session_version, 3)
   })
 
   await runCase('logoutAdminSession stays idempotent for invalid token', async () => {
@@ -263,7 +258,7 @@ async function main() {
   })
 
   await runCase('logoutAdminSession stays idempotent for non-refresh typ token', async () => {
-    const fakeAdmin = createFakeAdmin({ refresh_token_version: 4 })
+    const fakeAdmin = createFakeAdmin({ refresh_token_version: 4, session_version: 2 })
 
     const service = createAuthService({
       adminModel: {
@@ -282,11 +277,13 @@ async function main() {
     const result = await service.logoutAdminSession('wrong-type-token')
     assert.equal(result.revoked, false)
     assert.equal(fakeAdmin.refresh_token_version, 4)
+    assert.equal(fakeAdmin.session_version, 2)
   })
 
   await runCase('verifyTwoFactorLogin issues a full session when TOTP is valid', async () => {
     const fakeAdmin = createFakeAdmin({
       refresh_token_version: 4,
+      session_version: 6,
       two_factor_enabled: true,
       two_factor_secret_encrypted: 'encrypted-secret',
     })
@@ -309,7 +306,7 @@ async function main() {
         JWT_REFRESH_SECRET: 'refresh',
       },
       twoFactorService: {
-        verifyLoginChallengeToken: () => ({ adminId: 1, rtv: 4 }),
+        verifyLoginChallengeToken: () => ({ adminId: 1, sv: 6 }),
         isTwoFactorEnabled: () => true,
         normalizeTotpCode: () => '123456',
         decryptTotpSecret: () => 'clear-secret',
@@ -329,13 +326,15 @@ async function main() {
     assert.equal(result.user.id, 1)
     assert.equal(signCalls.length, 2)
     assert.equal(signCalls[0].typ, 'access')
-    assert.equal(signCalls[0].rtv, 4)
+    assert.equal(signCalls[0].sv, 6)
     assert.equal(signCalls[1].typ, 'refresh')
+    assert.equal(signCalls[1].rtv, 4)
   })
 
   await runCase('verifyTwoFactorLogin consumes recovery code when TOTP is absent', async () => {
     const fakeAdmin = createFakeAdmin({
       refresh_token_version: 3,
+      session_version: 8,
       two_factor_enabled: true,
       two_factor_recovery_codes: '["hash-a","hash-b","hash-c"]',
     })
@@ -358,7 +357,7 @@ async function main() {
         JWT_REFRESH_SECRET: 'refresh',
       },
       twoFactorService: {
-        verifyLoginChallengeToken: () => ({ adminId: 1, rtv: 3 }),
+        verifyLoginChallengeToken: () => ({ adminId: 1, sv: 8 }),
         isTwoFactorEnabled: () => true,
         normalizeTotpCode: () => '',
         normalizeRecoveryCode: () => 'ABCDE12345',
@@ -381,6 +380,8 @@ async function main() {
     assert.equal(result.recoveryCodesRemaining, 2)
     assert.equal(fakeAdmin.two_factor_recovery_codes, '["hash-a","hash-c"]')
     assert.equal(signCalls.length, 2)
+    assert.equal(signCalls[0].sv, 8)
+    assert.equal(signCalls[1].rtv, 3)
   })
 
   if (failures > 0) {

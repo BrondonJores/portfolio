@@ -30,6 +30,11 @@ const Admin = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    session_version: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
     two_factor_enabled: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

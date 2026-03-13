@@ -62,6 +62,7 @@ function createAuthenticate(adminOverrides = {}) {
           email: 'admin@example.com',
           two_factor_enabled: true,
           refresh_token_version: 4,
+          session_version: 4,
           ...adminOverrides,
         }
       },
@@ -96,7 +97,7 @@ async function main() {
         username: 'admin',
         email: 'admin@example.com',
         twoFactorEnabled: true,
-        rtv: 4,
+        sv: 4,
         typ: 'access',
       },
       process.env.JWT_ACCESS_SECRET
@@ -158,7 +159,7 @@ async function main() {
         id: 0,
         username: 'admin',
         email: 'admin@example.com',
-        rtv: 4,
+        sv: 4,
         typ: 'access',
       },
       process.env.JWT_ACCESS_SECRET
@@ -188,7 +189,7 @@ async function main() {
         id: 7,
         username: 'admin',
         email: 'admin@example.com',
-        rtv: 3,
+        sv: 3,
         typ: 'access',
       },
       process.env.JWT_ACCESS_SECRET
@@ -203,7 +204,7 @@ async function main() {
     const { res, output } = createResponseRecorder()
     let nextCalled = false
 
-    await createAuthenticate({ refresh_token_version: 4 })(req, res, () => {
+    await createAuthenticate({ session_version: 4 })(req, res, () => {
       nextCalled = true
     })
 

@@ -49,20 +49,20 @@ function createService(overrides = {}) {
   })
 }
 
-runCase('sign/verify login challenge token keeps admin and token version', () => {
+runCase('sign/verify login challenge token keeps admin and session version', () => {
   const service = createService()
   const token = service.signLoginChallengeToken({
     adminId: 42,
     email: 'admin@example.com',
     username: 'admin',
-    tokenVersion: 7,
+    sessionVersion: 7,
   })
 
   const payload = service.verifyLoginChallengeToken(token)
   assert.equal(payload.adminId, 42)
   assert.equal(payload.email, 'admin@example.com')
   assert.equal(payload.username, 'admin')
-  assert.equal(payload.rtv, 7)
+  assert.equal(payload.sv, 7)
 })
 
 runCase('sign/verify setup token returns matching admin id and secret', () => {
@@ -164,7 +164,7 @@ runCase('JWT_MFA_SECRET is mandatory for signing MFA tokens', () => {
         adminId: 1,
         email: 'admin@example.com',
         username: 'admin',
-        tokenVersion: 0,
+        sessionVersion: 0,
       }),
     (err) => {
       assert.equal(err.statusCode, 500)

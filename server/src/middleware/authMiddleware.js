@@ -10,13 +10,13 @@ const { logSecurityEventFromRequest } = require('../services/securityEventServic
  */
 function isValidAccessPayload(payload) {
   const userId = Number(payload?.id)
-  const tokenVersion = Number(payload?.rtv)
+  const sessionVersion = Number(payload?.sv)
   return (
     payload?.typ === 'access' &&
     Number.isInteger(userId) &&
     userId > 0 &&
-    Number.isInteger(tokenVersion) &&
-    tokenVersion >= 0
+    Number.isInteger(sessionVersion) &&
+    sessionVersion >= 0
   )
 }
 
@@ -60,9 +60,9 @@ function createAuthenticateMiddleware(deps = {}) {
 
       const userId = Number(payload.id)
       const admin = await adminModel.findByPk(userId)
-      const currentTokenVersion = Number(admin?.refresh_token_version)
+      const currentSessionVersion = Number(admin?.session_version)
 
-      if (!admin || !Number.isInteger(currentTokenVersion) || currentTokenVersion !== Number(payload.rtv)) {
+      if (!admin || !Number.isInteger(currentSessionVersion) || currentSessionVersion !== Number(payload.sv)) {
         throw new Error('stale access token')
       }
 

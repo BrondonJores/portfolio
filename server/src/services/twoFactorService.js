@@ -157,16 +157,16 @@ function createTwoFactorService(deps = {}) {
 
   /**
    * Signe un token de challenge MFA pour la 2eme etape login.
-   * @param {{adminId:number,email:string,username:string,tokenVersion:number}} params Donnees challenge.
+   * @param {{adminId:number,email:string,username:string,sessionVersion:number}} params Donnees challenge.
    * @returns {string} Token challenge.
    */
-  function signLoginChallengeToken({ adminId, email, username, tokenVersion }) {
+  function signLoginChallengeToken({ adminId, email, username, sessionVersion }) {
     return jwt.sign(
       {
         sub: Number(adminId),
         email,
         username,
-        rtv: Number(tokenVersion) || 0,
+        sv: Number(sessionVersion) || 0,
         typ: 'mfa_challenge',
       },
       getTwoFactorJwtSecret(),
@@ -177,7 +177,7 @@ function createTwoFactorService(deps = {}) {
   /**
    * Verifie un token challenge MFA.
    * @param {string|undefined} token Token challenge.
-   * @returns {{adminId:number,rtv:number,email:string,username:string}} Payload verifie.
+   * @returns {{adminId:number,sv:number,email:string,username:string}} Payload verifie.
    * @throws {Error} Erreur 401 si token invalide/expire.
    */
   function verifyLoginChallengeToken(token) {
@@ -203,7 +203,7 @@ function createTwoFactorService(deps = {}) {
 
     return {
       adminId,
-      rtv: Number(payload?.rtv) || 0,
+      sv: Number(payload?.sv) || 0,
       email: String(payload?.email || ''),
       username: String(payload?.username || ''),
     }

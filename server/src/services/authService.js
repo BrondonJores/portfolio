@@ -20,12 +20,12 @@ function createAuthService(deps = {}) {
   const twoFactorService = deps.twoFactorService || twoFactorServiceLib
 
   /**
-   * Parse une version de refresh token vers un entier >= 0.
+   * Parse une version de jeton/session vers un entier >= 0.
    * @param {unknown} value Valeur brute.
    * @param {number} [fallback=0] Valeur de repli.
    * @returns {number} Version normalisee.
    */
-  function parseTokenVersion(value, fallback = 0) {
+  function parseVersion(value, fallback = 0) {
     const parsed = Number(value)
     if (Number.isInteger(parsed) && parsed >= 0) {
       return parsed
@@ -36,18 +36,19 @@ function createAuthService(deps = {}) {
   /**
    * Signe un access token JWT.
    * @param {object} payload Donnees utilisateur.
+   * @param {number} sessionVersion Version courante de la session serveur.
    * @returns {string} Token JWT court.
    */
-  function generateAccessToken(payload, tokenVersion) {
+  function generateAccessToken(payload, sessionVersion) {
     return jwt.sign(
       {
         ...payload,
-        rtv: parseTokenVersion(tokenVersion, 0),
+        sv: parseVersion(sessionVersion, 0),
         typ: 'access',
       },
       env.JWT_ACCESS_SECRET,
       {
-      expiresIn: env.JWT_ACCESS_EXPIRES || '15m',
+        expiresIn: env.JWT_ACCESS_EXPIRES || '15m',
       }
     )
   }
@@ -102,7 +103,7 @@ function createAuthService(deps = {}) {
   function toRefreshPayload(user, tokenVersion) {
     return {
       ...user,
-      rtv: parseTokenVersion(tokenVersion, 0),
+      rtv: parseVersion(tokenVersion, 0),
       typ: 'refresh',
     }
   }
@@ -138,7 +139,7 @@ function createAuthService(deps = {}) {
       id,
       username: payload?.username || '',
       email: payload?.email || '',
-      rtv: parseTokenVersion(payload?.rtv, 0),
+      rtv: parseVersion(payload?.rtv, 0),
     }
   }
 
@@ -164,16 +165,70 @@ function createAuthService(deps = {}) {
   }
 
   /**
-   * Incremente la version refresh token en base.
+   * Retourne la version courante de session pour les access tokens.
+   * @param {object} admin Instance admin Sequelize.
+   * @returns {number} Version normalisee.
+   */
+  function getSessionVersion(admin) {
+    return parseVersion(admin?.session_version, 0)
+  }
+
+  /**
+   * Retourne la version courante du refresh token.
+   * @param {object} admin Instance admin Sequelize.
+   * @returns {number} Version normalisee.
+   */
+  function getRefreshTokenVersion(admin) {
+    return parseVersion(admin?.refresh_token_version, 0)
+  }
+
+  /**
+   * Met a jour les versions de session/refresh sur l'instance admin.
+   * @param {object} admin Instance admin Sequelize.
+   * @param {{refresh_token_version?: number, session_version?: number}} payload Nouvelles valeurs.
+   * @returns {Promise<object>} Instance admin mise a jour.
+   */
+  async function updateAdminVersions(admin, payload) {
+    if (typeof admin.update === 'function') {
+      await admin.update(payload)
+      return admin
+    }
+
+    Object.assign(admin, payload)
+    return admin
+  }
+
+  /**
+   * Incremente uniquement la version refresh token.
    * @param {object} admin Instance admin Sequelize.
    * @returns {Promise<number>} Nouvelle version courante.
    */
   async function bumpRefreshTokenVersion(admin) {
-    await admin.increment('refresh_token_version', { by: 1 })
-    if (typeof admin.reload === 'function') {
-      await admin.reload()
+    const nextVersion = getRefreshTokenVersion(admin) + 1
+    await updateAdminVersions(admin, {
+      refresh_token_version: nextVersion,
+    })
+    return nextVersion
+  }
+
+  /**
+   * Revoque la session active en invalidant access + refresh tokens.
+   * @param {object} admin Instance admin Sequelize.
+   * @returns {Promise<{refreshTokenVersion:number,sessionVersion:number}>} Nouvelles versions.
+   */
+  async function revokeActiveSession(admin) {
+    const nextRefreshTokenVersion = getRefreshTokenVersion(admin) + 1
+    const nextSessionVersion = getSessionVersion(admin) + 1
+
+    await updateAdminVersions(admin, {
+      refresh_token_version: nextRefreshTokenVersion,
+      session_version: nextSessionVersion,
+    })
+
+    return {
+      refreshTokenVersion: nextRefreshTokenVersion,
+      sessionVersion: nextSessionVersion,
     }
-    return parseTokenVersion(admin.refresh_token_version, 0)
   }
 
   /**
@@ -183,9 +238,10 @@ function createAuthService(deps = {}) {
    */
   function issueSessionForAdmin(admin) {
     const user = toPublicUser(admin)
-    const tokenVersion = parseTokenVersion(admin.refresh_token_version, 0)
-    const accessToken = generateAccessToken(user, tokenVersion)
-    const refreshToken = generateRefreshToken(toRefreshPayload(user, tokenVersion))
+    const sessionVersion = getSessionVersion(admin)
+    const refreshTokenVersion = getRefreshTokenVersion(admin)
+    const accessToken = generateAccessToken(user, sessionVersion)
+    const refreshToken = generateRefreshToken(toRefreshPayload(user, refreshTokenVersion))
 
     return {
       mfaRequired: false,
@@ -220,7 +276,7 @@ function createAuthService(deps = {}) {
         adminId: admin.id,
         email: admin.email,
         username: admin.username,
-        tokenVersion: parseTokenVersion(admin.refresh_token_version, 0),
+        sessionVersion: getSessionVersion(admin),
       })
 
       return {
@@ -241,9 +297,9 @@ function createAuthService(deps = {}) {
   async function verifyTwoFactorLogin({ mfaToken, totpCode, recoveryCode }) {
     const challenge = twoFactorService.verifyLoginChallengeToken(mfaToken)
     const admin = await loadAdminOrThrow(challenge.adminId, { includeTwoFactorSecrets: true })
-    const currentVersion = parseTokenVersion(admin.refresh_token_version, 0)
+    const currentVersion = getSessionVersion(admin)
 
-    if (challenge.rtv !== currentVersion) {
+    if (challenge.sv !== currentVersion) {
       throw createHttpError(401, 'Session invalide.')
     }
 
@@ -359,7 +415,7 @@ function createAuthService(deps = {}) {
       two_factor_recovery_codes: twoFactorService.serializeRecoveryCodeHashes(recoveryHashes),
     })
 
-    await bumpRefreshTokenVersion(admin)
+    await revokeActiveSession(admin)
 
     return {
       enabled: true,
@@ -433,7 +489,7 @@ function createAuthService(deps = {}) {
       two_factor_recovery_codes: null,
     })
 
-    await bumpRefreshTokenVersion(admin)
+    await revokeActiveSession(admin)
 
     return {
       enabled: false,
@@ -485,7 +541,7 @@ function createAuthService(deps = {}) {
   async function refreshAdminSession(refreshToken) {
     const payload = verifyRefreshToken(refreshToken)
     const admin = await loadAdminOrThrow(payload.id)
-    const currentVersion = parseTokenVersion(admin.refresh_token_version, 0)
+    const currentVersion = getRefreshTokenVersion(admin)
 
     if (payload.rtv !== currentVersion) {
       throw createHttpError(401, 'Session invalide.')
@@ -493,7 +549,7 @@ function createAuthService(deps = {}) {
 
     const nextVersion = await bumpRefreshTokenVersion(admin)
     const user = toPublicUser(admin)
-    const accessToken = generateAccessToken(user, nextVersion)
+    const accessToken = generateAccessToken(user, getSessionVersion(admin))
     const nextRefreshToken = generateRefreshToken(toRefreshPayload(user, nextVersion))
 
     return {
@@ -535,13 +591,13 @@ function createAuthService(deps = {}) {
       return { revoked: false }
     }
 
-    const tokenVersion = parseTokenVersion(payload?.rtv, -1)
-    const currentVersion = parseTokenVersion(admin.refresh_token_version, 0)
+    const tokenVersion = parseVersion(payload?.rtv, -1)
+    const currentVersion = getRefreshTokenVersion(admin)
     if (tokenVersion !== currentVersion) {
       return { revoked: false }
     }
 
-    await bumpRefreshTokenVersion(admin)
+    await revokeActiveSession(admin)
     return { revoked: true }
   }
 
