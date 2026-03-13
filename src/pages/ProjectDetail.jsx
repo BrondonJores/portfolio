@@ -44,9 +44,9 @@ export default function ProjectDetail() {
   const projectNotFoundLabel = settings.ui_project_detail_not_found || 'Projet introuvable.'
   const projectBackLabel = settings.ui_project_detail_back || 'Retour'
   const projectViewCodeLabel = settings.ui_project_detail_view_code || 'Voir le code'
-  const projectViewDemoLabel = settings.ui_project_detail_view_demo || 'Voir la demo'
+  const projectViewDemoLabel = settings.ui_project_detail_view_demo || 'Voir la démo'
   const projectCopyLinkLabel = settings.ui_project_detail_copy_link || 'Copier le lien'
-  const projectLinkCopiedLabel = settings.ui_project_detail_link_copied || 'Lien copie !'
+  const projectLinkCopiedLabel = settings.ui_project_detail_link_copied || 'Lien copié !'
   const projectsBadgeFeatured = settings.ui_project_badge_featured || 'Mis en avant'
 
   useEffect(() => {
@@ -124,7 +124,7 @@ export default function ProjectDetail() {
       key: 'scope',
       label: 'Scope',
       value: showcaseProfile.scope,
-      helper: project.featured ? projectsBadgeFeatured : 'Case study disponible',
+      helper: project.featured ? projectsBadgeFeatured : 'Étude de cas disponible',
     },
   ]
   const caseStudyBrief = [
@@ -140,7 +140,7 @@ export default function ProjectDetail() {
   const description = getShortText(
     project.description,
     320,
-    'Un projet concu pour transformer une intention produit en experience claire et robuste.'
+    'Un projet conçu pour transformer une intention produit en expérience claire et robuste.'
   )
 
   return (
@@ -181,7 +181,7 @@ export default function ProjectDetail() {
                   }}
                 >
                   <SparklesIcon className="h-4 w-4" aria-hidden="true" />
-                  Showcase detaille
+                  Showcase détaillé
                 </span>
                 {project.featured && <Badge>{projectsBadgeFeatured}</Badge>}
               </div>
@@ -292,7 +292,7 @@ export default function ProjectDetail() {
               <div className="grid gap-6 xl:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)] xl:items-start">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                    Project brief
+                    Brief projet
                   </p>
                   <h2 className="mt-3 text-2xl font-semibold leading-tight" style={{ color: 'var(--color-text-primary)' }}>
                     Ce dossier met en avant la mission, la livraison et les preuves qui portent le projet.

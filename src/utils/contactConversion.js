@@ -3,22 +3,22 @@ export const CONTACT_INTENT_PRESETS = Object.freeze([
     id: 'audit',
     label: 'Audit',
     title: 'Auditer et prioriser',
-    description: "Faire un etat des lieux utile d'un produit, d'une codebase ou d'un funnel existant.",
-    helper: 'Ideal pour repartir avec des priorites claires et des quick wins utiles.',
+    description: "Faire un état des lieux utile d’un produit, d’une codebase ou d’un funnel existant.",
+    helper: 'Idéal pour repartir avec des priorités claires et des quick wins utiles.',
   },
   {
     id: 'build',
     label: 'Build',
     title: 'Lancer ou refondre',
-    description: 'Cadrer un MVP, une refonte ou une nouvelle surface produit avec une execution propre.',
-    helper: 'Le bon point de depart pour transformer une intention en plan de livraison concret.',
+    description: 'Cadrer un MVP, une refonte ou une nouvelle surface produit avec une exécution propre.',
+    helper: 'Le bon point de départ pour transformer une intention en plan de livraison concret.',
   },
   {
     id: 'rescue',
     label: 'Renfort',
-    title: 'Debloquer un sprint',
-    description: 'Intervenir sur un point critique: livraison bloquee, dette, bugs ou dernier polish.',
-    helper: 'Pensé pour les contextes ou il faut remettre du mouvement vite, sans bruit inutile.',
+    title: 'Débloquer un sprint',
+    description: 'Intervenir sur un point critique : livraison bloquée, dette, bugs ou dernier polish.',
+    helper: 'Pensé pour les contextes où il faut remettre du mouvement vite, sans bruit inutile.',
   },
 ])
 
@@ -43,7 +43,7 @@ export const CONTACT_REASSURANCE_POINTS = Object.freeze([
   {
     key: 'format',
     label: 'Format flexible',
-    detail: 'Audit, renfort, sprint cible ou build complet selon le contexte reel.',
+    detail: 'Audit, renfort, sprint ciblé ou build complet selon le contexte réel.',
   },
 ])
 
@@ -62,9 +62,9 @@ export function resolveContactIntentPreset(value) {
 }
 
 /**
- * Construit un message guide a injecter dans le formulaire.
+ * Construit un message guide à injecter dans le formulaire.
  * @param {{title:string}|null} preset Preset cible.
- * @returns {string} Message pre-rempli.
+ * @returns {string} Message pré-rempli.
  */
 export function buildContactIntentMessage(preset) {
   if (!preset) {
@@ -72,7 +72,7 @@ export function buildContactIntentMessage(preset) {
   }
 
   return [
-    `Bonjour,`,
+    'Bonjour,',
     '',
     `Je vous contacte pour ${preset.title.toLowerCase()}.`,
     '',
@@ -91,7 +91,7 @@ export function buildContactIntentMessage(preset) {
 }
 
 /**
- * Retourne l'URL de contact pre-qualifiee.
+ * Retourne l’URL de contact pré-qualifiée.
  * @param {string} intentId Identifiant intent.
  * @returns {string} Href vers /contact.
  */

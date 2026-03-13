@@ -132,8 +132,8 @@ export default function Navbar() {
   const closeMenu = () => setMenuOpen(false)
   const navLinks = [
     { id: 'home', anchor: '#hero', to: '/', label: settings.ui_nav_label_home || 'Accueil' },
-    { id: 'about', anchor: '#about', to: '/#about', label: settings.ui_nav_label_about || 'A propos' },
-    { id: 'skills', anchor: '#skills', to: '/competences', label: settings.ui_nav_label_skills || 'Competences' },
+    { id: 'about', anchor: '#about', to: '/#about', label: settings.ui_nav_label_about || 'À propos' },
+    { id: 'skills', anchor: '#skills', to: '/competences', label: settings.ui_nav_label_skills || 'Compétences' },
     { id: 'certifications', anchor: '#certifications', to: '/certifications', label: settings.ui_nav_label_certifications || 'Certifications' },
     { id: 'projects', anchor: '#projects', to: '/projets', label: settings.ui_nav_label_projects || 'Projets' },
     { id: 'blog', anchor: '#blog', to: '/blog', label: settings.ui_nav_label_blog || 'Blog' },

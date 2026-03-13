@@ -75,9 +75,9 @@ export default function Blog({ articles = [], loading = false }) {
     [animationConfig]
   )
   const blogTitle = settings.ui_section_blog_title || 'Blog'
-  const blogSubtitle = settings.ui_section_blog_subtitle || 'Mes derniers articles et reflexions'
+  const blogSubtitle = settings.ui_section_blog_subtitle || 'Mes derniers articles et réflexions'
   const blogViewAllLabel = settings.ui_section_blog_view_all || 'Voir tous les articles'
-  const blogFeaturedLabel = settings.ui_section_blog_featured || 'A la une'
+  const blogFeaturedLabel = settings.ui_section_blog_featured || 'À la une'
   const blogReadLabel = settings.ui_section_blog_read || "Lire l'article"
 
   if (loading) {
@@ -212,7 +212,7 @@ export default function Blog({ articles = [], loading = false }) {
                       {getCardExcerpt(
                         featuredArticle.excerpt,
                         210,
-                        'Analyse, retour d experience et strategie concrete autour du developpement web.'
+                        'Analyse, retour d’expérience et stratégie concrète autour du développement web.'
                       )}
                     </p>
 
@@ -312,7 +312,7 @@ export default function Blog({ articles = [], loading = false }) {
                         {getCardExcerpt(
                           article.excerpt,
                           130,
-                          'Un article pratique pour gagner en clarte et en execution.'
+                          'Un article pratique pour gagner en clarté et en exécution.'
                         )}
                       </p>
                       {Array.isArray(article.tags) && article.tags.length > 0 && (

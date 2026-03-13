@@ -27,9 +27,9 @@ export default function Skills({ skillGroups = [], loading = false }) {
     () => buildSectionItemVariants('skills', animationConfig),
     [animationConfig]
   )
-  const skillsTitle = settings.ui_section_skills_title || 'Competences'
+  const skillsTitle = settings.ui_section_skills_title || 'Compétences'
   const skillsSubtitle = settings.ui_section_skills_subtitle || "Technologies et outils que j'utilise au quotidien"
-  const skillsEmptyLabel = settings.ui_section_skills_empty || 'Aucune competence pour le moment.'
+  const skillsEmptyLabel = settings.ui_section_skills_empty || 'Aucune compétence pour le moment.'
 
   if (loading) {
     return (

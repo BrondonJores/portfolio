@@ -43,11 +43,11 @@ export default function Hero({ homeMetrics = [] }) {
 
   const heroNameRaw = settings.hero_name || 'Brondon Jores'
   const initials = buildInitials(heroNameRaw)
-  const heroTitleRaw = settings.hero_title || 'Developpeur\nFull Stack'
+  const heroTitleRaw = settings.hero_title || 'Développeur\nFull Stack'
   const titleLines = heroTitleRaw.includes('\n')
     ? heroTitleRaw.split('\n').filter((line) => line.trim().length > 0)
     : [heroTitleRaw]
-  const bio = settings.hero_bio || 'Je construis des applications web modernes, performantes et securisees.'
+  const bio = settings.hero_bio || 'Je construis des applications web modernes, performantes et sécurisées.'
   const availability = settings.contact_availability || 'Disponible pour des projets'
   const location = settings.contact_location || 'Remote'
   const photoStatus = settings.hero_photo_status || 'Ouvert aux collaborations'
@@ -69,11 +69,11 @@ export default function Hero({ homeMetrics = [] }) {
   const sideStats = [
     {
       value: toMetricValue(settings.stat_1_value, '3+'),
-      label: settings.stat_1_label || "ans d'experience",
+      label: settings.stat_1_label || "ans d’expérience",
     },
     {
       value: toMetricValue(settings.stat_2_value, '20+'),
-      label: settings.stat_2_label || 'projets livres',
+      label: settings.stat_2_label || 'projets livrés',
     },
     {
       value: toMetricValue(settings.stat_3_value, '10+'),
@@ -82,7 +82,7 @@ export default function Hero({ homeMetrics = [] }) {
   ]
 
   const contextRows = [
-    { label: 'Disponibilite', value: availability },
+    { label: 'Disponibilité', value: availability },
     { label: 'Base', value: location },
     { label: 'Focus', value: photoStack },
   ]
@@ -395,7 +395,7 @@ export default function Hero({ homeMetrics = [] }) {
                   transition={{ duration: 0.22 * animationConfig.durationScale, ease: 'easeOut' }}
                 >
                   <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                    Stack de predilection
+                    Stack de prédilection
                   </p>
                   <p className="mt-2 text-sm font-medium leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
                     {photoStack}

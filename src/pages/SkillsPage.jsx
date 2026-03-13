@@ -47,10 +47,10 @@ function SkillBar({ skill }) {
 export default function SkillsPage() {
   const { settings } = useSettings()
   const { groupedSkills, loading } = usePublicSkills()
-  const pageTitle = buildPageTitle(settings, 'Competences')
-  const skillsPageHeading = settings.ui_skills_page_title || 'Mes Competences'
+  const pageTitle = buildPageTitle(settings, 'Compétences')
+  const skillsPageHeading = settings.ui_skills_page_title || 'Mes compétences'
   const skillsPageSubtitle =
-    settings.ui_skills_page_subtitle || 'Technologies et outils maitrises avec niveaux de competences'
+    settings.ui_skills_page_subtitle || 'Technologies et outils maîtrisés avec niveaux de compétences'
 
   return (
     <>

@@ -80,10 +80,10 @@ export default function HomeSignalBoard({
         ? getTextSnippet(
             featuredProject.description,
             170,
-            'Des realisations concues pour etre lisibles, robustes et credibles.'
+            'Des réalisations conçues pour être lisibles, robustes et crédibles.'
           )
-        : 'Des realisations concues pour etre lisibles, robustes et credibles.',
-      value: featuredProject?.title || 'Selection projets',
+        : 'Des réalisations conçues pour être lisibles, robustes et crédibles.',
+      value: featuredProject?.title || 'Sélection projets',
       helper: settings.ui_section_projects_view_all || 'Voir tous mes projets',
       href: '/projets',
       Icon: FolderOpenIcon,
@@ -94,8 +94,8 @@ export default function HomeSignalBoard({
       title: 'Notes & retours terrain',
       eyebrow: 'Journal',
       description: latestArticle
-        ? getTextSnippet(latestArticle.excerpt, 118, 'Des articles pour partager la methode et les choix techniques.')
-        : 'Des articles pour partager la methode et les choix techniques.',
+        ? getTextSnippet(latestArticle.excerpt, 118, 'Des articles pour partager la méthode et les choix techniques.')
+        : 'Des articles pour partager la méthode et les choix techniques.',
       value: latestArticle?.title || 'Derniers articles',
       helper: latestArticle?.published_at ? formatDate(latestArticle.published_at) : (settings.ui_section_blog_view_all || 'Voir tous les articles'),
       href: '/blog',

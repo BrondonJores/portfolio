@@ -31,7 +31,7 @@ export default function Home() {
     {
       value: projectsLoading ? '...' : String(projects.length),
       label: 'Projets',
-      detail: 'showcases et etudes de cas visibles',
+      detail: 'showcases et études de cas visibles',
     },
     {
       value: articlesLoading ? '...' : String(articles.length),
@@ -41,7 +41,7 @@ export default function Home() {
     {
       value: certificationsLoading ? '...' : String(certifications.length),
       label: 'Certifications',
-      detail: certificationsLoading ? 'badges en chargement' : `${badgeImages.length} badges verifies`,
+      detail: certificationsLoading ? 'badges en chargement' : `${badgeImages.length} badges vérifiés`,
     },
   ]
 

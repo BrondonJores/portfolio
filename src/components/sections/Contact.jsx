@@ -58,14 +58,14 @@ export default function Contact() {
   const sectionSubtitle = settings.ui_section_contact_subtitle || 'Discutons de votre prochain projet'
   const contactIntro =
     settings.ui_contact_intro ||
-    "Je suis disponible pour des missions freelance, des opportunites d'emploi ou simplement pour discuter de vos projets. N'hesitez pas a me contacter."
+    "Je suis disponible pour des missions freelance, des opportunités d’emploi ou simplement pour discuter de vos projets. N’hésitez pas à me contacter."
   const formNameLabel = settings.ui_contact_form_name_label || 'Nom'
   const formEmailLabel = settings.ui_contact_form_email_label || 'Email'
   const formMessageLabel = settings.ui_contact_form_message_label || 'Message'
   const formNamePlaceholder = settings.ui_contact_form_name_placeholder || 'Votre nom'
   const formEmailPlaceholder = settings.ui_contact_form_email_placeholder || 'votre@email.com'
-  const formMessagePlaceholder = settings.ui_contact_form_message_placeholder || 'Decrivez votre projet ou votre demande...'
-  const formSuccessMessage = settings.ui_contact_form_success || 'Votre message a ete envoye avec succes.'
+  const formMessagePlaceholder = settings.ui_contact_form_message_placeholder || 'Décrivez votre projet ou votre demande...'
+  const formSuccessMessage = settings.ui_contact_form_success || 'Votre message a été envoyé avec succès.'
   const formSubmitLabel = settings.ui_contact_form_submit || 'Envoyer le message'
   const formSubmittingLabel = settings.ui_contact_form_submitting || 'Envoi en cours...'
   const activeIntent = CONTACT_INTENT_PRESETS.find((preset) => preset.id === selectedIntentId) || null
@@ -437,7 +437,7 @@ export default function Contact() {
                     Besoin, timing, contexte. Trois infos suffisent pour lancer la discussion.
                   </p>
                   <p className="hidden max-w-md text-sm leading-relaxed sm:block" style={{ color: 'var(--color-text-secondary)' }}>
-                    Un brief simple suffit. Si tu bloques, choisis un format ci-contre et je pre-remplis la base pour toi.
+                    Un brief simple suffit. Si tu bloques, choisis un format ci-contre et je pré-remplis la base pour toi.
                   </p>
                   <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
                     <Button

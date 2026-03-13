@@ -111,32 +111,32 @@ export default function ArticleDetail() {
   const articleBackToTopLabel = settings.ui_article_back_to_top || 'Retour en haut'
   const articleBackToBlogLabel = settings.ui_article_back_to_blog || 'Retour au blog'
   const articleCopyLinkLabel = settings.ui_article_copy_link || 'Copier le lien'
-  const articleLinkCopiedLabel = settings.ui_article_link_copied || 'Lien copie !'
+  const articleLinkCopiedLabel = settings.ui_article_link_copied || 'Lien copié !'
   const articleCopyShortLabel = settings.ui_article_copy_short || 'Copier'
-  const articleCopyShortCopiedLabel = settings.ui_article_copy_short_copied || 'Copie !'
+  const articleCopyShortCopiedLabel = settings.ui_article_copy_short_copied || 'Copié !'
   const articleLikeAddLabel = settings.ui_article_like_add || "J'aime cet article"
   const articleLikeRemoveLabel = settings.ui_article_like_remove || 'Retirer le like'
-  const articleLikeOnLabel = settings.ui_article_like_label_on || 'Aime'
+  const articleLikeOnLabel = settings.ui_article_like_label_on || 'Aimé'
   const articleLikeOffLabel = settings.ui_article_like_label_off || "J'aime"
   const likeAddLabel = articleLikeAddLabel
   const likeRemoveLabel = articleLikeRemoveLabel
   const articleReadingSuffix = settings.ui_article_reading_time_suffix || 'min de lecture'
   const articleViewsSuffix = settings.ui_article_views_suffix || 'vues'
-  const articleTocTitle = settings.ui_article_toc_title || 'Table des matieres'
-  const articleGenericErrorLabel = settings.ui_article_generic_error || 'Une erreur est survenue. Veuillez reessayer.'
-  const articleLikeErrorLabel = settings.ui_article_like_error || 'Impossible de mettre a jour le like pour le moment.'
+  const articleTocTitle = settings.ui_article_toc_title || 'Table des matières'
+  const articleGenericErrorLabel = settings.ui_article_generic_error || 'Une erreur est survenue. Veuillez réessayer.'
+  const articleLikeErrorLabel = settings.ui_article_like_error || 'Impossible de mettre à jour le like pour le moment.'
   const articleCommentsTitle = settings.ui_article_comments_title || 'Commentaires'
   const articleCommentWord = settings.ui_article_comment_word || 'commentaire'
   const articleLeaveCommentLabel = settings.ui_article_leave_comment || 'Laisser un commentaire'
   const articleCommentPendingLabel =
-    settings.ui_article_comment_pending || 'Commentaire soumis, en attente de moderation.'
+    settings.ui_article_comment_pending || 'Commentaire soumis, en attente de modération.'
   const articleCommentNamePlaceholder = settings.ui_article_comment_name_placeholder || 'Votre nom *'
   const articleCommentEmailPlaceholder = settings.ui_article_comment_email_placeholder || 'Votre email (optionnel)'
   const articleCommentContentPlaceholder = settings.ui_article_comment_content_placeholder || 'Votre commentaire...'
   const articleCommentSubmitLabel = settings.ui_article_comment_submit || 'Publier'
   const articleCommentSubmittingLabel = settings.ui_article_comment_submitting || 'Envoi...'
   const articleRelatedTitle = settings.ui_article_related_title || 'Articles similaires'
-  const articleNewsletterSuccess = settings.ui_article_newsletter_success || 'Merci ! Vous etes desormais abonne(e).'
+  const articleNewsletterSuccess = settings.ui_article_newsletter_success || 'Merci ! Vous êtes désormais abonné(e).'
   const articleNewsletterTitle =
     settings.ui_article_newsletter_title || 'Vous aimez ce contenu ? Abonnez-vous pour ne rien manquer.'
   const articleNewsletterEmailPlaceholder =
@@ -263,7 +263,7 @@ export default function ArticleDetail() {
     {
       key: 'publication',
       label: 'Publication',
-      value: article.published_at ? formatArticleDate(article.published_at) : 'Bientot',
+      value: article.published_at ? formatArticleDate(article.published_at) : 'Bientôt',
       helper: article.author_name || settings.site_name || 'Portfolio',
     },
     {
@@ -275,7 +275,7 @@ export default function ArticleDetail() {
     {
       key: 'impact',
       label: 'Impact',
-      value: article.views != null ? `${article.views} ${articleViewsSuffix}` : `${likesCount} appreciations`,
+      value: article.views != null ? `${article.views} ${articleViewsSuffix}` : `${likesCount} appréciations`,
       helper: `${likesCount} signal${likesCount > 1 ? 's' : ''} de lecture`,
     },
     {
@@ -565,7 +565,7 @@ export default function ArticleDetail() {
                 <TableOfContents
                   headings={tocHeadings}
                   title={articleTocTitle}
-                  helper={`${tocHeadings.length} reperes pour naviguer sans casser le rythme.`}
+                  helper={`${tocHeadings.length} repères pour naviguer sans casser le rythme.`}
                   className="mt-6 xl:hidden"
                   collapsible
                   defaultOpen={false}
@@ -622,10 +622,10 @@ export default function ArticleDetail() {
                       Ressenti de lecture
                     </p>
                     <p className="mt-3 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                      Ce contenu t'a aide ? Tu peux le signaler en un clic.
+                      Ce contenu t&apos;a aidé ? Tu peux le signaler en un clic.
                     </p>
                     <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                      Les retours rapides me permettent d'identifier les sujets qui meritent d'etre pousses plus loin.
+                      Les retours rapides me permettent d&apos;identifier les sujets qui méritent d&apos;être poussés plus loin.
                     </p>
                   </div>
                   <div className="relative inline-flex">
@@ -698,7 +698,7 @@ export default function ArticleDetail() {
                     </h2>
                   </div>
                   <p className="max-w-md text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                    Partage ton retour, une question ou un angle complementaire. Les commentaires passent en moderation avant publication.
+                    Partage ton retour, une question ou un angle complémentaire. Les commentaires passent en modération avant publication.
                   </p>
                 </div>
 
@@ -853,7 +853,7 @@ export default function ArticleDetail() {
                 <TableOfContents
                   headings={tocHeadings}
                   title={articleTocTitle}
-                  helper={`${tocHeadings.length} reperes pour suivre la lecture.`}
+                  helper={`${tocHeadings.length} repères pour suivre la lecture.`}
                   listId="article-toc-desktop"
                 />
               </aside>
@@ -865,14 +865,14 @@ export default function ArticleDetail() {
               <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                    A poursuivre
+                    À poursuivre
                   </p>
                   <h2 className="mt-3 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                     {articleRelatedTitle}
                   </h2>
                 </div>
                 <p className="max-w-md text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                  Une selection d'articles proches pour prolonger la lecture sans casser le rythme.
+                  Une sélection d&apos;articles proches pour prolonger la lecture sans casser le rythme.
                 </p>
               </div>
 
@@ -923,7 +923,7 @@ export default function ArticleDetail() {
                         )}
                         <div className="p-5">
                           <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                            Article lie
+                            Article lié
                           </p>
                           <p className="mt-3 line-clamp-2 text-lg font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
                             {relatedArticle.title}

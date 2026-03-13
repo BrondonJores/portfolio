@@ -22,11 +22,11 @@ export default function About() {
 
   const stats = [
     { icon: BriefcaseIcon, value: settings.stat_1_value || '3+', label: settings.stat_1_label || "ans d'experience" },
-    { icon: CodeBracketIcon, value: settings.stat_2_value || '20+', label: settings.stat_2_label || 'projets realises' },
+    { icon: CodeBracketIcon, value: settings.stat_2_value || '20+', label: settings.stat_2_label || 'projets réalisés' },
     { icon: UserIcon, value: settings.stat_3_value || '10+', label: settings.stat_3_label || 'clients satisfaits' },
   ]
 
-  const bio = settings.bio || "Developpeur Full Stack passionne par la creation d'applications web modernes et performantes. Je me specialise dans l'ecosysteme JavaScript avec React pour le frontend et Node.js pour le backend."
+  const bio = settings.bio || "Développeur Full Stack passionné par la création d’applications web modernes et performantes. Je me spécialise dans l’écosystème JavaScript avec React pour le frontend et Node.js pour le backend."
 
   const heroName = settings.hero_name || 'BJ'
   const avatarUrl = settings.avatar_url || ''
@@ -34,8 +34,8 @@ export default function About() {
   const photoObjectPosition = settings.hero_photo_object_position || '50% 30%'
   const location = settings.contact_location || 'Remote'
   const aboutPhotoBadge = settings.about_photo_badge || 'Disponible pour missions freelance'
-  const aboutPhotoCaption = settings.about_photo_caption || 'De la conception au deploiement, je prends en charge le cycle complet.'
-  const aboutTitle = settings.ui_about_title || 'A propos de moi'
+  const aboutPhotoCaption = settings.about_photo_caption || 'De la conception au déploiement, je prends en charge le cycle complet.'
+  const aboutTitle = settings.ui_about_title || 'À propos de moi'
   const aboutSubtitle = settings.tagline || 'Une approche produit, design et engineering de bout en bout.'
   const initials = heroName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
   const canAnimate = animationConfig.canAnimate

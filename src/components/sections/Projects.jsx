@@ -93,15 +93,15 @@ export default function Projects({ projects = [], loading = false }) {
     [animationConfig]
   )
   const projectsTitle = settings.ui_section_projects_title || 'Projets'
-  const projectsSubtitle = settings.ui_section_projects_subtitle || 'Quelques-uns de mes realisations recentes'
+  const projectsSubtitle = settings.ui_section_projects_subtitle || 'Quelques-unes de mes réalisations récentes'
   const projectsBadgeFeatured = settings.ui_project_badge_featured || 'Mis en avant'
   const projectsActionGithub = settings.ui_project_action_github || 'GitHub'
-  const projectsActionDemo = settings.ui_project_action_demo || 'Demo'
-  const projectsDemoUnavailable = settings.ui_project_demo_unavailable || 'Demo non disponible'
+  const projectsActionDemo = settings.ui_project_action_demo || 'Démo'
+  const projectsDemoUnavailable = settings.ui_project_demo_unavailable || 'Démo non disponible'
   const projectsViewAllLabel = settings.ui_section_projects_view_all || 'Voir tous mes projets'
-  const projectsActionCaseStudy = settings.ui_project_action_case_study || 'Voir etude de cas'
+  const projectsActionCaseStudy = settings.ui_project_action_case_study || 'Voir l’étude de cas'
   const projectsShowcaseLabel = settings.ui_project_showcase_label || 'Showcase'
-  const projectsStatDemos = settings.ui_project_stat_demos || 'Demos live'
+  const projectsStatDemos = settings.ui_project_stat_demos || 'Démos live'
   const projectsStatRepos = settings.ui_project_stat_repos || 'Repos publics'
   const projectsStatTech = settings.ui_project_stat_tech || 'Technos'
   const snapshotObjective = settings.ui_project_snapshot_objective || 'Objectif'
@@ -307,7 +307,7 @@ export default function Projects({ projects = [], loading = false }) {
                       {heroProject.title}
                     </h3>
                     <p className="text-sm md:text-base leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                      {heroProfile?.mission || 'Projet concu pour fournir une solution robuste et orientee impact.'}
+                      {heroProfile?.mission || 'Projet conçu pour fournir une solution robuste et orientée impact.'}
                     </p>
 
                     <div className="grid gap-3 sm:grid-cols-3">

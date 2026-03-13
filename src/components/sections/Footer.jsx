@@ -26,7 +26,7 @@ export default function Footer() {
 
   const siteName = normalizeText(settings.site_name) || normalizeText(settings.hero_name) || 'Portfolio'
   const siteTagline = normalizeText(settings.tagline) || normalizeText(settings.hero_title) || 'Portfolio personnel'
-  const footerText = normalizeText(settings.footer_text) || `(c) ${year} ${siteName}. Tous droits reserves.`
+  const footerText = normalizeText(settings.footer_text) || `(c) ${year} ${siteName}. Tous droits réservés.`
   const footerCredits = normalizeText(settings.footer_credits) || 'Construit avec React, Tailwind CSS et Heroicons'
   const contactEmail = normalizeText(settings.contact_email)
   const contactLocation = normalizeText(settings.contact_location)
@@ -36,7 +36,7 @@ export default function Footer() {
     { to: '/', label: settings.ui_nav_label_home || 'Accueil' },
     { to: '/projets', label: settings.ui_nav_label_projects || 'Projets' },
     { to: '/blog', label: settings.ui_nav_label_blog || 'Blog' },
-    { to: '/competences', label: settings.ui_nav_label_skills || 'Competences' },
+    { to: '/competences', label: settings.ui_nav_label_skills || 'Compétences' },
     { to: '/contact', label: settings.ui_nav_label_contact || 'Contact' },
   ]
 
@@ -179,7 +179,7 @@ export default function Footer() {
                   boxShadow: '0 16px 32px -26px color-mix(in srgb, var(--color-accent-glow) 48%, transparent)',
                 }}
               >
-                Demarrer un brief
+                Démarrer un brief
               </Link>
               {contactEmail && (
                 <Button variant="secondary" href={`mailto:${contactEmail}`} className="w-full justify-center sm:w-auto">
@@ -236,7 +236,7 @@ export default function Footer() {
 
             <div>
               <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                Reseaux
+                Réseaux
               </p>
               {socialLinks.length > 0 ? (
                 <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -260,7 +260,7 @@ export default function Footer() {
                 </div>
               ) : (
                 <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                  Les points de contact directs sont centralises sur la page contact.
+                  Les points de contact directs sont centralisés sur la page contact.
                 </p>
               )}
             </div>
@@ -333,7 +333,7 @@ export default function Footer() {
 
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-              Reseaux
+              Réseaux
             </p>
             {socialLinks.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2.5">
@@ -357,7 +357,7 @@ export default function Footer() {
               </div>
             ) : (
               <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                Les points de contact directs sont centralises sur la page contact.
+                Les points de contact directs sont centralisés sur la page contact.
               </p>
             )}
           </div>

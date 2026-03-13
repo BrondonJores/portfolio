@@ -66,17 +66,17 @@ export default function ContactPage() {
   const sectionSubtitle = settings.ui_section_contact_subtitle || 'Discutons de votre prochain projet'
   const contactIntro =
     settings.ui_contact_intro ||
-    "Je suis disponible pour des missions freelance, des opportunites d'emploi ou simplement pour discuter de vos projets."
+    "Je suis disponible pour des missions freelance, des opportunités d’emploi ou simplement pour discuter de vos projets."
   const formNameLabel = settings.ui_contact_form_name_label || 'Nom'
   const formEmailLabel = settings.ui_contact_form_email_label || 'Email'
   const formMessageLabel = settings.ui_contact_form_message_label || 'Message'
   const formNamePlaceholder = settings.ui_contact_form_name_placeholder || 'Votre nom'
   const formEmailPlaceholder = settings.ui_contact_form_email_placeholder || 'votre@email.com'
-  const formMessagePlaceholder = settings.ui_contact_form_message_placeholder || 'Decrivez votre projet...'
-  const formSuccessMessage = settings.ui_contact_form_success || 'Votre message a ete envoye avec succes.'
+  const formMessagePlaceholder = settings.ui_contact_form_message_placeholder || 'Décrivez votre projet...'
+  const formSuccessMessage = settings.ui_contact_form_success || 'Votre message a été envoyé avec succès.'
   const formSubmitLabel = settings.ui_contact_form_submit || 'Envoyer le message'
   const formSubmittingLabel = settings.ui_contact_form_submitting || 'Envoi en cours...'
-  const testimonialsTitle = settings.ui_contact_testimonials_title || 'Temoignages'
+  const testimonialsTitle = settings.ui_contact_testimonials_title || 'Témoignages'
   const routeIntent = useMemo(() => {
     const params = new URLSearchParams(routerLocation.search)
     return resolveContactIntentPreset(params.get('intent'))
@@ -129,8 +129,8 @@ export default function ContactPage() {
     {
       key: 'format',
       label: 'Formats',
-      value: `${CONTACT_INTENT_PRESETS.length} points d'entree`,
-      helper: 'Audit, build ou renfort selon le contexte reel.',
+      value: `${CONTACT_INTENT_PRESETS.length} points d’entrée`,
+      helper: 'Audit, build ou renfort selon le contexte réel.',
       icon: SparklesIcon,
     },
   ]
@@ -162,7 +162,7 @@ export default function ContactPage() {
                   }}
                 >
                   <SparklesIcon className="h-4 w-4" aria-hidden="true" />
-                  Conversation qualifiee
+                  Conversation qualifiée
                 </span>
               </div>
 
@@ -283,7 +283,7 @@ export default function ContactPage() {
                   className="w-full justify-center sm:w-auto"
                 >
                   <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
-                  Pre-remplir un brief
+                  Pré-remplir un brief
                 </Button>
               </div>
             </div>
@@ -344,7 +344,7 @@ export default function ContactPage() {
                       Brief rapide
                     </p>
                     <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                      Decris le contexte, je m'occupe du reste.
+                      Décris le contexte, je m’occupe du reste.
                     </p>
                   </div>
                 </div>
@@ -574,7 +574,7 @@ export default function ContactPage() {
                       </h2>
                     </div>
                     <p className="max-w-md text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                      Quelques retours choisis pour montrer la qualite de collaboration et le niveau d'execution.
+                      Quelques retours choisis pour montrer la qualité de collaboration et le niveau d’exécution.
                     </p>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -656,7 +656,7 @@ export default function ContactPage() {
                       {contactLocation}
                     </p>
                     <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                      Remote-first, avec des echanges asynchrones propres et des points synchrones quand ils ont du sens.
+                      Remote-first, avec des échanges asynchrones propres et des points synchrones quand ils ont du sens.
                     </p>
                   </div>
                 </div>
@@ -664,7 +664,7 @@ export default function ContactPage() {
 
               <Card>
                 <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                  Demarrages rapides
+                  Démarrages rapides
                 </p>
                 <div className="mt-4 space-y-3">
                   {CONTACT_INTENT_PRESETS.map((preset) => (

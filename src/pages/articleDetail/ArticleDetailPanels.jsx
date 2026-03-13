@@ -61,10 +61,10 @@ export function BackToTopButton({ label = 'Retour en haut' }) {
   )
 }
 
-/* Table des matieres avec suivi de section active via IntersectionObserver. */
+/* Table des matières avec suivi de section active via IntersectionObserver. */
 export function TableOfContents({
   headings,
-  title = 'Table des matieres',
+  title = 'Table des matières',
   helper = '',
   className = '',
   collapsible = false,
@@ -198,7 +198,7 @@ export function ShareSidebar({
   particlesSpreadPx = 88,
   particlesDurationMs = 700,
   copyLabel = 'Copier le lien',
-  copiedLabel = 'Lien copie !',
+  copiedLabel = 'Lien copié !',
   likeAddLabel = "J'aime cet article",
   likeRemoveLabel = 'Retirer le like',
 }) {
@@ -325,7 +325,7 @@ export function ShareSidebar({
 /* Carte auteur. */
 export function AuthorCard({ article }) {
   const name = article.author_name || 'BrondonJores'
-  const bio = article.author_bio || 'Developpeur Full Stack passionne.'
+  const bio = article.author_bio || 'Développeur Full Stack passionné.'
   const initials = name.split(' ').map((word) => word[0] || '').join('').slice(0, 2).toUpperCase()
 
   return (
@@ -399,12 +399,12 @@ export function AuthorCard({ article }) {
 
 /* Newsletter CTA inline. */
 export function NewsletterCTA({
-  successLabel = 'Merci ! Vous etes desormais abonne(e).',
+  successLabel = 'Merci ! Vous êtes désormais abonné(e).',
   titleLabel = 'Vous aimez ce contenu ? Abonnez-vous pour ne rien manquer.',
   emailPlaceholder = 'votre@email.com',
   submitLabel = "S'abonner",
   submittingLabel = 'Envoi...',
-  genericErrorLabel = 'Une erreur est survenue. Veuillez reessayer.',
+  genericErrorLabel = 'Une erreur est survenue. Veuillez réessayer.',
 }) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle') // idle | loading | success | error

@@ -51,7 +51,7 @@ export default function BlogPage() {
   const { articles, pagination, loading } = usePublicArticles({ page, limit: 9 })
   const pageTitle = buildPageTitle(settings, 'Blog')
   const blogPageHeading = settings.ui_blog_page_title || 'Blog'
-  const blogPageSubtitle = settings.ui_blog_page_subtitle || 'Articles et reflexions sur le developpement web'
+  const blogPageSubtitle = settings.ui_blog_page_subtitle || 'Articles et réflexions sur le développement web'
   const blogPageEmpty = settings.ui_blog_page_empty || 'Aucun article disponible pour le moment.'
   const blogReadLabel = settings.ui_section_blog_read || "Lire l'article"
   const spotlightArticle = articles[0] || null
@@ -79,15 +79,15 @@ export default function BlogPage() {
     },
     {
       key: 'tempo',
-      label: 'Temps cumule',
+      label: 'Temps cumulé',
       value: `${totalReadingMinutes || 0} min`,
-      helper: articles.length > 0 ? `${Math.max(1, Math.round(totalReadingMinutes / articles.length))} min/article` : 'lecture editoriale',
+      helper: articles.length > 0 ? `${Math.max(1, Math.round(totalReadingMinutes / articles.length))} min/article` : 'lecture éditoriale',
     },
     {
       key: 'reperes',
-      label: 'Reperes',
+      label: 'Repères',
       value: String(totalReadingCues || 0),
-      helper: topTags.length > 0 ? `${topTags.length} themes dominants` : 'lecture continue',
+      helper: topTags.length > 0 ? `${topTags.length} thèmes dominants` : 'lecture continue',
     },
   ]
 
@@ -106,7 +106,7 @@ export default function BlogPage() {
                   className="mb-4 text-[11px] uppercase tracking-[0.22em]"
                   style={{ color: 'var(--color-text-secondary)' }}
                 >
-                  Journal d execution
+                  Journal d’exécution
                 </p>
                 <SectionTitle
                   title={blogPageHeading}
@@ -208,7 +208,7 @@ export default function BlogPage() {
                             }}
                           >
                             <SparklesIcon className="h-4 w-4" aria-hidden="true" />
-                            A la une
+                            À la une
                           </span>
                           {spotlightArticle.published_at && (
                             <span
@@ -245,7 +245,7 @@ export default function BlogPage() {
                             {
                               label: 'Focus',
                               value: spotlightProfile?.focusValue || 'Journal terrain',
-                              helper: spotlightProfile?.focusDetail || 'Partage de methode',
+                              helper: spotlightProfile?.focusDetail || 'Partage de méthode',
                             },
                             {
                               label: 'Rythme',
@@ -321,7 +321,7 @@ export default function BlogPage() {
                       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                         <div>
                           <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                            Themes dominants
+                            Thèmes dominants
                           </p>
                           <p className="mt-2 text-base font-medium" style={{ color: 'var(--color-text-primary)' }}>
                             Les sujets qui structurent cette page.
@@ -425,7 +425,7 @@ export default function BlogPage() {
                                   {getArticleExcerpt(
                                     profile?.lead || article.excerpt,
                                     150,
-                                    'Un article pour clarifier une methode, un arbitrage ou un retour terrain.'
+                                    'Un article pour clarifier une méthode, un arbitrage ou un retour terrain.'
                                   )}
                                 </p>
 
@@ -442,7 +442,7 @@ export default function BlogPage() {
                                         Focus
                                       </p>
                                       <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                                        {profile?.focusValue || 'Lecture editoriale'}
+                                        {profile?.focusValue || 'Lecture éditoriale'}
                                       </p>
                                     </div>
                                     <div>
@@ -455,7 +455,7 @@ export default function BlogPage() {
                                     </div>
                                   </div>
                                   <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                                    {profile?.coverageDetail || 'Lecture editoriale continue'}
+                                    {profile?.coverageDetail || 'Lecture éditoriale continue'}
                                   </p>
                                 </div>
 

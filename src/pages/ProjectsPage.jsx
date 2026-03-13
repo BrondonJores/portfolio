@@ -38,7 +38,7 @@ function buildSummaryTiles({ totalProjects, activeFilters, typeFacets, stackFace
   return [
     {
       key: 'total',
-      label: 'Selection visible',
+      label: 'Sélection visible',
       value: String(totalProjects || 0),
       helper: activeFilters > 0 ? `${activeFilters} filtres actifs` : 'sans filtre',
     },
@@ -52,7 +52,7 @@ function buildSummaryTiles({ totalProjects, activeFilters, typeFacets, stackFace
       key: 'tech',
       label: 'Technos',
       value: String(technologyFacets.length || 0),
-      helper: `${stackFacets.length || 0} stacks detectees`,
+      helper: `${stackFacets.length || 0} stacks détectées`,
     },
   ]
 }
@@ -95,12 +95,12 @@ export default function ProjectsPage() {
   const pageTitle = buildPageTitle(settings, 'Projets')
   const projectsPageHeading = settings.ui_projects_page_title || 'Mes Projets'
   const projectsPageSubtitle =
-    settings.ui_projects_page_subtitle || "L'ensemble de mes realisations et experiences de developpement"
+    settings.ui_projects_page_subtitle || "L’ensemble de mes réalisations et expériences de développement"
   const projectsBadgeFeatured = settings.ui_project_badge_featured || 'Mis en avant'
   const projectsActionGithub = settings.ui_project_action_github || 'GitHub'
-  const projectsActionDemo = settings.ui_project_action_demo || 'Demo'
-  const projectsDemoUnavailable = settings.ui_project_demo_unavailable || 'Demo non disponible'
-  const projectsActionCaseStudy = settings.ui_project_action_case_study || 'Voir etude de cas'
+  const projectsActionDemo = settings.ui_project_action_demo || 'Démo'
+  const projectsDemoUnavailable = settings.ui_project_demo_unavailable || 'Démo non disponible'
+  const projectsActionCaseStudy = settings.ui_project_action_case_study || 'Voir étude de cas'
 
   const typeFacets = useMemo(() => getFacetAxis(facets, 'type'), [facets])
   const stackFacets = useMemo(() => getFacetAxis(facets, 'stack'), [facets])
@@ -134,9 +134,9 @@ export default function ProjectsPage() {
     }).length
 
     return [
-      { key: 'live', label: 'Livraisons live', value: String(liveCount), helper: 'demos accessibles' },
+      { key: 'live', label: 'Livraisons live', value: String(liveCount), helper: 'démos accessibles' },
       { key: 'source', label: 'Sources visibles', value: String(sourceCount), helper: 'repos consultables' },
-      { key: 'dossier', label: 'Dossiers structures', value: String(structuredCount), helper: 'case studies approfondis' },
+      { key: 'dossier', label: 'Dossiers structurés', value: String(structuredCount), helper: 'case studies approfondis' },
     ]
   }, [projectProfiles, projects])
 
@@ -195,7 +195,7 @@ export default function ProjectsPage() {
                   <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                        Filtrer la selection
+                        Filtrer la sélection
                       </p>
                       <p className="mt-2 text-base font-medium" style={{ color: 'var(--color-text-primary)' }}>
                         {hasActiveFilters
@@ -210,7 +210,7 @@ export default function ProjectsPage() {
                         className="text-sm underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] rounded"
                         style={{ color: 'var(--color-accent)' }}
                       >
-                        Reinitialiser
+                        Réinitialiser
                       </button>
                     )}
                   </div>
@@ -302,10 +302,10 @@ export default function ProjectsPage() {
                     Lecture showcase
                   </p>
                   <p className="mt-3 text-lg font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
-                    Chaque projet est raconte comme un dossier: mission, scope, livraison et preuves visibles.
+                    Chaque projet est raconté comme un dossier: mission, scope, livraison et preuves visibles.
                   </p>
                   <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                    La page n&apos;est plus une simple liste. Elle te laisse comparer rapidement ce qui est live, ce qui est documente, et ce qui raconte le mieux ta facon de livrer.
+                    La page n&apos;est plus une simple liste. Elle te laisse comparer rapidement ce qui est live, ce qui est documenté, et ce qui raconte le mieux ta façon de livrer.
                   </p>
                 </div>
 
@@ -343,7 +343,7 @@ export default function ProjectsPage() {
             <Card>
               <div className="py-10 text-center">
                 <p className="text-lg font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                  Aucun projet ne correspond a la selection.
+                  Aucun projet ne correspond à la sélection.
                 </p>
                 <p className="mt-3 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                   Essaie de retirer un filtre pour retrouver l’ensemble du catalogue.
@@ -351,7 +351,7 @@ export default function ProjectsPage() {
                 {hasActiveFilters && (
                   <div className="mt-6">
                     <Button variant="secondary" onClick={clearFilters}>
-                      Reinitialiser les filtres
+                      Réinitialiser les filtres
                     </Button>
                   </div>
                 )}
@@ -434,7 +434,7 @@ export default function ProjectsPage() {
                             {spotlightProject.title}
                           </h2>
                           <p className="mt-4 text-sm leading-relaxed md:text-base" style={{ color: 'var(--color-text-secondary)' }}>
-                            {spotlightProfile?.mission || 'Une realisation orientee impact, execution et lisibilite.'}
+                            {spotlightProfile?.mission || 'Une réalisation orientée impact, exécution et lisibilité.'}
                           </p>
                         </div>
 
@@ -612,7 +612,7 @@ export default function ProjectsPage() {
                               </div>
 
                               <p className="mb-4 text-sm leading-relaxed line-clamp-3" style={{ color: 'var(--color-text-secondary)' }}>
-                                {getShortText(profile.mission, 150, 'Projet produit pour transformer une intention en experience claire.')}
+                                {getShortText(profile.mission, 150, 'Projet produit pour transformer une intention en expérience claire.')}
                               </p>
 
                               <div
