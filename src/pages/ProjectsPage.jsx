@@ -19,7 +19,8 @@ import Footer from '../components/sections/Footer.jsx'
 import { useSettings } from '../context/SettingsContext.jsx'
 import { usePublicProjects } from '../hooks/usePublicProjects.js'
 import { buildPageTitle } from '../utils/seoSettings.js'
-import { getFacetAxis, getProjectDisplayTags, getProjectTaxonomy } from '../utils/projectTaxonomy.js'
+import { getFacetAxis, getProjectDisplayTags } from '../utils/projectTaxonomy.js'
+import { getProjectShowcaseProfile } from '../utils/projectShowcase.js'
 
 function getShortText(value, maxLength, fallback) {
   const normalized = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : ''
@@ -52,6 +53,22 @@ function buildSummaryTiles({ totalProjects, activeFilters, typeFacets, stackFace
       value: String(technologyFacets.length || 0),
       helper: `${stackFacets.length || 0} stacks detectees`,
     },
+  ]
+}
+
+function buildProjectBrief(profile) {
+  return [
+    { label: 'Mission', value: profile.mission },
+    { label: 'Scope', value: profile.scope },
+    { label: 'Stack', value: profile.stack },
+  ]
+}
+
+function buildProjectSignals(profile) {
+  return [
+    { label: 'Livraison', value: profile.delivery, helper: profile.proofHeadline },
+    { label: 'Couverture', value: profile.coverageValue, helper: profile.coverageDetail },
+    { label: 'Preuves', value: profile.proofHeadline, helper: profile.proofDetail },
   ]
 }
 
@@ -98,14 +115,29 @@ export default function ProjectsPage() {
   })
   const spotlightProject = projects[0] || null
   const secondaryProjects = spotlightProject ? projects.slice(1) : []
-  const spotlightTaxonomy = useMemo(
-    () => (spotlightProject ? getProjectTaxonomy(spotlightProject) : null),
-    [spotlightProject]
+  const projectProfiles = useMemo(
+    () => new Map(projects.map((project) => [project.id, getProjectShowcaseProfile(project)])),
+    [projects]
   )
   const spotlightTags = useMemo(
     () => (spotlightProject ? getProjectDisplayTags(spotlightProject, 6) : []),
     [spotlightProject]
   )
+  const spotlightProfile = spotlightProject ? projectProfiles.get(spotlightProject.id) : null
+  const dossierOverview = useMemo(() => {
+    const liveCount = projects.filter((project) => Boolean(project.demo_url)).length
+    const sourceCount = projects.filter((project) => Boolean(project.github_url)).length
+    const structuredCount = projects.filter((project) => {
+      const profile = projectProfiles.get(project.id)
+      return Boolean(profile?.contentBlockCount)
+    }).length
+
+    return [
+      { key: 'live', label: 'Livraisons live', value: String(liveCount), helper: 'demos accessibles' },
+      { key: 'source', label: 'Sources visibles', value: String(sourceCount), helper: 'repos consultables' },
+      { key: 'dossier', label: 'Dossiers structures', value: String(structuredCount), helper: 'case studies approfondis' },
+    ]
+  }, [projectProfiles, projects])
 
   const clearFilters = () => {
     setActiveType('')
@@ -261,6 +293,47 @@ export default function ProjectsPage() {
             </section>
           )}
 
+          <section className="mb-8 sm:mb-10">
+            <Card>
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,0.98fr)_minmax(0,1.02fr)] xl:items-end">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    Lecture showcase
+                  </p>
+                  <p className="mt-3 text-lg font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
+                    Chaque projet est raconte comme un dossier: mission, scope, livraison et preuves visibles.
+                  </p>
+                  <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    La page n&apos;est plus une simple liste. Elle te laisse comparer rapidement ce qui est live, ce qui est documente, et ce qui raconte le mieux ta facon de livrer.
+                  </p>
+                </div>
+
+                <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+                  {dossierOverview.map((tile) => (
+                    <div
+                      key={tile.key}
+                      className="min-w-[13rem] snap-start rounded-2xl border px-4 py-4 sm:min-w-0"
+                      style={{
+                        borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 84%, transparent)',
+                      }}
+                    >
+                      <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        {tile.label}
+                      </p>
+                      <p className="mt-3 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                        {tile.value}
+                      </p>
+                      <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                        {tile.helper}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </section>
+
           {loading ? (
             <div className="flex justify-center py-20">
               <Spinner size="lg" />
@@ -326,6 +399,9 @@ export default function ProjectsPage() {
                       </div>
 
                       <div className="flex flex-col gap-5 p-5 sm:p-6 md:p-8">
+                        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          Flagship case study
+                        </p>
                         <div className="flex flex-wrap items-center gap-2">
                           <span
                             className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
@@ -346,11 +422,7 @@ export default function ProjectsPage() {
                             {spotlightProject.title}
                           </h2>
                           <p className="mt-4 text-sm leading-relaxed md:text-base" style={{ color: 'var(--color-text-secondary)' }}>
-                            {getShortText(
-                              spotlightProject.description,
-                              240,
-                              'Une realisation orientee impact, execution et lisibilite.'
-                            )}
+                            {spotlightProfile?.mission || 'Une realisation orientee impact, execution et lisibilite.'}
                           </p>
                         </div>
 
@@ -362,24 +434,58 @@ export default function ProjectsPage() {
                           </div>
                         )}
 
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                              Type
-                            </p>
-                            <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                              {spotlightTaxonomy?.type || 'Non renseigne'}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
-                              Stack
-                            </p>
-                            <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                              {spotlightTaxonomy?.stack?.length > 0 ? spotlightTaxonomy.stack.slice(0, 3).join(' | ') : 'A definir'}
-                            </p>
-                          </div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          {buildProjectSignals(spotlightProfile || getProjectShowcaseProfile(spotlightProject)).map((item) => (
+                            <div
+                              key={`${spotlightProject.id}-${item.label}`}
+                              className="rounded-2xl border px-4 py-3"
+                              style={{
+                                borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                                backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 78%, transparent)',
+                              }}
+                            >
+                              <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                                {item.label}
+                              </p>
+                              <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                {item.value}
+                              </p>
+                              <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                                {item.helper}
+                              </p>
+                            </div>
+                          ))}
                         </div>
+
+                        <div className="grid gap-3">
+                          {buildProjectBrief(spotlightProfile || getProjectShowcaseProfile(spotlightProject)).map((item) => (
+                            <div key={`${spotlightProject.id}-${item.label}`} className="grid gap-2 md:grid-cols-[80px_1fr] md:items-start">
+                              <p className="text-xs uppercase tracking-[0.12em]" style={{ color: 'var(--color-text-secondary)' }}>
+                                {item.label}
+                              </p>
+                              <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
+                                {item.value}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {spotlightProfile?.chapterLabels?.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {spotlightProfile.chapterLabels.map((chapter) => (
+                              <span
+                                key={`${spotlightProject.id}-chapter-${chapter}`}
+                                className="rounded-full border px-3 py-1 text-xs"
+                                style={{
+                                  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                                  color: 'var(--color-text-secondary)',
+                                }}
+                              >
+                                {chapter}
+                              </span>
+                            ))}
+                          </div>
+                        )}
 
                         <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                           <Link
@@ -426,8 +532,8 @@ export default function ProjectsPage() {
 
                   <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
                     {secondaryProjects.map((project, index) => {
-                      const taxonomy = getProjectTaxonomy(project)
                       const displayTags = getProjectDisplayTags(project, 5)
+                      const profile = projectProfiles.get(project.id) || getProjectShowcaseProfile(project)
 
                       return (
                         <motion.div
@@ -469,6 +575,9 @@ export default function ProjectsPage() {
                             )}
 
                             <div className="flex flex-1 flex-col p-5">
+                              <p className="mb-3 text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                                Case study
+                              </p>
                               <div className="mb-3 flex items-start justify-between gap-3">
                                 <div>
                                   <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
@@ -484,27 +593,41 @@ export default function ProjectsPage() {
                               </div>
 
                               <p className="mb-4 text-sm leading-relaxed line-clamp-3" style={{ color: 'var(--color-text-secondary)' }}>
-                                {getShortText(
-                                  project.description,
-                                  150,
-                                  'Projet produit pour transformer une intention en experience claire.'
-                                )}
+                                {getShortText(profile.mission, 150, 'Projet produit pour transformer une intention en experience claire.')}
                               </p>
 
-                              {(taxonomy.type || taxonomy.stack.length > 0) && (
-                                <div className="mb-4 space-y-1">
-                                  {taxonomy.type && (
-                                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                                      Type: <span style={{ color: 'var(--color-text-primary)' }}>{taxonomy.type}</span>
-                                    </p>
-                                  )}
-                                  {taxonomy.stack.length > 0 && (
-                                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                                      Stack: <span style={{ color: 'var(--color-text-primary)' }}>{taxonomy.stack.slice(0, 2).join(' | ')}</span>
-                                    </p>
-                                  )}
+                              <div
+                                className="mb-4 rounded-2xl border px-3 py-3"
+                                style={{
+                                  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 76%, transparent)',
+                                }}
+                              >
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  {buildProjectSignals(profile).slice(0, 2).map((item) => (
+                                    <div key={`${project.id}-${item.label}`}>
+                                      <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--color-text-secondary)' }}>
+                                        {item.label}
+                                      </p>
+                                      <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                        {item.value}
+                                      </p>
+                                      <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                                        {item.helper}
+                                      </p>
+                                    </div>
+                                  ))}
                                 </div>
-                              )}
+                              </div>
+
+                              <div className="mb-4 space-y-2">
+                                {buildProjectBrief(profile).map((item) => (
+                                  <div key={`${project.id}-${item.label}`} className="grid grid-cols-[64px_1fr] gap-2 text-xs">
+                                    <p style={{ color: 'var(--color-text-secondary)' }}>{item.label}</p>
+                                    <p style={{ color: 'var(--color-text-primary)' }}>{item.value}</p>
+                                  </div>
+                                ))}
+                              </div>
 
                               {displayTags.length > 0 && (
                                 <div className="mb-4 flex flex-wrap gap-1.5">
@@ -523,6 +646,9 @@ export default function ProjectsPage() {
                                   {projectsActionCaseStudy}
                                   <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
                                 </Link>
+                                <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                  {profile.proofHeadline}
+                                </span>
                                 {project.github_url && (
                                   <Button
                                     variant="ghost"

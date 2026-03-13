@@ -19,6 +19,7 @@ import { getProjectBySlug } from '../services/projectService.js'
 import { useSettings } from '../context/SettingsContext.jsx'
 import { buildPageTitle } from '../utils/seoSettings.js'
 import { getProjectDisplayTags, getProjectTaxonomy } from '../utils/projectTaxonomy.js'
+import { getProjectShowcaseProfile } from '../utils/projectShowcase.js'
 
 function getShortText(value, maxLength, fallback) {
   const normalized = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : ''
@@ -83,27 +84,57 @@ export default function ProjectDetail() {
   }
 
   const taxonomy = getProjectTaxonomy(project)
+  const showcaseProfile = getProjectShowcaseProfile(project)
   const displayTags = getProjectDisplayTags(project, 8)
-  const metaCards = [
+  const detailReadout = [
     {
-      key: 'type',
-      label: 'Type',
-      value: taxonomy.type || 'Non renseigne',
-      helper: project.featured ? projectsBadgeFeatured : 'Case study disponible',
+      key: 'delivery',
+      label: 'Livraison',
+      value: showcaseProfile.delivery,
+      helper: showcaseProfile.proofHeadline,
+    },
+    {
+      key: 'coverage',
+      label: 'Couverture',
+      value: showcaseProfile.coverageValue,
+      helper: showcaseProfile.coverageDetail,
     },
     {
       key: 'stack',
       label: 'Stack',
-      value: taxonomy.stack.length > 0 ? taxonomy.stack.slice(0, 3).join(' | ') : 'A definir',
-      helper: `${taxonomy.technologies.length || 0} technos visibles`,
+      value: showcaseProfile.stack,
+      helper: `${showcaseProfile.technologyCount || 0} technos visibles`,
+    },
+  ]
+  const metaCards = [
+    {
+      key: 'delivery',
+      label: 'Livraison',
+      value: showcaseProfile.delivery,
+      helper: showcaseProfile.proofHeadline,
+    },
+    {
+      key: 'coverage',
+      label: 'Couverture',
+      value: showcaseProfile.coverageValue,
+      helper: showcaseProfile.coverageDetail,
     },
     {
       key: 'scope',
       label: 'Scope',
-      value: taxonomy.domains.length > 0 ? taxonomy.domains.slice(0, 2).join(' | ') : 'Produit web',
-      helper: taxonomy.labels.length > 0 ? taxonomy.labels.slice(0, 2).join(' | ') : 'Execution complete',
+      value: showcaseProfile.scope,
+      helper: project.featured ? projectsBadgeFeatured : 'Case study disponible',
     },
   ]
+  const caseStudyBrief = [
+    { key: 'mission', label: 'Mission', value: showcaseProfile.mission },
+    { key: 'scope', label: 'Scope', value: showcaseProfile.scope },
+    { key: 'stack', label: 'Stack', value: showcaseProfile.stack },
+    { key: 'proof', label: 'Preuves', value: showcaseProfile.proofDetail },
+  ]
+  const coverageItems = showcaseProfile.chapterLabels.length > 0
+    ? showcaseProfile.chapterLabels
+    : [showcaseProfile.scope, showcaseProfile.delivery, showcaseProfile.proofHeadline].filter(Boolean)
 
   const description = getShortText(
     project.description,
@@ -243,6 +274,84 @@ export default function ProjectDetail() {
             </section>
           )}
 
+          <section className="mb-10 sm:mb-12">
+            <Card>
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)] xl:items-start">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    Project brief
+                  </p>
+                  <h2 className="mt-3 text-2xl font-semibold leading-tight" style={{ color: 'var(--color-text-primary)' }}>
+                    Ce dossier met en avant la mission, la livraison et les preuves qui portent le projet.
+                  </h2>
+                  <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    Avant d&apos;entrer dans le contenu complet, tu peux lire ici le cadre du projet et les signaux qui le rendent concret.
+                  </p>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    {detailReadout.map((item) => (
+                      <div
+                        key={`${project.id}-${item.key}`}
+                        className="rounded-2xl border px-4 py-3"
+                        style={{
+                          borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                          backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 82%, transparent)',
+                        }}
+                      >
+                        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          {item.label}
+                        </p>
+                        <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {item.value}
+                        </p>
+                        <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                          {item.helper}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-3">
+                  {caseStudyBrief.map((item) => (
+                    <div
+                      key={`${project.id}-${item.key}`}
+                      className="grid gap-2 rounded-2xl border px-4 py-4 md:grid-cols-[82px_1fr] md:items-start"
+                      style={{
+                        borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 78%, transparent)',
+                      }}
+                    >
+                      <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        {item.label}
+                      </p>
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {coverageItems.length > 0 && (
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {coverageItems.map((item) => (
+                    <span
+                      key={`${project.id}-coverage-${item}`}
+                      className="rounded-full border px-3 py-1 text-xs"
+                      style={{
+                        borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </section>
+
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-10 xl:grid-cols-[minmax(0,1fr)_300px]">
             <div
               className="rounded-[var(--ui-radius-2xl)] border p-5 sm:p-6 md:p-8"
@@ -255,6 +364,29 @@ export default function ProjectDetail() {
             </div>
 
             <aside className="grid gap-4 sm:grid-cols-2 lg:sticky lg:top-28 lg:grid-cols-1">
+              <Card>
+                <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  Livraison
+                </p>
+                <div
+                  className="mt-4 rounded-2xl border px-4 py-4"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--color-border) 76%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 82%, transparent)',
+                  }}
+                >
+                  <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    {showcaseProfile.delivery}
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    {showcaseProfile.proofHeadline}
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    {showcaseProfile.proofDetail}
+                  </p>
+                </div>
+              </Card>
+
               {taxonomy.technologies.length > 0 && (
                 <Card>
                   <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
@@ -276,6 +408,19 @@ export default function ProjectDetail() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     {[...taxonomy.domains, ...taxonomy.labels].map((item) => (
                       <Badge key={item}>{item}</Badge>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {coverageItems.length > 0 && (
+                <Card>
+                  <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    Storyline
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {coverageItems.map((item) => (
+                      <Badge key={`storyline-${item}`}>{item}</Badge>
                     ))}
                   </div>
                 </Card>

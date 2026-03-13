@@ -20,6 +20,7 @@ import { useSettings } from '../../context/SettingsContext.jsx'
 import { getSectionAnimationConfig } from '../../utils/animationSettings.js'
 import { buildSectionContainerVariants, buildSectionItemVariants } from '../../utils/sectionMotionProfiles.js'
 import { getProjectDisplayTags, getProjectTaxonomy } from '../../utils/projectTaxonomy.js'
+import { getProjectShowcaseProfile } from '../../utils/projectShowcase.js'
 
 /**
  * Nettoie un texte pour affichage court.
@@ -31,28 +32,6 @@ function normalizeText(value) {
     return ''
   }
   return value.replace(/\s+/g, ' ').trim()
-}
-
-/**
- * Extrait une phrase courte et lisible.
- * @param {unknown} value Texte source.
- * @param {number} maxLength Longueur max.
- * @param {string} fallback Valeur de repli.
- * @returns {string} Phrase courte.
- */
-function getShortSentence(value, maxLength, fallback) {
-  const normalized = normalizeText(value)
-  if (!normalized) {
-    return fallback
-  }
-
-  // Compatible Safari iOS ancien: evite le lookbehind `(?<=...)`.
-  const sentenceMatch = normalized.match(/^.*?[.!?](?:\s+|$)/)
-  const sentence = (sentenceMatch?.[0] || normalized).trim()
-  if (sentence.length <= maxLength) {
-    return sentence
-  }
-  return `${sentence.slice(0, Math.max(1, maxLength - 3)).trim()}...`
 }
 
 /**
@@ -72,24 +51,27 @@ function resolveProjectChips(project, limit) {
  * @returns {Array<{label:string,value:string}>} Lignes de contexte.
  */
 function buildProjectSnapshot(project, labels) {
-  const taxonomy = getProjectTaxonomy(project)
-  const summary = getShortSentence(
-    project?.description,
-    140,
-    'Projet produit pour livrer une solution claire, testable et maintenable.'
-  )
-  const stack = taxonomy.stack.length > 0
-    ? taxonomy.stack.slice(0, 3).join(' | ')
-    : 'Stack non renseignee'
-  const proof = [
-    project?.demo_url ? labels.demoLive : null,
-    project?.github_url ? labels.sourceCode : null,
-  ].filter(Boolean).join(' + ') || labels.caseStudyOnly
+  const profile = getProjectShowcaseProfile(project)
+  return [
+    { label: labels.objective, value: profile.mission },
+    { label: labels.scope, value: profile.scope },
+    { label: labels.stack, value: profile.stack },
+  ]
+}
+
+/**
+ * Prepare les signaux de lecture d'un projet.
+ * @param {object} project Projet.
+ * @param {object} labels Labels i18n.
+ * @returns {Array<{label:string,value:string,helper:string}>} Signaux rapides.
+ */
+function buildProjectSignals(project, labels) {
+  const profile = getProjectShowcaseProfile(project)
 
   return [
-    { label: labels.objective, value: summary },
-    { label: labels.stack, value: stack },
-    { label: labels.proof, value: proof },
+    { label: labels.delivery, value: profile.delivery, helper: profile.proofHeadline },
+    { label: labels.coverage, value: profile.coverageValue, helper: profile.coverageDetail },
+    { label: labels.proof, value: profile.proofHeadline, helper: profile.proofDetail },
   ]
 }
 
@@ -122,11 +104,11 @@ export default function Projects({ projects = [], loading = false }) {
   const projectsStatRepos = settings.ui_project_stat_repos || 'Repos publics'
   const projectsStatTech = settings.ui_project_stat_tech || 'Technos'
   const snapshotObjective = settings.ui_project_snapshot_objective || 'Objectif'
+  const snapshotScope = settings.ui_project_snapshot_scope || 'Scope'
   const snapshotStack = settings.ui_project_snapshot_stack || 'Stack'
   const snapshotProof = settings.ui_project_snapshot_proof || 'Preuve'
-  const snapshotCaseStudyOnly = settings.ui_project_snapshot_case_study || 'Etude de cas detaillee'
-  const snapshotDemoLive = settings.ui_project_snapshot_demo_live || 'Demo live'
-  const snapshotSourceCode = settings.ui_project_snapshot_source_code || 'Code source'
+  const snapshotDelivery = settings.ui_project_snapshot_delivery || 'Livraison'
+  const snapshotCoverage = settings.ui_project_snapshot_coverage || 'Couverture'
 
   const showcaseStats = useMemo(() => {
     const demosCount = projects.filter((project) => Boolean(project.demo_url)).length
@@ -143,6 +125,10 @@ export default function Projects({ projects = [], loading = false }) {
   }, [projects, projectsStatDemos, projectsStatRepos, projectsStatTech])
 
   const [heroProject, ...secondaryProjects] = projects
+  const heroProfile = useMemo(
+    () => (heroProject ? getProjectShowcaseProfile(heroProject) : null),
+    [heroProject]
+  )
 
   if (loading) {
     return (
@@ -311,21 +297,41 @@ export default function Projects({ projects = [], loading = false }) {
                       {heroProject.title}
                     </h3>
                     <p className="text-sm md:text-base leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                      {getShortSentence(
-                        heroProject.description,
-                        210,
-                        'Projet concu pour fournir une solution robuste et orientee impact.'
-                      )}
+                      {heroProfile?.mission || 'Projet concu pour fournir une solution robuste et orientee impact.'}
                     </p>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {buildProjectSignals(heroProject, {
+                        delivery: snapshotDelivery,
+                        coverage: snapshotCoverage,
+                        proof: snapshotProof,
+                      }).map((item) => (
+                        <div
+                          key={`${heroProject.id}-${item.label}`}
+                          className="rounded-2xl border px-4 py-3"
+                          style={{
+                            borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 78%, transparent)',
+                          }}
+                        >
+                          <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                            {item.label}
+                          </p>
+                          <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                            {item.value}
+                          </p>
+                          <p className="mt-2 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                            {item.helper}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
 
                     <dl className="grid gap-3">
                       {buildProjectSnapshot(heroProject, {
                         objective: snapshotObjective,
+                        scope: snapshotScope,
                         stack: snapshotStack,
-                        proof: snapshotProof,
-                        caseStudyOnly: snapshotCaseStudyOnly,
-                        demoLive: snapshotDemoLive,
-                        sourceCode: snapshotSourceCode,
                       }).map((item) => (
                         <div key={`${heroProject.id}-${item.label}`} className="grid grid-cols-[80px_1fr] gap-3 text-sm">
                           <dt style={{ color: 'var(--color-text-secondary)' }}>{item.label}</dt>
@@ -409,11 +415,13 @@ export default function Projects({ projects = [], loading = false }) {
               const tags = resolveProjectChips(project, 4)
               const snapshot = buildProjectSnapshot(project, {
                 objective: snapshotObjective,
+                scope: snapshotScope,
                 stack: snapshotStack,
+              })
+              const signals = buildProjectSignals(project, {
+                delivery: snapshotDelivery,
+                coverage: snapshotCoverage,
                 proof: snapshotProof,
-                caseStudyOnly: snapshotCaseStudyOnly,
-                demoLive: snapshotDemoLive,
-                sourceCode: snapshotSourceCode,
               })
 
               return (
@@ -465,6 +473,13 @@ export default function Projects({ projects = [], loading = false }) {
                     )}
 
                     <div className="flex flex-col flex-grow p-5">
+                      <p
+                        className="mb-3 text-[11px] uppercase tracking-[0.18em]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        Case brief
+                      </p>
+
                       <div className="flex items-start justify-between mb-3 gap-2">
                         <h3 className="text-lg font-semibold leading-snug" style={{ color: 'var(--color-text-primary)' }}>
                           {project.title}
@@ -482,12 +497,33 @@ export default function Projects({ projects = [], loading = false }) {
                         )}
                       </div>
 
-                      <p className="text-sm leading-relaxed mb-4 line-clamp-2" style={{ color: 'var(--color-text-secondary)' }}>
-                        {getShortSentence(project.description, 150, 'Solution orientee valeur et execution propre.')}
-                      </p>
+                      <div
+                        className="mb-4 rounded-2xl border px-3 py-3"
+                        style={{
+                          borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
+                          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 76%, transparent)',
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                              {signals[0].label}
+                            </p>
+                            <p className="mt-2 text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                              {signals[0].value}
+                            </p>
+                          </div>
+                          <p className="max-w-[11rem] text-right text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                            {signals[1].value}
+                          </p>
+                        </div>
+                        <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                          {signals[0].helper}
+                        </p>
+                      </div>
 
                       <dl className="grid gap-2 mb-4">
-                        {snapshot.slice(1).map((item) => (
+                        {snapshot.map((item) => (
                           <div key={`${project.id}-${item.label}`} className="grid grid-cols-[60px_1fr] gap-2 text-xs">
                             <dt style={{ color: 'var(--color-text-secondary)' }}>{item.label}</dt>
                             <dd style={{ color: 'var(--color-text-primary)' }}>{item.value}</dd>
@@ -523,6 +559,9 @@ export default function Projects({ projects = [], loading = false }) {
                           {projectsActionCaseStudy}
                           <ArrowRightIcon className="h-4 w-4" aria-hidden="true" />
                         </Link>
+                        <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          {signals[2].value}
+                        </span>
                         {project.demo_url && (
                           <Button
                             variant="ghost"
