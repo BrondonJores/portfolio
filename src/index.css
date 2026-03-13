@@ -227,14 +227,18 @@ samp {
 
 .media-shell {
   position: relative;
-  isolation: isolate;
+  display: block;
   overflow: hidden;
+  background-color: var(--color-bg-secondary);
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .media-skeleton {
   position: absolute;
   inset: 0;
   z-index: 0;
+  background-color: var(--color-bg-secondary);
   background:
     linear-gradient(
       145deg,
@@ -252,8 +256,21 @@ samp {
     linear-gradient(
       90deg,
       transparent 0%,
-      color-mix(in srgb, white 8%, transparent) 42%,
+      rgba(255, 255, 255, 0.08) 42%,
       transparent 100%
     );
   animation: media-shimmer 1600ms ease-in-out infinite;
+}
+
+@supports not (background: color-mix(in srgb, black 50%, white)) {
+  .media-skeleton {
+    background: linear-gradient(145deg, var(--color-bg-secondary), var(--color-bg-card));
+  }
+}
+
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .media-skeleton::after {
+    animation: none;
+    opacity: 0.18;
+  }
 }

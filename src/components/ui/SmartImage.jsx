@@ -95,13 +95,14 @@ export default function SmartImage({
           loading={resolvedLoading}
           fetchPriority={fetchPriority}
           decoding={decoding}
-          className={imgClassName}
+          className={`relative z-[1] block ${imgClassName}`.trim()}
           style={{
+            display: 'block',
             opacity: status === 'loaded' ? 1 : 0,
-            filter: status === 'loaded' ? 'blur(0px)' : 'blur(18px)',
-            transition:
-              'opacity 420ms ease, filter 520ms ease, transform 700ms cubic-bezier(0.22, 1, 0.36, 1)',
-            willChange: 'opacity, filter, transform',
+            transition: 'opacity 260ms ease, transform 700ms cubic-bezier(0.22, 1, 0.36, 1)',
+            willChange: 'opacity',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
             ...imgStyle,
           }}
           onLoad={(event) => {

@@ -106,6 +106,8 @@ export default function Card({ children, className = '' }) {
         transition:
           'border-color var(--ui-transition-ms) ease, box-shadow var(--ui-transition-ms) ease, background-color var(--ui-transition-ms) ease',
         transformStyle: 'preserve-3d',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
         rotateX: canTilt ? springRotateX : 0,
         rotateY: canTilt ? springRotateY : 0,
       }}
@@ -153,7 +155,7 @@ export default function Card({ children, className = '' }) {
         transition={{ duration: 0.22 * animationConfig.durationScale, ease: 'easeOut' }}
         style={{
           borderRadius: 'calc(var(--ui-radius-xl) - 1px)',
-          border: '1px solid color-mix(in srgb, white 10%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--color-border) 48%, transparent)',
         }}
         aria-hidden="true"
       />
