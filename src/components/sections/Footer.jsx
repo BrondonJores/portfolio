@@ -59,7 +59,7 @@ export default function Footer() {
     >
       <div className="mx-auto max-w-6xl px-4 pb-8 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
         <section
-          className="overflow-hidden rounded-[var(--ui-radius-2xl)] border p-5 sm:p-6 md:p-7"
+          className="hidden overflow-hidden rounded-[var(--ui-radius-2xl)] border p-5 lg:block lg:p-6 xl:p-7"
           style={{
             borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
             background:
@@ -197,7 +197,7 @@ export default function Footer() {
           </div>
         </section>
 
-        <div className="mt-8 border-t pt-6 sm:hidden" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+        <div className="border-t pt-6 sm:hidden" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
           <div className="grid gap-6">
             <div>
               <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>

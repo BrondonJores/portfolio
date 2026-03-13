@@ -141,10 +141,10 @@ export default function ContactPage() {
         <title>{pageTitle}</title>
       </Helmet>
       <Navbar />
-      <main className="min-h-screen pb-16 pt-28" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <main className="min-h-screen overflow-x-hidden pb-16 pt-28" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+        <div className="mx-auto max-w-6xl overflow-x-hidden px-4 sm:px-6 lg:px-8">
           <section className="mb-10 grid gap-8 xl:grid-cols-[minmax(0,1.06fr)_320px] xl:items-end">
-            <div>
+            <div className="min-w-0">
               <p
                 className="mb-4 text-[11px] uppercase tracking-[0.22em]"
                 style={{ color: 'var(--color-text-secondary)' }}
@@ -187,7 +187,7 @@ export default function ContactPage() {
                 {contactIntro}
               </p>
 
-              <div className="-mx-1 mt-6 flex gap-2 overflow-x-auto px-1 pb-1 sm:hidden">
+              <div className="mt-6 grid gap-2 sm:hidden">
                 {CONTACT_INTENT_PRESETS.map((preset) => {
                   const isActive = activeIntentId === preset.id
 
@@ -196,7 +196,7 @@ export default function ContactPage() {
                       key={`mobile-hero-${preset.id}`}
                       type="button"
                       onClick={() => handleIntentSelect(preset)}
-                      className="min-w-[11.5rem] rounded-[var(--ui-radius-xl)] border px-4 py-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                      className="w-full rounded-[var(--ui-radius-xl)] border px-4 py-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                       style={{
                         borderColor: isActive
                           ? 'color-mix(in srgb, var(--color-accent) 56%, var(--color-border))'
@@ -256,23 +256,7 @@ export default function ContactPage() {
                 })}
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-2 sm:hidden">
-                {CONTACT_BRIEF_CHECKLIST.slice(0, 3).map((item) => (
-                  <span
-                    key={`mobile-hero-${item}`}
-                    className="rounded-full border px-3 py-1.5 text-xs font-medium"
-                    style={{
-                      color: 'var(--color-text-secondary)',
-                      borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
-                      backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
-                    }}
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-6 hidden flex-wrap gap-2 sm:flex">
+              <div className="hidden sm:flex sm:flex-wrap sm:gap-2">
                 {CONTACT_BRIEF_CHECKLIST.map((item) => (
                   <span
                     key={item}
@@ -288,14 +272,15 @@ export default function ContactPage() {
                 ))}
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Button variant="primary" href={`mailto:${contactEmail}`}>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <Button variant="primary" href={`mailto:${contactEmail}`} className="w-full justify-center sm:w-auto">
                   <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
                   Email direct
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={() => handleIntentSelect(CONTACT_INTENT_PRESETS[1] || CONTACT_INTENT_PRESETS[0])}
+                  className="w-full justify-center sm:w-auto"
                 >
                   <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
                   Pre-remplir un brief
@@ -303,7 +288,7 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+            <div className="hidden gap-3 sm:grid sm:grid-cols-3 xl:grid-cols-1">
               {responseSignals.map((signal) => {
                 const Icon = signal.icon
                 return (
@@ -337,7 +322,7 @@ export default function ContactPage() {
           </section>
 
           <section className="grid gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] xl:gap-10">
-            <div className="grid gap-4">
+            <div className="grid min-w-0 gap-4">
               <div
                 className="overflow-hidden rounded-[var(--ui-radius-2xl)] border p-4 sm:p-6 md:p-7"
                 style={{
@@ -398,7 +383,7 @@ export default function ContactPage() {
                   </div>
                 )}
 
-                <div className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1 sm:hidden">
+                <div className="mb-5 grid gap-2 sm:hidden">
                   {CONTACT_INTENT_PRESETS.map((preset) => {
                     const isActive = activeIntentId === preset.id
 
@@ -407,7 +392,7 @@ export default function ContactPage() {
                         key={`mobile-form-${preset.id}`}
                         type="button"
                         onClick={() => handleIntentSelect(preset)}
-                        className="min-w-[11rem] rounded-[var(--ui-radius-xl)] border px-4 py-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
+                        className="w-full rounded-[var(--ui-radius-xl)] border px-4 py-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
                         style={{
                           borderColor: isActive
                             ? 'color-mix(in srgb, var(--color-accent) 56%, var(--color-border))'
@@ -458,7 +443,7 @@ export default function ContactPage() {
                   })}
                 </div>
 
-                <form onSubmit={handleSubmit} noValidate className="space-y-4">
+                <form onSubmit={handleSubmit} noValidate className="space-y-4 min-w-0">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label
@@ -552,27 +537,11 @@ export default function ContactPage() {
                       type="submit"
                       variant="primary"
                       disabled={status.loading}
-                      className="justify-center sm:min-w-[220px]"
+                      className="w-full justify-center sm:min-w-[220px]"
                     >
                       <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
                       {status.loading ? formSubmittingLabel : formSubmitLabel}
                     </Button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 sm:hidden">
-                    {CONTACT_BRIEF_CHECKLIST.slice(0, 3).map((item) => (
-                      <span
-                        key={`mobile-form-${item}`}
-                        className="rounded-full border px-3 py-1.5 text-xs"
-                        style={{
-                          color: 'var(--color-text-secondary)',
-                          borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
-                          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
-                        }}
-                      >
-                        {item}
-                      </span>
-                    ))}
                   </div>
 
                   <div className="hidden flex-wrap gap-2 sm:flex">
@@ -594,7 +563,7 @@ export default function ContactPage() {
               </div>
 
               {testimonials.length > 0 && (
-                <section>
+                <section className="min-w-0">
                   <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
                       <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
@@ -634,7 +603,7 @@ export default function ContactPage() {
               )}
             </div>
 
-            <aside className="grid gap-4">
+            <aside className="hidden min-w-0 gap-4 lg:grid">
               <Card>
                 <div className="flex items-center gap-3">
                   <span
