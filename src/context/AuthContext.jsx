@@ -1,5 +1,5 @@
 /* Contexte d'authentification pour l'espace administrateur */
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback } from 'react'
 import { configureApi } from '../services/api.js'
 import {
   login as loginRequest,
@@ -131,7 +131,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   /* Configuration du service API a chaque changement de token */
-  useEffect(() => {
+  useLayoutEffect(() => {
     configureApi({
       accessToken,
       refreshToken: refreshToken,
