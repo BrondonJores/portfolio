@@ -1,22 +1,19 @@
-/* Composant bouton extensible avec animations configurables */
 import { useEffect, useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { detectAnimationAssetMode, sanitizeAnimationAssetUrl } from '../../utils/animationAsset.js'
 import { getAnimationConfig } from '../../utils/animationSettings.js'
+import { getUiThemePrimitives } from '../../utils/themeSettings.js'
 import LoaderAssetPlayer from './LoaderAssetPlayer.jsx'
 
-const VARIANT_STYLES = {
-  primary:
-    'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-light)] focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-primary)]',
-  secondary:
-    'border border-[var(--color-accent)] text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-primary)]',
-  ghost:
-    'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-border)]',
-}
-
-const BASE_STYLES =
-  'relative isolate inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none overflow-hidden transform-gpu'
+const BASE_STYLES = [
+  'relative isolate inline-flex min-h-[var(--ui-control-height)] items-center justify-center gap-2',
+  'overflow-hidden rounded-[var(--ui-radius-xl)] border px-[var(--ui-button-px)] py-[var(--ui-button-py)]',
+  'text-[length:var(--ui-button-font-size)] font-medium transition-all duration-200',
+  'disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none',
+  'focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2',
+  'focus-visible:ring-offset-[var(--color-bg-primary)] transform-gpu',
+].join(' ')
 
 const BUTTON_ASSET_URL_BY_VARIANT = {
   primary: 'buttonAssetPrimaryUrl',
@@ -24,12 +21,6 @@ const BUTTON_ASSET_URL_BY_VARIANT = {
   ghost: 'buttonAssetGhostUrl',
 }
 
-/**
- * Resolve l'URL d'asset button selon la variante, avec fallback global.
- * @param {Record<string, unknown>} animationConfig Configuration animation courante.
- * @param {'primary'|'secondary'|'ghost'} variant Variante bouton.
- * @returns {string} URL nettoyee ou chaine vide.
- */
 function resolveButtonAssetUrl(animationConfig, variant) {
   const scopedKey = BUTTON_ASSET_URL_BY_VARIANT[variant] || BUTTON_ASSET_URL_BY_VARIANT.primary
   const scopedUrl = sanitizeAnimationAssetUrl(animationConfig?.[scopedKey])
@@ -43,10 +34,69 @@ function resolveButtonAssetUrl(animationConfig, variant) {
   return ''
 }
 
-/**
- * Rend un element <a> si href est fourni, sinon un <button>.
- * Le pulse des CTA principaux est parametre depuis AdminSettings > Animations.
- */
+function buildButtonChrome({
+  variant,
+  uiPrimitives,
+  isHovered,
+  animationConfig,
+  canRunMicroInteractions,
+  canRenderButtonAsset,
+  shouldPulse,
+}) {
+  const surfaceMix = Math.round(uiPrimitives.surfaceOpacity * 100)
+  const borderMix = Math.round(uiPrimitives.surfaceBorderAlpha * 100)
+  const glowStrength = Math.max(0.28, 0.48 * animationConfig.buttonGlowBoost)
+  const sharedStyle = {
+    letterSpacing: uiPrimitives.density === 'compact' ? '0.01em' : '0.015em',
+    backdropFilter: uiPrimitives.surfaceBlurPx > 0 && variant !== 'primary'
+      ? `blur(${uiPrimitives.surfaceBlurPx}px)`
+      : 'none',
+    WebkitBackdropFilter: uiPrimitives.surfaceBlurPx > 0 && variant !== 'primary'
+      ? `blur(${uiPrimitives.surfaceBlurPx}px)`
+      : 'none',
+  }
+
+  if (variant === 'secondary') {
+    return {
+      ...sharedStyle,
+      color: isHovered ? 'var(--color-text-primary)' : 'var(--color-accent)',
+      backgroundColor: `color-mix(in srgb, var(--color-bg-card) ${surfaceMix}%, transparent)`,
+      borderColor: `color-mix(in srgb, var(--color-accent) ${Math.max(34, borderMix)}%, var(--color-border))`,
+      boxShadow: isHovered
+        ? `0 18px 36px -24px color-mix(in srgb, var(--color-accent-glow) ${Math.round(glowStrength * 100)}%, transparent)`
+        : `0 14px 30px -26px color-mix(in srgb, var(--color-border) 18%, transparent)`,
+      animation: 'none',
+    }
+  }
+
+  if (variant === 'ghost') {
+    return {
+      ...sharedStyle,
+      color: isHovered ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+      backgroundColor: isHovered
+        ? 'color-mix(in srgb, var(--color-accent-glow) 18%, transparent)'
+        : 'transparent',
+      borderColor: isHovered
+        ? 'color-mix(in srgb, var(--color-border) 66%, transparent)'
+        : 'transparent',
+      boxShadow: 'none',
+      animation: 'none',
+    }
+  }
+
+  return {
+    ...sharedStyle,
+    color: '#ffffff',
+    borderColor: 'color-mix(in srgb, var(--color-accent-light) 48%, var(--color-accent))',
+    background:
+      'linear-gradient(135deg, var(--color-accent), color-mix(in srgb, var(--color-accent-light) 72%, white))',
+    boxShadow: isHovered && canRunMicroInteractions && !canRenderButtonAsset
+      ? `0 20px 44px -26px color-mix(in srgb, var(--color-accent-glow) ${Math.round(glowStrength * 100)}%, transparent)`
+      : '0 16px 32px -26px color-mix(in srgb, var(--color-accent-glow) 48%, transparent)',
+    animation: shouldPulse ? `cta-pulse ${animationConfig.ctaPulseIntervalMs}ms ease-in-out infinite` : 'none',
+  }
+}
+
 export default function Button({
   variant = 'primary',
   href,
@@ -68,6 +118,7 @@ export default function Button({
     () => getAnimationConfig(settings, Boolean(prefersReducedMotion)),
     [settings, prefersReducedMotion]
   )
+  const uiPrimitives = useMemo(() => getUiThemePrimitives(settings), [settings])
 
   const buttonAssetUrl = useMemo(
     () => resolveButtonAssetUrl(animationConfig, variant),
@@ -86,7 +137,7 @@ export default function Button({
     && Boolean(buttonAssetUrl)
     && buttonAssetMode === 'lottie'
     && !assetLoadFailed
-  const classes = `${BASE_STYLES} ${VARIANT_STYLES[variant] ?? VARIANT_STYLES.primary} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`
+  const classes = `${BASE_STYLES} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`
   const canRunMicroInteractions = animationConfig.canAnimate
     && animationConfig.buttonMicroEnabled
     && !disabled
@@ -97,28 +148,22 @@ export default function Button({
   const shouldRenderRipple = canRunMicroInteractions
     && animationConfig.buttonRippleEnabled
     && !canRenderButtonAsset
-  const glowRadius = 22 * animationConfig.buttonGlowBoost
-  const glowStyle = variant === 'primary'
-    ? {
-      boxShadow: isHovered && canRunMicroInteractions && !canRenderButtonAsset
-        ? `0 0 ${glowRadius}px var(--color-accent-glow)`
-        : 'none',
-      transition: 'box-shadow 0.2s ease',
-      animation: shouldPulse ? `cta-pulse ${animationConfig.ctaPulseIntervalMs}ms ease-in-out infinite` : 'none',
-    }
-    : {}
   const hoverAnimation = canRunMicroInteractions
     ? { y: -animationConfig.buttonHoverLiftPx }
     : undefined
   const tapAnimation = canRunMicroInteractions
     ? { scale: animationConfig.buttonPressScale }
     : undefined
+  const buttonChromeStyle = buildButtonChrome({
+    variant,
+    uiPrimitives,
+    isHovered,
+    animationConfig,
+    canRunMicroInteractions,
+    canRenderButtonAsset,
+    shouldPulse,
+  })
 
-  /**
-   * Ajoute une onde au point d'interaction pour renforcer le feedback visuel.
-   * @param {import('react').PointerEvent<HTMLElement>} event Evenement pointeur.
-   * @returns {void}
-   */
   function handlePointerDownInternal(event) {
     onPointerDown?.(event)
     if (!shouldRenderRipple || event.button !== 0) {
@@ -139,11 +184,6 @@ export default function Button({
     setRipples((previous) => [...previous.slice(-2), nextRipple])
   }
 
-  /**
-   * Supprime une onde terminee.
-   * @param {string} rippleId Identifiant de l'onde.
-   * @returns {void}
-   */
   function removeRipple(rippleId) {
     setRipples((previous) => previous.filter((ripple) => ripple.id !== rippleId))
   }
@@ -156,7 +196,7 @@ export default function Button({
         {...(isExternal ? { rel: 'noopener noreferrer', target: '_blank' } : {})}
         className={classes}
         aria-disabled={disabled}
-        style={glowStyle}
+        style={buttonChromeStyle}
         whileHover={hoverAnimation}
         whileTap={tapAnimation}
         onMouseEnter={(event) => {
@@ -221,7 +261,7 @@ export default function Button({
       onClick={onClick}
       className={classes}
       disabled={disabled}
-      style={glowStyle}
+      style={buttonChromeStyle}
       whileHover={hoverAnimation}
       whileTap={tapAnimation}
       onMouseEnter={(event) => {

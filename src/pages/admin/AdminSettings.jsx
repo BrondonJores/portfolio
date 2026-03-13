@@ -17,6 +17,11 @@ import QRCode from 'qrcode'
 import {
   DEFAULT_THEME_SETTINGS,
   FONT_FAMILY_OPTIONS,
+  UI_CARD_STYLE_OPTIONS,
+  UI_DENSITY_OPTIONS,
+  UI_HEADING_STYLE_OPTIONS,
+  UI_NAV_MODE_OPTIONS,
+  UI_SURFACE_STYLE_OPTIONS,
   mergeWithThemeDefaults,
 } from '../../utils/themeSettings.js'
 import {
@@ -1552,6 +1557,51 @@ export default function AdminSettings() {
                     step={0.01}
                     unit="x"
                     defaultValue={1}
+                  />
+                </div>
+              </CardSection>
+
+              <CardSection>
+                <SectionTitle>Structure UI</SectionTitle>
+                <InlineTip>
+                  Ces reglages changent le vocabulaire visuel du site sans casser le pilotage par preset:
+                  densite, type de surfaces, style des titres, navbar et cartes.
+                </InlineTip>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FieldSelect
+                    label="Densite interface"
+                    fieldKey="ui_density"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={UI_DENSITY_OPTIONS}
+                  />
+                  <FieldSelect
+                    label="Style des surfaces"
+                    fieldKey="ui_surface_style"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={UI_SURFACE_STYLE_OPTIONS}
+                  />
+                  <FieldSelect
+                    label="Composition des titres"
+                    fieldKey="ui_heading_style"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={UI_HEADING_STYLE_OPTIONS}
+                  />
+                  <FieldSelect
+                    label="Mode navbar"
+                    fieldKey="ui_nav_mode"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={UI_NAV_MODE_OPTIONS}
+                  />
+                  <FieldSelect
+                    label="Famille de cartes"
+                    fieldKey="ui_card_style"
+                    settings={settings}
+                    onChange={handleChange}
+                    options={UI_CARD_STYLE_OPTIONS}
                   />
                 </div>
               </CardSection>

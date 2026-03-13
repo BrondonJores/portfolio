@@ -16,6 +16,164 @@ export const FONT_FAMILY_OPTIONS = [
   { value: 'jetbrains', label: 'JetBrains Mono' },
 ]
 
+export const UI_DENSITY_OPTIONS = [
+  { value: 'compact', label: 'Compacte' },
+  { value: 'comfortable', label: 'Equilibree' },
+  { value: 'spacious', label: 'Aerienne' },
+]
+
+export const UI_SURFACE_STYLE_OPTIONS = [
+  { value: 'soft', label: 'Soft depth' },
+  { value: 'glass', label: 'Glass' },
+  { value: 'solid', label: 'Solid panel' },
+]
+
+export const UI_HEADING_STYLE_OPTIONS = [
+  { value: 'split', label: 'Editorial split' },
+  { value: 'rule', label: 'Accent rule' },
+  { value: 'stacked', label: 'Stack simple' },
+]
+
+export const UI_NAV_MODE_OPTIONS = [
+  { value: 'line', label: 'Ligne fine' },
+  { value: 'pill', label: 'Capsule flottante' },
+  { value: 'panel', label: 'Panneau outil' },
+]
+
+export const UI_CARD_STYLE_OPTIONS = [
+  { value: 'editorial', label: 'Editoriales' },
+  { value: 'showcase', label: 'Showcase' },
+  { value: 'panel', label: 'Panneau dense' },
+]
+
+const UI_DENSITY_CONFIG = {
+  compact: {
+    controlHeightPx: 42,
+    buttonPaddingXRem: 1.05,
+    buttonPaddingYRem: 0.7,
+    buttonFontSizeRem: 0.92,
+    cardPaddingRem: 1.2,
+    navHeightPx: 58,
+    sectionTitleGapRem: 1,
+  },
+  comfortable: {
+    controlHeightPx: 46,
+    buttonPaddingXRem: 1.2,
+    buttonPaddingYRem: 0.8,
+    buttonFontSizeRem: 0.96,
+    cardPaddingRem: 1.45,
+    navHeightPx: 64,
+    sectionTitleGapRem: 1.2,
+  },
+  spacious: {
+    controlHeightPx: 52,
+    buttonPaddingXRem: 1.45,
+    buttonPaddingYRem: 0.95,
+    buttonFontSizeRem: 1,
+    cardPaddingRem: 1.7,
+    navHeightPx: 70,
+    sectionTitleGapRem: 1.45,
+  },
+}
+
+const UI_SURFACE_STYLE_CONFIG = {
+  soft: {
+    surfaceOpacity: 0.92,
+    surfaceBorderAlpha: 0.78,
+    surfaceBlurPx: 10,
+    surfaceShadowOpacity: 0.16,
+    surfaceShadowBlurPx: 36,
+    surfaceShadowSpreadPx: -20,
+  },
+  glass: {
+    surfaceOpacity: 0.74,
+    surfaceBorderAlpha: 0.58,
+    surfaceBlurPx: 18,
+    surfaceShadowOpacity: 0.2,
+    surfaceShadowBlurPx: 44,
+    surfaceShadowSpreadPx: -24,
+  },
+  solid: {
+    surfaceOpacity: 1,
+    surfaceBorderAlpha: 0.92,
+    surfaceBlurPx: 0,
+    surfaceShadowOpacity: 0.1,
+    surfaceShadowBlurPx: 28,
+    surfaceShadowSpreadPx: -18,
+  },
+}
+
+const UI_CARD_STYLE_CONFIG = {
+  editorial: {
+    hoverLiftPx: 8,
+    hoverScale: 1.015,
+    glowOpacity: 0.7,
+    glareOpacity: 0.58,
+    accentBorderAlpha: 0.46,
+  },
+  showcase: {
+    hoverLiftPx: 12,
+    hoverScale: 1.028,
+    glowOpacity: 1,
+    glareOpacity: 1,
+    accentBorderAlpha: 0.72,
+  },
+  panel: {
+    hoverLiftPx: 5,
+    hoverScale: 1.01,
+    glowOpacity: 0.4,
+    glareOpacity: 0.35,
+    accentBorderAlpha: 0.32,
+  },
+}
+
+function resolveEnumValue(rawValue, allowedValues, fallback) {
+  const safeValue = String(rawValue || '').trim().toLowerCase()
+  if (allowedValues.includes(safeValue)) {
+    return safeValue
+  }
+  return fallback
+}
+
+export function resolveUiDensity(rawValue) {
+  return resolveEnumValue(rawValue, Object.keys(UI_DENSITY_CONFIG), 'comfortable')
+}
+
+export function resolveUiSurfaceStyle(rawValue) {
+  return resolveEnumValue(rawValue, Object.keys(UI_SURFACE_STYLE_CONFIG), 'soft')
+}
+
+export function resolveUiHeadingStyle(rawValue) {
+  return resolveEnumValue(rawValue, ['split', 'rule', 'stacked'], 'split')
+}
+
+export function resolveUiNavMode(rawValue) {
+  return resolveEnumValue(rawValue, ['line', 'pill', 'panel'], 'pill')
+}
+
+export function resolveUiCardStyle(rawValue) {
+  return resolveEnumValue(rawValue, Object.keys(UI_CARD_STYLE_CONFIG), 'editorial')
+}
+
+export function getUiThemePrimitives(settings = {}) {
+  const density = resolveUiDensity(settings.ui_density)
+  const surfaceStyle = resolveUiSurfaceStyle(settings.ui_surface_style)
+  const headingStyle = resolveUiHeadingStyle(settings.ui_heading_style)
+  const navMode = resolveUiNavMode(settings.ui_nav_mode)
+  const cardStyle = resolveUiCardStyle(settings.ui_card_style)
+
+  return {
+    density,
+    surfaceStyle,
+    headingStyle,
+    navMode,
+    cardStyle,
+    ...UI_DENSITY_CONFIG[density],
+    ...UI_SURFACE_STYLE_CONFIG[surfaceStyle],
+    ...UI_CARD_STYLE_CONFIG[cardStyle],
+  }
+}
+
 export const DEFAULT_THEME_SETTINGS = {
   theme_dark_bg_primary: '#060b0f',
   theme_dark_bg_secondary: '#0a1118',
@@ -37,6 +195,11 @@ export const DEFAULT_THEME_SETTINGS = {
   ui_font_heading: 'inter',
   ui_font_mono: 'jetbrains',
   ui_font_scale: '1',
+  ui_density: 'comfortable',
+  ui_surface_style: 'soft',
+  ui_heading_style: 'split',
+  ui_nav_mode: 'pill',
+  ui_card_style: 'editorial',
   ui_radius_base: '12',
   ui_glow_strength: '1',
   ui_transition_speed: '300',
@@ -175,6 +338,7 @@ function resolveFontFamily(fontToken, fallbackToken) {
 function buildThemeConfig(settings = {}) {
   const durationScale = clampNumber(settings.anim_duration_scale, 0.6, 2, 1)
   const intensity = clampNumber(settings.anim_intensity, 0.4, 2.5, 1)
+  const primitives = getUiThemePrimitives(settings)
 
   return {
     darkBgPrimary: normalizeHexColor(settings.theme_dark_bg_primary, DEFAULT_THEME_SETTINGS.theme_dark_bg_primary),
@@ -197,6 +361,29 @@ function buildThemeConfig(settings = {}) {
     fontHeading: resolveFontFamily(settings.ui_font_heading, DEFAULT_THEME_SETTINGS.ui_font_heading),
     fontMono: resolveFontFamily(settings.ui_font_mono, DEFAULT_THEME_SETTINGS.ui_font_mono),
     fontScale: clampNumber(settings.ui_font_scale, 0.9, 1.2, 1),
+    density: primitives.density,
+    surfaceStyle: primitives.surfaceStyle,
+    headingStyle: primitives.headingStyle,
+    navMode: primitives.navMode,
+    cardStyle: primitives.cardStyle,
+    controlHeightPx: primitives.controlHeightPx,
+    buttonPaddingXRem: primitives.buttonPaddingXRem,
+    buttonPaddingYRem: primitives.buttonPaddingYRem,
+    buttonFontSizeRem: primitives.buttonFontSizeRem,
+    cardPaddingRem: primitives.cardPaddingRem,
+    navHeightPx: primitives.navHeightPx,
+    sectionTitleGapRem: primitives.sectionTitleGapRem,
+    surfaceOpacity: primitives.surfaceOpacity,
+    surfaceBorderAlpha: primitives.surfaceBorderAlpha,
+    surfaceBlurPx: primitives.surfaceBlurPx,
+    surfaceShadowOpacity: primitives.surfaceShadowOpacity,
+    surfaceShadowBlurPx: primitives.surfaceShadowBlurPx,
+    surfaceShadowSpreadPx: primitives.surfaceShadowSpreadPx,
+    cardHoverLiftPx: primitives.hoverLiftPx,
+    cardHoverScale: primitives.hoverScale,
+    cardGlowOpacity: primitives.glowOpacity,
+    cardGlareOpacity: primitives.glareOpacity,
+    cardAccentBorderAlpha: primitives.accentBorderAlpha,
     radiusPx: clampNumber(settings.ui_radius_base, 4, 24, 12),
     glowStrength: clampNumber(settings.ui_glow_strength, 0.3, 2, 1),
     transitionSpeedMs: clampNumber(settings.ui_transition_speed, 100, 800, 300) * durationScale,
@@ -254,6 +441,29 @@ export function applyThemeSettings(settings = {}) {
   rootStyle.setProperty('--font-family-heading', config.fontHeading)
   rootStyle.setProperty('--font-family-mono', config.fontMono)
   rootStyle.setProperty('--ui-font-scale', String(config.fontScale))
+  rootStyle.setProperty('--ui-density', config.density)
+  rootStyle.setProperty('--ui-surface-style', config.surfaceStyle)
+  rootStyle.setProperty('--ui-heading-style', config.headingStyle)
+  rootStyle.setProperty('--ui-nav-mode', config.navMode)
+  rootStyle.setProperty('--ui-card-style', config.cardStyle)
+  rootStyle.setProperty('--ui-control-height', `${config.controlHeightPx}px`)
+  rootStyle.setProperty('--ui-button-px', `${config.buttonPaddingXRem}rem`)
+  rootStyle.setProperty('--ui-button-py', `${config.buttonPaddingYRem}rem`)
+  rootStyle.setProperty('--ui-button-font-size', `${config.buttonFontSizeRem}rem`)
+  rootStyle.setProperty('--ui-card-padding', `${config.cardPaddingRem}rem`)
+  rootStyle.setProperty('--ui-nav-height', `${config.navHeightPx}px`)
+  rootStyle.setProperty('--ui-section-title-gap', `${config.sectionTitleGapRem}rem`)
+  rootStyle.setProperty('--ui-surface-opacity', String(config.surfaceOpacity))
+  rootStyle.setProperty('--ui-surface-border-alpha', String(config.surfaceBorderAlpha))
+  rootStyle.setProperty('--ui-surface-blur', `${config.surfaceBlurPx}px`)
+  rootStyle.setProperty('--ui-surface-shadow-opacity', String(config.surfaceShadowOpacity))
+  rootStyle.setProperty('--ui-surface-shadow-blur', `${config.surfaceShadowBlurPx}px`)
+  rootStyle.setProperty('--ui-surface-shadow-spread', `${config.surfaceShadowSpreadPx}px`)
+  rootStyle.setProperty('--ui-card-hover-lift', `${config.cardHoverLiftPx}px`)
+  rootStyle.setProperty('--ui-card-hover-scale', String(config.cardHoverScale))
+  rootStyle.setProperty('--ui-card-glow-opacity', String(config.cardGlowOpacity))
+  rootStyle.setProperty('--ui-card-glare-opacity', String(config.cardGlareOpacity))
+  rootStyle.setProperty('--ui-card-accent-border-alpha', String(config.cardAccentBorderAlpha))
   rootStyle.setProperty('--ui-radius-base', `${config.radiusPx}px`)
   rootStyle.setProperty('--ui-glow-strength', String(config.glowStrength))
   rootStyle.setProperty('--ui-transition-ms', `${config.transitionSpeedMs}ms`)
