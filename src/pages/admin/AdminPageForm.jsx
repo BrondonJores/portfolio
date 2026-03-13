@@ -2,6 +2,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import {
+  ArrowTopRightOnSquareIcon,
+  DocumentTextIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import BlockEditor from '../../components/admin/BlockEditor.jsx'
 import BlockRenderer from '../../components/ui/BlockRenderer.jsx'
@@ -31,10 +36,23 @@ const AUTOSAVE_DEBOUNCE_MS = 900
 const LOCAL_DRAFT_PREFIX = 'portfolio_cms_page_form_draft'
 
 const inputStyle = {
-  backgroundColor: 'var(--color-bg-primary)',
-  borderColor: 'var(--color-border)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 88%, transparent)',
+  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
   color: 'var(--color-text-primary)',
 }
+
+const panelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 78%, transparent)',
+}
+
+const insetPanelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+}
+
+const textInputClassName = 'w-full rounded-2xl border px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]'
+const textareaClassName = `${textInputClassName} min-h-[124px] resize-y`
 
 const EMPTY_FORM = {
   title: '',
@@ -102,6 +120,27 @@ function parseLayout(value) {
  */
 function getLocalDraftKey(isEdit, pageId) {
   return isEdit ? `${LOCAL_DRAFT_PREFIX}_edit_${pageId}` : `${LOCAL_DRAFT_PREFIX}_new`
+}
+
+/**
+ * Retourne le style du badge de statut.
+ * @param {string} status Statut courant.
+ * @returns {{color:string, backgroundColor:string, borderColor:string}} Style badge.
+ */
+function getStatusTone(status) {
+  if (status === 'published') {
+    return {
+      color: '#4ade80',
+      backgroundColor: 'rgba(74, 222, 128, 0.12)',
+      borderColor: 'rgba(74, 222, 128, 0.28)',
+    }
+  }
+
+  return {
+    color: '#f59e0b',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.28)',
+  }
 }
 
 export default function AdminPageForm() {
@@ -379,6 +418,10 @@ export default function AdminPageForm() {
     }
   }
 
+  const statusTone = getStatusTone(status)
+  const liveSlug = toSlug(form.slug || form.title) || 'nouvelle-page'
+  const sectionCount = blocks.length
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -393,142 +436,261 @@ export default function AdminPageForm() {
         <title>{isEdit ? 'Modifier la page CMS' : 'Nouvelle page CMS'} - Administration</title>
       </Helmet>
 
-      <div className="max-w-7xl">
-        <h1 className="text-2xl font-bold mb-8" style={{ color: 'var(--color-text-primary)' }}>
-          {isEdit ? 'Modifier la page CMS' : 'Nouvelle page CMS'}
-        </h1>
+      <div className="max-w-7xl space-y-6">
+        <section
+          className="overflow-hidden rounded-[32px] border px-5 py-5 sm:px-6 sm:py-6"
+          style={panelStyle}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <span
+                className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em]"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                <DocumentTextIcon className="h-4 w-4" aria-hidden="true" />
+                Page system
+              </span>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl" style={{ color: 'var(--color-text-primary)' }}>
+                  {isEdit ? 'Affiner la page sans perdre le fil du rendu.' : 'Composer une page qui reste premium meme en edition.'}
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 sm:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                  Structure, SEO et preview live sont regroupes dans un meme cockpit pour reduire
+                  les allers-retours et garder une vue claire sur l’etat de publication.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <span
+                className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]"
+                style={statusTone}
+              >
+                {status === 'published' ? 'Publiee' : 'Brouillon'}
+              </span>
+              <span
+                className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                {autosaveLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: 'Sections en cours', value: sectionCount },
+              { label: 'Slug live', value: liveSlug, mono: true },
+              { label: 'Publication', value: publishedAt ? fmtDate(publishedAt) : 'Pas encore publiee' },
+            ].map((metric) => (
+              <article
+                key={metric.label}
+                className="rounded-[24px] border px-4 py-4"
+                style={insetPanelStyle}
+              >
+                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {metric.label}
+                </p>
+                <p
+                  className={`mt-3 text-sm font-semibold sm:text-base ${metric.mono ? 'font-mono' : ''}`}
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  {metric.value}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
-            <div className="space-y-5 min-w-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    Titre <span style={{ color: '#f87171' }}>*</span>
-                  </label>
-                  <input
-                    name="title"
-                    type="text"
-                    value={form.title}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                    style={inputStyle}
-                    required
-                  />
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
+            <div className="min-w-0 space-y-5">
+              <section className="rounded-[28px] border p-5 sm:p-6" style={panelStyle}>
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Fondations de la page
+                    </h2>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      Definis le titre, la route et l’identite editoriale de base.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openVisualBuilder}
+                    className="inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-medium transition hover:-translate-y-0.5"
+                    style={insetPanelStyle}
+                  >
+                    <SparklesIcon className="h-4 w-4" aria-hidden="true" />
+                    Ouvrir le builder visuel
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--color-text-secondary)' }}>
-                    Slug
-                  </label>
-                  <input
-                    name="slug"
-                    type="text"
-                    value={form.slug}
-                    onChange={handleChange}
-                    placeholder={toSlug(form.title)}
-                    className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] font-mono"
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
 
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                    Contenu <span style={{ color: '#f87171' }}>*</span>
-                  </label>
-                  <Button type="button" variant="ghost" onClick={openVisualBuilder}>
-                    Builder visuel
-                  </Button>
-                </div>
-                <BlockEditor
-                  blocks={blocks}
-                  onChange={setBlocks}
-                  templates={editorTemplates}
-                  allowSections
-                />
-              </div>
-
-              <div
-                className="rounded-xl border p-4 space-y-4"
-                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
-              >
-                <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                  SEO de la page
-                </h2>
-                <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                    Meta title
-                  </label>
-                  <input
-                    name="seo_title"
-                    type="text"
-                    value={form.seo_title}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                    style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                    Meta description
-                  </label>
-                  <textarea
-                    name="seo_description"
-                    value={form.seo_description}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] resize-none"
-                    style={inputStyle}
-                  />
-                </div>
-                <ImageUploader
-                  label="Image Open Graph"
-                  value={form.og_image}
-                  onUpload={(url) => setForm((prev) => ({ ...prev, og_image: url }))}
-                />
-                <div>
-                  <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                    URL canonique
-                  </label>
-                  <input
-                    name="canonical_url"
-                    type="url"
-                    value={form.canonical_url}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                    style={inputStyle}
-                  />
-                </div>
-                <div className="flex items-center gap-5">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                      Titre <span style={{ color: '#f87171' }}>*</span>
+                    </label>
                     <input
-                      name="noindex"
-                      type="checkbox"
-                      checked={form.noindex}
+                      name="title"
+                      type="text"
+                      value={form.title}
                       onChange={handleChange}
-                      style={{ accentColor: 'var(--color-accent)' }}
+                      className={textInputClassName}
+                      style={inputStyle}
+                      required
                     />
-                    <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                      noindex
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      name="nofollow"
-                      type="checkbox"
-                      checked={form.nofollow}
-                      onChange={handleChange}
-                      style={{ accentColor: 'var(--color-accent)' }}
-                    />
-                    <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                      nofollow
-                    </span>
-                  </label>
-                </div>
-              </div>
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      Utilise un titre clair, distinctif et assez fort pour la navigation.
+                    </p>
+                  </div>
 
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                      Slug
+                    </label>
+                    <input
+                      name="slug"
+                      type="text"
+                      value={form.slug}
+                      onChange={handleChange}
+                      placeholder={toSlug(form.title)}
+                      className={`${textInputClassName} font-mono`}
+                      style={inputStyle}
+                    />
+                    <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      La route finale sera generee en format `/pages/{liveSlug}`.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-[28px] border p-5 sm:p-6" style={panelStyle}>
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Architecture du contenu
+                    </h2>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      Gere les blocs comme un storyboard, avec un rendu qui reste visible a droite.
+                    </p>
+                  </div>
+                  <span
+                    className="inline-flex w-fit items-center rounded-full border px-3 py-1 text-xs font-medium"
+                    style={insetPanelStyle}
+                  >
+                    {sectionCount} bloc{sectionCount > 1 ? 's' : ''} actif{sectionCount > 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <div className="rounded-[24px] border p-3 sm:p-4" style={insetPanelStyle}>
+                  <BlockEditor
+                    blocks={blocks}
+                    onChange={setBlocks}
+                    templates={editorTemplates}
+                    allowSections
+                  />
+                </div>
+              </section>
+
+              <section className="rounded-[28px] border p-5 sm:p-6" style={panelStyle}>
+                <div className="mb-5">
+                  <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    SEO et diffusion
+                  </h2>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    Prepare les meta signaux qui accompagnent la page dans les recherches et les partages.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <div className="space-y-4 rounded-[24px] border p-4" style={insetPanelStyle}>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                        Meta title
+                      </label>
+                      <input
+                        name="seo_title"
+                        type="text"
+                        value={form.seo_title}
+                        onChange={handleChange}
+                        className={textInputClassName}
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                        Meta description
+                      </label>
+                      <textarea
+                        name="seo_description"
+                        value={form.seo_description}
+                        onChange={handleChange}
+                        rows={4}
+                        className={textareaClassName}
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-[24px] border p-4" style={insetPanelStyle}>
+                    <ImageUploader
+                      label="Image Open Graph"
+                      value={form.og_image}
+                      onUpload={(url) => setForm((prev) => ({ ...prev, og_image: url }))}
+                    />
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                        URL canonique
+                      </label>
+                      <input
+                        name="canonical_url"
+                        type="url"
+                        value={form.canonical_url}
+                        onChange={handleChange}
+                        className={textInputClassName}
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {[
+                        { key: 'noindex', label: 'Masquer des moteurs', checked: form.noindex },
+                        { key: 'nofollow', label: 'Ne pas suivre les liens', checked: form.nofollow },
+                      ].map((toggle) => (
+                        <label
+                          key={toggle.key}
+                          className="flex cursor-pointer items-center justify-between rounded-2xl border px-4 py-3"
+                          style={inputStyle}
+                        >
+                          <span className="pr-4 text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                            {toggle.label}
+                          </span>
+                          <input
+                            name={toggle.key}
+                            type="checkbox"
+                            checked={toggle.checked}
+                            onChange={handleChange}
+                            style={{ accentColor: 'var(--color-accent)' }}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
                 <Button type="submit" variant="primary" disabled={saving}>
                   {saving ? <Spinner size="sm" /> : isEdit ? 'Enregistrer' : 'Creer la page'}
                 </Button>
@@ -549,71 +711,82 @@ export default function AdminPageForm() {
             </div>
 
             <aside className="space-y-4 xl:sticky xl:top-24 self-start">
-              <div
-                className="rounded-xl border p-3 space-y-1"
-                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-                  Autosave local
-                </p>
-                <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
-                  {autosaveLabel}
-                </p>
-                {localDraftRestored && (
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    Un brouillon local a ete restaure automatiquement.
-                  </p>
-                )}
-              </div>
-
-              <div
-                className="rounded-xl border p-3 space-y-1"
-                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
-              >
-                <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                  Statut: <strong style={{ color: 'var(--color-text-primary)' }}>{status}</strong>
-                </p>
-                <p className="text-xs font-mono" style={{ color: 'var(--color-text-secondary)' }}>
-                  URL: /pages/{toSlug(form.slug || form.title) || 'nouvelle-page'}
-                </p>
-                {publishedAt && (
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    Publiee le: {fmtDate(publishedAt)}
-                  </p>
-                )}
-              </div>
-
-              <div
-                className="rounded-xl border overflow-hidden"
-                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-secondary)' }}
-              >
-                <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                    Apercu live page
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    Rendu en temps reel de la page CMS.
-                  </p>
-                </div>
-                <div className="p-4 max-h-[70vh] overflow-y-auto space-y-4">
-                  <section
-                    className="rounded-lg border p-3"
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
-                  >
-                    <h2 className="text-xl font-semibold break-words" style={{ color: 'var(--color-text-primary)' }}>
-                      {form.title.trim() || 'Titre de la page...'}
+              <section className="rounded-[28px] border p-5" style={panelStyle}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      Pulse
+                    </p>
+                    <h2 className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Etat de la page
                     </h2>
+                  </div>
+                  <span
+                    className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                    style={statusTone}
+                  >
+                    {status === 'published' ? 'Live' : 'Draft'}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {[
+                    { label: 'Autosave local', value: autosaveLabel },
+                    { label: 'Route finale', value: `/pages/${liveSlug}`, mono: true },
+                    { label: 'Publication', value: publishedAt ? fmtDate(publishedAt) : 'En attente' },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[22px] border px-4 py-3" style={insetPanelStyle}>
+                      <p className="text-[11px] uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        {item.label}
+                      </p>
+                      <p
+                        className={`mt-2 text-sm font-medium ${item.mono ? 'font-mono' : ''}`}
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {localDraftRestored && (
+                  <p className="mt-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    Un brouillon local a ete restaure automatiquement sur ce navigateur.
+                  </p>
+                )}
+              </section>
+
+              <section className="overflow-hidden rounded-[28px] border" style={panelStyle}>
+                <div className="border-b px-5 py-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+                  <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    Preview
+                  </p>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Apercu live page
+                    </h2>
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px]"
+                      style={insetPanelStyle}
+                    >
+                      <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                      Temps reel
+                    </span>
+                  </div>
+                </div>
+                <div className="max-h-[72vh] space-y-4 overflow-y-auto p-5">
+                  <section className="rounded-[22px] border p-4" style={insetPanelStyle}>
+                    <h3 className="break-words text-2xl font-semibold tracking-[-0.03em]" style={{ color: 'var(--color-text-primary)' }}>
+                      {form.title.trim() || 'Titre de la page...'}
+                    </h3>
                     {form.seo_description.trim() && (
-                      <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      <p className="mt-3 text-sm leading-7" style={{ color: 'var(--color-text-secondary)' }}>
                         {form.seo_description}
                       </p>
                     )}
                   </section>
 
-                  <article
-                    className="rounded-lg border p-3"
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
-                  >
+                  <article className="rounded-[22px] border p-4" style={insetPanelStyle}>
                     {blocks.length > 0 ? (
                       <BlockRenderer content={previewContent} />
                     ) : (
@@ -623,7 +796,7 @@ export default function AdminPageForm() {
                     )}
                   </article>
                 </div>
-              </div>
+              </section>
             </aside>
           </div>
         </form>

@@ -1,5 +1,5 @@
 /* Page de gestion des pages CMS (draft/published) dans l'administration. */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -8,6 +8,7 @@ import {
   PlusIcon,
   RocketLaunchIcon,
   ArrowDownOnSquareStackIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import ConfirmModal from '../../components/admin/ConfirmModal.jsx'
@@ -25,6 +26,16 @@ import { openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/
 
 const PAGE_LIMIT = 12
 
+const panelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 78%, transparent)',
+}
+
+const metricCardStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 56%, transparent)',
+}
+
 /**
  * Formate une date en texte lisible FR.
  * @param {string | Date | null | undefined} value Date source.
@@ -34,7 +45,41 @@ function fmtDate(value) {
   if (!value) return '-'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleDateString('fr-FR')
+  return date.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+/**
+ * Retourne les couleurs d'un badge de statut.
+ * @param {'published' | 'draft' | string} status Statut de la page.
+ * @returns {{color: string, backgroundColor: string, borderColor: string}} Styles badge.
+ */
+function getStatusTone(status) {
+  if (status === 'published') {
+    return {
+      color: '#4ade80',
+      backgroundColor: 'rgba(74, 222, 128, 0.12)',
+      borderColor: 'rgba(74, 222, 128, 0.26)',
+    }
+  }
+
+  return {
+    color: '#f59e0b',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.26)',
+  }
+}
+
+/**
+ * Retourne le titre principal de la page CMS.
+ * @param {object} page Page CMS admin.
+ * @returns {string} Titre a afficher.
+ */
+function getPageTitle(page) {
+  return page?.draft?.title || page?.published?.title || page?.slug || 'Page sans titre'
 }
 
 export default function AdminPages() {
@@ -53,6 +98,7 @@ export default function AdminPages() {
 
   /**
    * Charge la liste des pages CMS cote admin.
+   * @param {number} [targetPage=currentPage] Page cible.
    * @returns {Promise<void>} Promise resolue apres chargement.
    */
   const loadPages = async (targetPage = currentPage) => {
@@ -75,7 +121,7 @@ export default function AdminPages() {
 
       const pages = Math.max(1, Math.ceil(nextTotal / Math.max(nextLimit, 1)))
       if (targetPage > pages && nextTotal > 0) {
-          setCurrentPage(pages)
+        setCurrentPage(pages)
       }
     } catch {
       addToast('Erreur lors du chargement des pages CMS.', 'error')
@@ -151,135 +197,266 @@ export default function AdminPages() {
     }
   }
 
+  const publishedCount = useMemo(
+    () => items.filter((page) => page?.status === 'published').length,
+    [items]
+  )
+  const draftCount = useMemo(
+    () => items.filter((page) => page?.status !== 'published').length,
+    [items]
+  )
+
   return (
     <>
       <Helmet>
         <title>Pages CMS - Administration</title>
       </Helmet>
 
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-            Pages CMS
-          </h1>
-          <Button variant="primary" onClick={() => openPageEditor('/admin/pages/nouveau')}>
-            <PlusIcon className="h-4 w-4" aria-hidden="true" />
-            Nouvelle page
-          </Button>
-        </div>
+      <div className="space-y-6">
+        <section
+          className="overflow-hidden rounded-[32px] border px-5 py-5 sm:px-6 sm:py-6"
+          style={panelStyle}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <span
+                className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em]"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                <DocumentTextIcon className="h-4 w-4" aria-hidden="true" />
+                CMS studio
+              </span>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl" style={{ color: 'var(--color-text-primary)' }}>
+                  Des pages qui gardent leur allure, meme en mode ops.
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 sm:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                  Gere tes pages marketing, tes brouillons et tes publications dans un espace plus lisible,
+                  plus editorial et mieux calibre pour les editions rapides.
+                </p>
+              </div>
+            </div>
+
+            <Button variant="primary" onClick={() => openPageEditor('/admin/pages/nouveau')} className="w-full sm:w-auto">
+              <PlusIcon className="h-4 w-4" aria-hidden="true" />
+              Nouvelle page
+            </Button>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: 'Pages visibles', value: publishedCount },
+              { label: 'Brouillons actifs', value: draftCount },
+              { label: 'Total suivis', value: pagination.total },
+            ].map((metric) => (
+              <article key={metric.label} className="rounded-[24px] border px-4 py-4" style={metricCardStyle}>
+                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {metric.label}
+                </p>
+                <p className="mt-3 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {metric.value}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         {loading ? (
-          <div className="flex justify-center py-20">
+          <div className="flex justify-center rounded-[28px] border py-20" style={panelStyle}>
             <Spinner size="lg" />
           </div>
         ) : items.length === 0 ? (
-          <p style={{ color: 'var(--color-text-secondary)' }}>
-            Aucune page CMS. Creez votre premiere page.
-          </p>
-        ) : (
-          <div
-            className="rounded-xl border overflow-hidden"
-            style={{ borderColor: 'var(--color-border)' }}
+          <section
+            className="rounded-[28px] border px-6 py-14 text-center"
+            style={panelStyle}
           >
-            <table className="w-full text-sm">
-              <thead
-                style={{
-                  backgroundColor: 'var(--color-bg-secondary)',
-                  color: 'var(--color-text-secondary)',
-                }}
-              >
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">Titre</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Slug</th>
-                  <th className="text-left px-4 py-3 font-medium">Statut</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Maj</th>
-                  <th className="text-right px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((page, index) => (
-                  <tr
+            <p className="text-lg font-medium" style={{ color: 'var(--color-text-primary)' }}>
+              Aucune page CMS pour le moment.
+            </p>
+            <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              Cree ta premiere page pour commencer a structurer tes contenus evergreen.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <Button variant="primary" onClick={() => openPageEditor('/admin/pages/nouveau')}>
+                <PlusIcon className="h-4 w-4" aria-hidden="true" />
+                Creer une page
+              </Button>
+            </div>
+          </section>
+        ) : (
+          <>
+            <div className="grid gap-4 lg:hidden">
+              {items.map((page) => {
+                const isBusy = busyId === page.id
+                const statusTone = getStatusTone(page.status)
+
+                return (
+                  <article
                     key={page.id}
-                    style={{
-                      backgroundColor:
-                        index % 2 === 0 ? 'var(--color-bg-card)' : 'var(--color-bg-secondary)',
-                      borderTop: '1px solid var(--color-border)',
-                    }}
+                    className="rounded-[26px] border p-4"
+                    style={panelStyle}
                   >
-                    <td
-                      className="px-4 py-3 font-medium"
-                      style={{ color: 'var(--color-text-primary)' }}
-                    >
-                      {page?.draft?.title || page?.published?.title || page.slug}
-                    </td>
-                    <td
-                      className="px-4 py-3 hidden md:table-cell font-mono text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      /pages/{page.slug}
-                    </td>
-                    <td className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-2">
+                        <p className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {getPageTitle(page)}
+                        </p>
+                        <p className="font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          /pages/{page.slug}
+                        </p>
+                      </div>
                       <span
-                        className="text-xs px-2 py-0.5 rounded"
-                        style={{
-                          color: page.status === 'published' ? '#4ade80' : '#f59e0b',
-                          backgroundColor:
-                            page.status === 'published'
-                              ? 'rgba(74, 222, 128, 0.1)'
-                              : 'rgba(245, 158, 11, 0.1)',
-                        }}
+                        className="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                        style={statusTone}
                       >
                         {page.status === 'published' ? 'Publiee' : 'Brouillon'}
                       </span>
-                    </td>
-                    <td
-                      className="px-4 py-3 hidden lg:table-cell text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-[20px] border px-3 py-3" style={metricCardStyle}>
+                        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          Derniere mise a jour
+                        </p>
+                        <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                          {fmtDate(page.updatedAt)}
+                        </p>
+                      </div>
+                      <div className="rounded-[20px] border px-3 py-3" style={metricCardStyle}>
+                        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          URL live
+                        </p>
+                        <p className="mt-2 truncate font-mono text-xs" style={{ color: 'var(--color-text-primary)' }}>
+                          /pages/{page.slug}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button variant="secondary" onClick={() => openPageEditor(`/admin/pages/${page.id}`)} className="flex-1">
+                        <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
+                        Modifier
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => void togglePublish(page)}
+                        disabled={isBusy}
+                        className="flex-1"
+                      >
+                        {page.status === 'published' ? (
+                          <ArrowDownOnSquareStackIcon className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                          <RocketLaunchIcon className="h-4 w-4" aria-hidden="true" />
+                        )}
+                        {page.status === 'published' ? 'Depublier' : 'Publier'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setConfirmId(page.id)}
+                        disabled={isBusy}
+                        className="w-full sm:w-auto"
+                      >
+                        <TrashIcon className="h-4 w-4" aria-hidden="true" />
+                        Supprimer
+                      </Button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+
+            <section className="hidden overflow-hidden rounded-[30px] border lg:block" style={panelStyle}>
+              <div
+                className="grid grid-cols-[minmax(0,1.3fr)_minmax(180px,0.8fr)_130px_150px_180px] gap-4 border-b px-6 py-4 text-[11px] font-semibold uppercase tracking-[0.22em]"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+                }}
+              >
+                <span>Titre</span>
+                <span>Route</span>
+                <span>Statut</span>
+                <span>Mise a jour</span>
+                <span className="text-right">Actions</span>
+              </div>
+
+              <div className="divide-y" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+                {items.map((page) => {
+                  const isBusy = busyId === page.id
+                  const statusTone = getStatusTone(page.status)
+
+                  return (
+                    <div
+                      key={page.id}
+                      className="grid grid-cols-[minmax(0,1.3fr)_minmax(180px,0.8fr)_130px_150px_180px] items-center gap-4 px-6 py-5 transition-transform duration-200 hover:-translate-y-0.5"
+                      style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 72%, transparent)' }}
                     >
-                      {fmtDate(page.updatedAt)}
-                    </td>
-                    <td className="px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {getPageTitle(page)}
+                        </p>
+                        <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          Edition rapide disponible depuis la fenetre dediee.
+                        </p>
+                      </div>
+
+                      <p className="truncate font-mono text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                        /pages/{page.slug}
+                      </p>
+
+                      <span
+                        className="inline-flex w-fit rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                        style={statusTone}
+                      >
+                        {page.status === 'published' ? 'Publiee' : 'Brouillon'}
+                      </span>
+
+                      <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        {fmtDate(page.updatedAt)}
+                      </p>
+
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openPageEditor(`/admin/pages/${page.id}`)}
-                          className="p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                          aria-label={`Modifier ${page.slug}`}
-                        >
-                          <PencilSquareIcon className="h-4 w-4" />
-                        </button>
-                        <button
+                        <Button variant="secondary" onClick={() => openPageEditor(`/admin/pages/${page.id}`)}>
+                          <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
+                          Modifier
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
                           onClick={() => void togglePublish(page)}
-                          disabled={busyId === page.id}
-                          className="p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-50"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                          aria-label={page.status === 'published' ? 'Depublier la page' : 'Publier la page'}
+                          disabled={isBusy}
                         >
                           {page.status === 'published' ? (
-                            <ArrowDownOnSquareStackIcon className="h-4 w-4" />
+                            <ArrowDownOnSquareStackIcon className="h-4 w-4" aria-hidden="true" />
                           ) : (
-                            <RocketLaunchIcon className="h-4 w-4" />
+                            <RocketLaunchIcon className="h-4 w-4" aria-hidden="true" />
                           )}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
                           onClick={() => setConfirmId(page.id)}
-                          disabled={busyId === page.id}
-                          className="p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
-                          style={{ color: 'var(--color-text-secondary)' }}
-                          aria-label={`Supprimer ${page.slug}`}
+                          disabled={isBusy}
                         >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
+                          <TrashIcon className="h-4 w-4" aria-hidden="true" />
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          </>
         )}
 
-        <div className="mt-4">
+        <div className="pt-1">
           <AdminPagination
             total={pagination.total}
             limit={pagination.limit}

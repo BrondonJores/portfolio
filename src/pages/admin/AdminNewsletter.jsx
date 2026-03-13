@@ -1,8 +1,14 @@
-﻿/* Page de gestion des campagnes newsletter admin */
-import { useEffect, useState } from 'react'
+/* Page de gestion des campagnes newsletter admin */
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { TrashIcon, PaperAirplaneIcon, PlusIcon } from '@heroicons/react/24/outline'
+import {
+  TrashIcon,
+  PaperAirplaneIcon,
+  PlusIcon,
+  PencilSquareIcon,
+  EnvelopeIcon,
+} from '@heroicons/react/24/outline'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import AdminPagination from '../../components/admin/AdminPagination.jsx'
 import Spinner from '../../components/ui/Spinner.jsx'
@@ -17,6 +23,51 @@ import { openAdminEditorWindow, subscribeAdminEditorRefresh } from '../../utils/
 
 const PAGE_LIMIT = 12
 
+const panelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 78%, transparent)',
+}
+
+const metricCardStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 56%, transparent)',
+}
+
+/**
+ * Formate une date courte FR.
+ * @param {string | null | undefined} dateString Date source.
+ * @returns {string} Date lisible.
+ */
+function formatDate(dateString) {
+  if (!dateString) return '-'
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+/**
+ * Retourne le style visuel d'un statut campagne.
+ * @param {string} status Statut campagne.
+ * @returns {{color: string, backgroundColor: string, borderColor: string}} Styles.
+ */
+function getStatusTone(status) {
+  if (status === 'sent') {
+    return {
+      color: '#4ade80',
+      backgroundColor: 'rgba(74, 222, 128, 0.12)',
+      borderColor: 'rgba(74, 222, 128, 0.26)',
+    }
+  }
+
+  return {
+    color: 'var(--color-text-secondary)',
+    backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 72%, transparent)',
+    borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  }
+}
+
 export default function AdminNewsletter() {
   const addToast = useAdminToast()
   const navigate = useNavigate()
@@ -29,7 +80,13 @@ export default function AdminNewsletter() {
     offset: 0,
   })
   const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState(null)
 
+  /**
+   * Charge les campagnes newsletter.
+   * @param {number} [targetPage=page] Page cible.
+   * @returns {void}
+   */
   const loadCampaigns = (targetPage = page) => {
     const offset = toOffsetFromPage(targetPage, PAGE_LIMIT)
     setLoading(true)
@@ -79,34 +136,50 @@ export default function AdminNewsletter() {
     }
   }
 
+  /**
+   * Supprime une campagne.
+   * @param {number|string} id Identifiant campagne.
+   * @returns {Promise<void>} Promise de suppression.
+   */
   const handleDelete = async (id) => {
+    setBusyId(id)
     try {
       await deleteCampaign(id)
       addToast('Campagne supprimee.', 'success')
       loadCampaigns(page)
     } catch (err) {
       addToast(err.message || 'Erreur lors de la suppression.', 'error')
+    } finally {
+      setBusyId(null)
     }
   }
 
+  /**
+   * Envoie une campagne brouillon.
+   * @param {number|string} id Identifiant campagne.
+   * @returns {Promise<void>} Promise d'envoi.
+   */
   const handleSend = async (id) => {
+    setBusyId(id)
     try {
       await sendCampaign(id)
       addToast('Campagne envoyee avec succes.', 'success')
       loadCampaigns(page)
     } catch (err) {
       addToast(err.message || "Erreur lors de l'envoi.", 'error')
+    } finally {
+      setBusyId(null)
     }
   }
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
+  const sentCount = useMemo(
+    () => campaigns.filter((campaign) => campaign?.status === 'sent').length,
+    [campaigns]
+  )
+  const draftCount = useMemo(
+    () => campaigns.filter((campaign) => campaign?.status !== 'sent').length,
+    [campaigns]
+  )
 
   return (
     <>
@@ -114,169 +187,264 @@ export default function AdminNewsletter() {
         <title>Newsletter - Administration</title>
       </Helmet>
 
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: 'var(--color-text-primary)' }}
-          >
-            Newsletter
-          </h1>
+      <div className="space-y-6">
+        <section
+          className="overflow-hidden rounded-[32px] border px-5 py-5 sm:px-6 sm:py-6"
+          style={panelStyle}
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <span
+                className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em]"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
+                Audience ops
+              </span>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl" style={{ color: 'var(--color-text-primary)' }}>
+                  Des campagnes plus nettes, du brouillon jusqu'a l'envoi.
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 sm:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                  Suit les brouillons, garde un oeil sur ce qui est deja parti et declenche
+                  les envois sans quitter un cockpit plus lisible et plus dense.
+                </p>
+              </div>
+            </div>
 
-          <Button
-            variant="primary"
-            onClick={() => openNewsletterEditor('/admin/newsletter/new')}
-          >
-            <PlusIcon className="h-4 w-4" aria-hidden="true" />
-            Nouvelle campagne
-          </Button>
-        </div>
+            <Button variant="primary" onClick={() => openNewsletterEditor('/admin/newsletter/new')} className="w-full sm:w-auto">
+              <PlusIcon className="h-4 w-4" aria-hidden="true" />
+              Nouvelle campagne
+            </Button>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: 'Brouillons prets', value: draftCount },
+              { label: 'Campagnes envoyees', value: sentCount },
+              { label: 'Total suivis', value: pagination.total },
+            ].map((metric) => (
+              <article key={metric.label} className="rounded-[24px] border px-4 py-4" style={metricCardStyle}>
+                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {metric.label}
+                </p>
+                <p className="mt-3 text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                  {metric.value}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         {loading ? (
-          <div className="flex justify-center py-20">
+          <div className="flex justify-center rounded-[28px] border py-20" style={panelStyle}>
             <Spinner size="lg" />
           </div>
         ) : campaigns.length === 0 ? (
-          <p style={{ color: 'var(--color-text-secondary)' }}>
-            Aucune campagne.
-          </p>
+          <section className="rounded-[28px] border px-6 py-14 text-center" style={panelStyle}>
+            <p className="text-lg font-medium" style={{ color: 'var(--color-text-primary)' }}>
+              Aucune campagne newsletter pour l’instant.
+            </p>
+            <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              Cree un premier brouillon pour lancer ton canal de diffusion.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <Button variant="primary" onClick={() => openNewsletterEditor('/admin/newsletter/new')}>
+                <PlusIcon className="h-4 w-4" aria-hidden="true" />
+                Creer une campagne
+              </Button>
+            </div>
+          </section>
         ) : (
-          <div
-            className="rounded-xl border overflow-hidden"
-            style={{ borderColor: 'var(--color-border)' }}
-          >
-            <table className="w-full text-sm">
-              <thead
+          <>
+            <div className="grid gap-4 lg:hidden">
+              {campaigns.map((campaign) => {
+                const isBusy = busyId === campaign.id
+                const statusTone = getStatusTone(campaign.status)
+                const articleCount = Array.isArray(campaign.articles) ? campaign.articles.length : 0
+
+                return (
+                  <article
+                    key={campaign.id}
+                    className="rounded-[26px] border p-4"
+                    style={panelStyle}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-2">
+                        <p className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {campaign.subject}
+                        </p>
+                        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                          {campaign.status === 'sent'
+                            ? `Envoyee le ${formatDate(campaign.sent_at)}`
+                            : 'Brouillon pret pour revision ou envoi'}
+                        </p>
+                      </div>
+                      <span
+                        className="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                        style={statusTone}
+                      >
+                        {campaign.status === 'sent' ? 'Envoyee' : 'Brouillon'}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-[20px] border px-3 py-3" style={metricCardStyle}>
+                        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          Articles lies
+                        </p>
+                        <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                          {articleCount}
+                        </p>
+                      </div>
+                      <div className="rounded-[20px] border px-3 py-3" style={metricCardStyle}>
+                        <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                          Derniere date
+                        </p>
+                        <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                          {formatDate(campaign.sent_at || campaign.updatedAt || campaign.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {campaign.status === 'draft' && (
+                        <>
+                          <Button
+                            variant="secondary"
+                            onClick={() => openNewsletterEditor(`/admin/newsletter/${campaign.id}/edit`)}
+                            className="flex-1"
+                          >
+                            <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
+                            Modifier
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => void handleSend(campaign.id)}
+                            disabled={isBusy}
+                            className="flex-1"
+                          >
+                            <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
+                            Envoyer
+                          </Button>
+                        </>
+                      )}
+
+                      {campaign.status !== 'sent' && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => void handleDelete(campaign.id)}
+                          disabled={isBusy}
+                          className="w-full sm:w-auto"
+                        >
+                          <TrashIcon className="h-4 w-4" aria-hidden="true" />
+                          Supprimer
+                        </Button>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+
+            <section className="hidden overflow-hidden rounded-[30px] border lg:block" style={panelStyle}>
+              <div
+                className="grid grid-cols-[minmax(0,1.3fr)_130px_120px_170px_220px] gap-4 border-b px-6 py-4 text-[11px] font-semibold uppercase tracking-[0.22em]"
                 style={{
-                  backgroundColor: 'var(--color-bg-secondary)',
                   color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
                 }}
               >
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">Sujet</th>
-                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">
-                    Statut
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">
-                    Articles
-                  </th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">
-                    Date d'envoi
-                  </th>
-                  <th className="text-right px-4 py-3 font-medium">Actions</th>
-                </tr>
-              </thead>
+                <span>Sujet</span>
+                <span>Statut</span>
+                <span>Articles</span>
+                <span>Date cle</span>
+                <span className="text-right">Actions</span>
+              </div>
 
-              <tbody>
-                {campaigns.map((c, i) => (
-                  <tr
-                    key={c.id}
-                    style={{
-                      backgroundColor:
-                        i % 2 === 0
-                          ? 'var(--color-bg-card)'
-                          : 'var(--color-bg-secondary)',
-                      borderTop: '1px solid var(--color-border)',
-                    }}
-                  >
-                    <td
-                      className="px-4 py-3 font-medium"
-                      style={{ color: 'var(--color-text-primary)' }}
+              <div className="divide-y" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+                {campaigns.map((campaign) => {
+                  const isBusy = busyId === campaign.id
+                  const statusTone = getStatusTone(campaign.status)
+                  const articleCount = Array.isArray(campaign.articles) ? campaign.articles.length : 0
+
+                  return (
+                    <div
+                      key={campaign.id}
+                      className="grid grid-cols-[minmax(0,1.3fr)_130px_120px_170px_220px] items-center gap-4 px-6 py-5 transition-transform duration-200 hover:-translate-y-0.5"
+                      style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 72%, transparent)' }}
                     >
-                      {c.subject}
-                      {c.cta_label && (
-                        <span className="ml-2 text-xs text-indigo-400">
-                          CTA
-                        </span>
-                      )}
-                    </td>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                          {campaign.subject}
+                        </p>
+                        <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                          {campaign.status === 'sent'
+                            ? `Envoyee le ${formatDate(campaign.sent_at)}`
+                            : 'Brouillon pret a etre active'}
+                        </p>
+                      </div>
 
-                    <td className="px-4 py-3 hidden sm:table-cell">
                       <span
-                        className="text-xs px-2 py-0.5 rounded"
-                        style={
-                          c.status === 'sent'
-                            ? {
-                                color: '#4ade80',
-                                backgroundColor:
-                                  'rgba(74,222,128,0.1)',
-                              }
-                            : {
-                                color: 'var(--color-text-secondary)',
-                                backgroundColor:
-                                  'var(--color-bg-primary)',
-                              }
-                        }
+                        className="inline-flex w-fit rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                        style={statusTone}
                       >
-                        {c.status === 'sent'
-                          ? `Envoyee le ${formatDate(c.sent_at)}`
-                          : 'Brouillon'}
+                        {campaign.status === 'sent' ? 'Envoyee' : 'Brouillon'}
                       </span>
-                    </td>
 
-                    <td
-                      className="px-4 py-3 hidden lg:table-cell text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      {Array.isArray(c.articles)
-                        ? c.articles.length
-                        : 0}
-                    </td>
+                      <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        {articleCount}
+                      </p>
 
-                    <td
-                      className="px-4 py-3 hidden md:table-cell text-xs"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      {formatDate(c.sent_at)}
-                    </td>
+                      <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        {formatDate(campaign.sent_at || campaign.updatedAt || campaign.createdAt)}
+                      </p>
 
-                    <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        {c.status === 'draft' && (
+                        {campaign.status === 'draft' && (
                           <>
-                            <button
-                              onClick={() =>
-                                openNewsletterEditor(`/admin/newsletter/${c.id}/edit`)
-                              }
-                              className="p-1.5 rounded-lg text-xs transition-colors focus:outline-none"
-                              style={{
-                                color: 'var(--color-text-secondary)',
-                              }}
+                            <Button
+                              variant="secondary"
+                              onClick={() => openNewsletterEditor(`/admin/newsletter/${campaign.id}/edit`)}
                             >
+                              <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
                               Modifier
-                            </button>
-
-                            <button
-                              onClick={() => handleSend(c.id)}
-                              className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                              style={{
-                                color: 'var(--color-text-secondary)',
-                              }}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => void handleSend(campaign.id)}
+                              disabled={isBusy}
                             >
-                              <PaperAirplaneIcon className="h-4 w-4" />
-                            </button>
-
-                            <button
-                              onClick={() => handleDelete(c.id)}
-                              className="p-1.5 rounded-lg transition-colors focus:outline-none"
-                              style={{
-                                color: 'var(--color-text-secondary)',
-                              }}
+                              <PaperAirplaneIcon className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => void handleDelete(campaign.id)}
+                              disabled={isBusy}
                             >
-                              <TrashIcon className="h-4 w-4" />
-                            </button>
+                              <TrashIcon className="h-4 w-4" aria-hidden="true" />
+                            </Button>
                           </>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          </>
         )}
 
-        <div className="mt-4">
+        <div className="pt-1">
           <AdminPagination
             total={pagination.total}
             limit={pagination.limit}

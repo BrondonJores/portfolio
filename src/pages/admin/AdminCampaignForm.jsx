@@ -2,7 +2,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import {
+  EnvelopeIcon,
+  PaperAirplaneIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline'
 import DOMPurify from 'dompurify'
 import { useAdminToast } from '../../components/admin/AdminLayout.jsx'
 import BlockEditor from '../../components/admin/BlockEditor.jsx'
@@ -37,10 +41,22 @@ const AUTOSAVE_DEBOUNCE_MS = 900
 const LOCAL_DRAFT_PREFIX = 'portfolio_newsletter_campaign_draft'
 
 const inputStyle = {
-  backgroundColor: 'var(--color-bg-primary)',
-  borderColor: 'var(--color-border)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 88%, transparent)',
+  borderColor: 'color-mix(in srgb, var(--color-border) 74%, transparent)',
   color: 'var(--color-text-primary)',
 }
+
+const panelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 78%, transparent)',
+}
+
+const insetPanelStyle = {
+  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 58%, transparent)',
+}
+
+const textInputClassName = 'w-full rounded-2xl border px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]'
 
 /**
  * Genere un identifiant local pour les blocs.
@@ -326,6 +342,27 @@ function getLocalDraftKey(isEdit, campaignId) {
   return isEdit ? `${LOCAL_DRAFT_PREFIX}_edit_${campaignId}` : `${LOCAL_DRAFT_PREFIX}_new`
 }
 
+/**
+ * Retourne le style du badge de statut campagne.
+ * @param {string} status Statut campagne.
+ * @returns {{color:string, backgroundColor:string, borderColor:string}} Style badge.
+ */
+function getStatusTone(status) {
+  if (status === 'sent') {
+    return {
+      color: '#4ade80',
+      backgroundColor: 'rgba(74, 222, 128, 0.12)',
+      borderColor: 'rgba(74, 222, 128, 0.28)',
+    }
+  }
+
+  return {
+    color: '#f59e0b',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.28)',
+  }
+}
+
 export default function AdminCampaignForm() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -585,6 +622,9 @@ export default function AdminCampaignForm() {
     }
   }
 
+  const selectedArticles = form.articles || []
+  const statusTone = getStatusTone(status)
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -599,85 +639,201 @@ export default function AdminCampaignForm() {
         <title>{isEdit ? 'Modifier la campagne' : 'Nouvelle campagne'} - Administration</title>
       </Helmet>
 
-      <div className="max-w-7xl">
-        <h1 className="text-2xl font-bold mb-8" style={{ color: 'var(--color-text-primary)' }}>
-          {isEdit ? 'Modifier la campagne' : 'Nouvelle campagne'}
-        </h1>
+      <div className="max-w-7xl space-y-6">
+        <section className="overflow-hidden rounded-[32px] border px-5 py-5 sm:px-6 sm:py-6" style={panelStyle}>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-3">
+              <span
+                className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em]"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                <EnvelopeIcon className="h-4 w-4" aria-hidden="true" />
+                Campaign studio
+              </span>
+              <div className="space-y-2">
+                <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl" style={{ color: 'var(--color-text-primary)' }}>
+                  {isEdit ? 'Affiner la campagne sans casser le rythme de diffusion.' : 'Monter une campagne avec une vraie vision d ensemble.'}
+                </h1>
+                <p className="max-w-2xl text-sm leading-7 sm:text-base" style={{ color: 'var(--color-text-secondary)' }}>
+                  Le sujet, les blocs, la selection d articles et l apercu email restent visibles
+                  dans un seul cockpit plus clair pour les envois editoriaux.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <span
+                className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]"
+                style={statusTone}
+              >
+                {isSent ? 'Envoyee' : 'Brouillon'}
+              </span>
+              <span
+                className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs"
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 54%, transparent)',
+                }}
+              >
+                {autosaveLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: 'Blocs email', value: blocks.length },
+              { label: 'Articles relies', value: selectedArticles.length },
+              { label: 'Sujet actif', value: form.subject.trim() || 'A definir' },
+            ].map((metric) => (
+              <article key={metric.label} className="rounded-[24px] border px-4 py-4" style={insetPanelStyle}>
+                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {metric.label}
+                </p>
+                <p className="mt-3 text-sm font-semibold sm:text-base" style={{ color: 'var(--color-text-primary)' }}>
+                  {metric.value}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
-            <div className="space-y-6 min-w-0">
-              <div>
-                <label
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Sujet *
-                </label>
-                <input
-                  name="subject"
-                  type="text"
-                  value={form.subject}
-                  onChange={handleChange}
-                  disabled={isSent}
-                  className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] transition-all"
-                  style={inputStyle}
-                />
-              </div>
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
+            <div className="space-y-5 min-w-0">
+              <section className="rounded-[28px] border p-5 sm:p-6" style={panelStyle}>
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Ligne editoriale
+                    </h2>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      Cadre le sujet et l angle de la campagne avant l envoi.
+                    </p>
+                  </div>
+                  {!isSent && (
+                    <button
+                      type="button"
+                      onClick={openVisualBuilder}
+                      className="inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-medium transition hover:-translate-y-0.5"
+                      style={insetPanelStyle}
+                    >
+                      <SparklesIcon className="h-4 w-4" aria-hidden="true" />
+                      Ouvrir le builder visuel
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                    Sujet *
+                  </label>
+                  <input
+                    name="subject"
+                    type="text"
+                    value={form.subject}
+                    onChange={handleChange}
+                    disabled={isSent}
+                    className={textInputClassName}
+                    style={inputStyle}
+                  />
+                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    Ce sujet porte la premiere promesse visible dans la boite mail.
+                  </p>
+                </div>
+              </section>
 
               {!isSent && (
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <label
-                      className="block text-sm font-medium"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                    >
-                      Contenu *
-                    </label>
-                    <Button type="button" variant="ghost" onClick={openVisualBuilder}>
-                      Builder visuel
-                    </Button>
+                <section className="rounded-[28px] border p-5 sm:p-6" style={panelStyle}>
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                        Contenu de la campagne
+                      </h2>
+                      <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                        Redige le coeur de l email comme une mini page editoriale.
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium" style={insetPanelStyle}>
+                      {blocks.length} bloc{blocks.length > 1 ? 's' : ''}
+                    </span>
                   </div>
-                  <BlockEditor
-                    blocks={blocks}
-                    onChange={handleBlocksChange}
-                    templates={editorTemplates}
-                  />
-                </div>
+
+                  <div className="rounded-[24px] border p-3 sm:p-4" style={insetPanelStyle}>
+                    <BlockEditor
+                      blocks={blocks}
+                      onChange={handleBlocksChange}
+                      templates={editorTemplates}
+                    />
+                  </div>
+                </section>
               )}
 
               {!isSent && (
-                <div>
-                  <label
-                    className="block text-sm font-medium mb-3"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    Selectionner des articles
-                  </label>
+                <section className="rounded-[28px] border p-5 sm:p-6" style={panelStyle}>
+                  <div className="mb-5">
+                    <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Articles relies
+                    </h2>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      Selectionne les contenus a pousser dans cette edition.
+                    </p>
+                  </div>
 
-                  <div
-                    className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3"
-                    style={{ borderColor: 'var(--color-border)' }}
-                  >
+                  <div className="grid gap-3">
                     {availableArticles.map((article) => {
-                      const selected = form.articles.some((entry) => entry.slug === article.slug)
+                      const selected = selectedArticles.some((entry) => entry.slug === article.slug)
                       return (
-                        <label key={article.id} className="flex items-center gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => handleArticleToggle(article)}
-                            style={{ accentColor: 'var(--color-accent)' }}
-                          />
-                          <span style={{ color: 'var(--color-text-primary)' }}>{article.title}</span>
+                        <label
+                          key={article.id}
+                          className="flex cursor-pointer items-start justify-between gap-4 rounded-[24px] border px-4 py-4 transition hover:-translate-y-0.5"
+                          style={{
+                            ...insetPanelStyle,
+                            borderColor: selected
+                              ? 'color-mix(in srgb, var(--color-accent) 72%, var(--color-border))'
+                              : insetPanelStyle.borderColor,
+                            backgroundColor: selected
+                              ? 'color-mix(in srgb, var(--color-accent-glow) 16%, var(--color-bg-primary))'
+                              : insetPanelStyle.backgroundColor,
+                          }}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                              {article.title}
+                            </p>
+                            {article.excerpt && (
+                              <p className="mt-2 line-clamp-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                                {article.excerpt}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span
+                              className="inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+                              style={selected ? getStatusTone('sent') : insetPanelStyle}
+                            >
+                              {selected ? 'Selectionne' : 'Disponible'}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={() => handleArticleToggle(article)}
+                              style={{ accentColor: 'var(--color-accent)' }}
+                            />
+                          </div>
                         </label>
                       )
                     })}
                   </div>
-                </div>
+                </section>
               )}
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3 pt-1">
                 {!isSent && (
                   <Button type="submit" variant="primary" disabled={saving}>
                     {saving ? <Spinner size="sm" /> : 'Enregistrer'}
@@ -704,81 +860,87 @@ export default function AdminCampaignForm() {
             </div>
 
             <aside className="space-y-4 xl:sticky xl:top-24 self-start">
-              <div
-                className="rounded-xl border p-3 space-y-1"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                }}
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-                  Autosave local
-                </p>
-                <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
-                  {autosaveLabel}
-                </p>
-                {localDraftRestored && (
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    Un brouillon local a ete restaure automatiquement.
-                  </p>
-                )}
-              </div>
-
-              <div
-                className="rounded-xl border overflow-hidden"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-bg-secondary)',
-                }}
-              >
-                <div
-                  className="px-4 py-3 border-b"
-                  style={{ borderColor: 'var(--color-border)' }}
-                >
-                  <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                    Apercu live newsletter
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    Mise a jour en temps reel pendant la redaction.
-                  </p>
+              <section className="rounded-[28px] border p-5" style={panelStyle}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      Pulse
+                    </p>
+                    <h2 className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                      Etat de la campagne
+                    </h2>
+                  </div>
+                  <span
+                    className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                    style={statusTone}
+                  >
+                    {isSent ? 'Live' : 'Draft'}
+                  </span>
                 </div>
 
-                <div className="p-4 max-h-[72vh] overflow-y-auto space-y-4">
-                  <section
-                    className="rounded-lg border p-3"
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
-                  >
-                    <p className="text-xs uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
+                <div className="mt-4 space-y-3">
+                  {[
+                    { label: 'Autosave local', value: autosaveLabel },
+                    { label: 'Sujet courant', value: form.subject.trim() || 'A definir' },
+                    { label: 'Articles relies', value: `${selectedArticles.length} selectionnes` },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[22px] border px-4 py-3" style={insetPanelStyle}>
+                      <p className="text-[11px] uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {localDraftRestored && (
+                  <p className="mt-4 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    Un brouillon local a ete restaure automatiquement sur ce navigateur.
+                  </p>
+                )}
+              </section>
+
+              <section className="overflow-hidden rounded-[28px] border" style={panelStyle}>
+                <div className="border-b px-5 py-4" style={{ borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)' }}>
+                  <p className="text-xs uppercase tracking-[0.22em]" style={{ color: 'var(--color-text-secondary)' }}>
+                    Preview
+                  </p>
+                  <h2 className="mt-2 text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                    Apercu live newsletter
+                  </h2>
+                </div>
+
+                <div className="max-h-[72vh] space-y-4 overflow-y-auto p-5">
+                  <section className="rounded-[22px] border p-4" style={insetPanelStyle}>
+                    <p className="text-[11px] uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
                       Sujet
                     </p>
-                    <h2 className="text-xl font-semibold break-words" style={{ color: 'var(--color-text-primary)' }}>
+                    <h2 className="mt-3 break-words text-2xl font-semibold tracking-[-0.03em]" style={{ color: 'var(--color-text-primary)' }}>
                       {form.subject.trim() || 'Sujet de la campagne...'}
                     </h2>
                   </section>
 
-                  <article
-                    className="prose prose-sm max-w-none leading-relaxed"
-                    style={{ color: 'var(--color-text-primary)' }}
-                  >
-                    {safePreviewHtml ? (
-                      <div dangerouslySetInnerHTML={{ __html: safePreviewHtml }} />
-                    ) : (
-                      <p style={{ color: 'var(--color-text-secondary)' }}>
-                        Ajoute des blocs pour voir le rendu ici.
-                      </p>
-                    )}
+                  <article className="rounded-[22px] border p-4" style={insetPanelStyle}>
+                    <div className="prose prose-sm max-w-none leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
+                      {safePreviewHtml ? (
+                        <div dangerouslySetInnerHTML={{ __html: safePreviewHtml }} />
+                      ) : (
+                        <p style={{ color: 'var(--color-text-secondary)' }}>
+                          Ajoute des blocs pour voir le rendu ici.
+                        </p>
+                      )}
+                    </div>
                   </article>
 
-                  {form.articles.length > 0 && (
-                    <section
-                      className="rounded-lg border p-3"
-                      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}
-                    >
-                      <p className="text-xs uppercase tracking-wide mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-                        Articles lies
+                  {selectedArticles.length > 0 && (
+                    <section className="rounded-[22px] border p-4" style={insetPanelStyle}>
+                      <p className="text-[11px] uppercase tracking-[0.2em]" style={{ color: 'var(--color-text-secondary)' }}>
+                        Articles relies
                       </p>
-                      <ul className="space-y-2">
-                        {form.articles.map((article) => (
+                      <ul className="mt-3 space-y-2">
+                        {selectedArticles.map((article) => (
                           <li key={article.slug} className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
                             {article.title}
                           </li>
@@ -787,7 +949,7 @@ export default function AdminCampaignForm() {
                     </section>
                   )}
                 </div>
-              </div>
+              </section>
             </aside>
           </div>
         </form>

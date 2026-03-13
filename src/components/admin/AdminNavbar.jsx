@@ -39,12 +39,29 @@ function getInitials(value) {
     .join('') || 'A'
 }
 
+function resolveQuickLinkStyle(active) {
+  return {
+    borderColor: active
+      ? 'color-mix(in srgb, var(--color-accent) 72%, var(--color-border))'
+      : 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+    color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+    backgroundColor: active
+      ? 'color-mix(in srgb, var(--color-accent-glow) 18%, var(--color-bg-primary))'
+      : 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+    boxShadow: active
+      ? '0 18px 34px -28px color-mix(in srgb, var(--color-accent-glow) 42%, transparent)'
+      : 'none',
+  }
+}
+
 export default function AdminNavbar({ onToggleSidebar }) {
   const { user } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const location = useLocation()
   const currentLabel = resolveAdminLabel(location.pathname)
   const displayName = user?.username || user?.email || 'Administrateur'
+  const templatesActive = location.pathname.startsWith('/admin/templates')
+  const themesActive = location.pathname.startsWith('/admin/themes')
 
   return (
     <header
@@ -77,30 +94,33 @@ export default function AdminNavbar({ onToggleSidebar }) {
               {currentLabel}
             </p>
           </div>
+
+          <span
+            className="hidden md:inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium"
+            style={{
+              color: 'var(--color-text-secondary)',
+              borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
+              backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+            }}
+          >
+            Studio live
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="hidden xl:flex items-center gap-2">
             <Link
               to="/admin/templates"
-              className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium"
-              style={{
-                borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
-                color: 'var(--color-text-secondary)',
-                backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
-              }}
+              className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition duration-200 hover:-translate-y-0.5"
+              style={resolveQuickLinkStyle(templatesActive)}
             >
               <Squares2X2Icon className="h-4 w-4" aria-hidden="true" />
               Templates
             </Link>
             <Link
               to="/admin/themes"
-              className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium"
-              style={{
-                borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
-                color: 'var(--color-text-secondary)',
-                backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
-              }}
+              className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition duration-200 hover:-translate-y-0.5"
+              style={resolveQuickLinkStyle(themesActive)}
             >
               <PaintBrushIcon className="h-4 w-4" aria-hidden="true" />
               Themes
@@ -131,6 +151,7 @@ export default function AdminNavbar({ onToggleSidebar }) {
             style={{
               borderColor: 'color-mix(in srgb, var(--color-border) 68%, transparent)',
               backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 52%, transparent)',
+              boxShadow: '0 20px 40px -32px color-mix(in srgb, var(--color-accent-glow) 34%, transparent)',
             }}
           >
             <span
