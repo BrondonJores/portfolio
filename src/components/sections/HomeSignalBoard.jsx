@@ -113,19 +113,6 @@ export default function HomeSignalBoard({
       Icon: CheckBadgeIcon,
       wide: false,
     },
-    {
-      key: 'capabilities',
-      title: 'Capacites mobilisables',
-      eyebrow: 'Execution',
-      description: skillGroups.length > 0
-        ? skillGroups.slice(0, 3).map((group) => group.category).filter(Boolean).join(' | ')
-        : 'Frontend, backend, contenu et qualite d execution.',
-      value: `${skillCount || 0} competences`,
-      helper: `${skillGroups.length || 0} familles`,
-      href: '/competences',
-      Icon: WrenchScrewdriverIcon,
-      wide: false,
-    },
   ]
 
   return (

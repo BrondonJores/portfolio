@@ -209,27 +209,7 @@ export default function Hero({ homeMetrics = [] }) {
                   backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 84%, transparent)',
                 }}
               >
-                <p
-                  className="text-[11px] uppercase tracking-[0.22em]"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                >
-                  Cadre d intervention
-                </p>
-                <div className="mt-4 space-y-3">
-                  {contextRows.map((row) => (
-                    <div key={row.label}>
-                      <p
-                        className="text-[11px] uppercase tracking-[0.16em]"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        {row.label}
-                      </p>
-                      <p className="mt-1 text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                        {row.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                
               </div>
             </motion.div>
 
