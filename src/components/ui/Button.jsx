@@ -34,6 +34,37 @@ function resolveButtonAssetUrl(animationConfig, variant) {
   return ''
 }
 
+function getHoverScale(variant, uiPrimitives) {
+  const baseDelta = Math.max(0.004, (uiPrimitives.hoverScale - 1) * 1.3)
+  if (variant === 'ghost') {
+    return 1 + Math.min(0.008, baseDelta * 0.5)
+  }
+  if (variant === 'secondary') {
+    return 1 + Math.min(0.014, baseDelta * 0.9)
+  }
+  return 1 + Math.min(0.02, baseDelta * 1.25)
+}
+
+function getSpotlightTint(variant) {
+  if (variant === 'ghost') {
+    return 'var(--color-accent)'
+  }
+  if (variant === 'secondary') {
+    return 'var(--color-accent-light)'
+  }
+  return '#ffffff'
+}
+
+function getSweepTint(variant) {
+  if (variant === 'ghost') {
+    return 'color-mix(in srgb, var(--color-accent) 22%, transparent)'
+  }
+  if (variant === 'secondary') {
+    return 'color-mix(in srgb, var(--color-accent-light) 24%, transparent)'
+  }
+  return 'color-mix(in srgb, white 38%, transparent)'
+}
+
 function buildButtonChrome({
   variant,
   uiPrimitives,
@@ -63,8 +94,8 @@ function buildButtonChrome({
       backgroundColor: `color-mix(in srgb, var(--color-bg-card) ${surfaceMix}%, transparent)`,
       borderColor: `color-mix(in srgb, var(--color-accent) ${Math.max(34, borderMix)}%, var(--color-border))`,
       boxShadow: isHovered
-        ? `0 18px 36px -24px color-mix(in srgb, var(--color-accent-glow) ${Math.round(glowStrength * 100)}%, transparent)`
-        : `0 14px 30px -26px color-mix(in srgb, var(--color-border) 18%, transparent)`,
+        ? `0 22px 38px -24px color-mix(in srgb, var(--color-accent-glow) ${Math.round(glowStrength * 100)}%, transparent)`
+        : '0 14px 30px -26px color-mix(in srgb, var(--color-border) 18%, transparent)',
       animation: 'none',
     }
   }
@@ -91,7 +122,7 @@ function buildButtonChrome({
     background:
       'linear-gradient(135deg, var(--color-accent), color-mix(in srgb, var(--color-accent-light) 72%, white))',
     boxShadow: isHovered && canRunMicroInteractions && !canRenderButtonAsset
-      ? `0 20px 44px -26px color-mix(in srgb, var(--color-accent-glow) ${Math.round(glowStrength * 100)}%, transparent)`
+      ? `0 22px 44px -26px color-mix(in srgb, var(--color-accent-glow) ${Math.round(glowStrength * 100)}%, transparent)`
       : '0 16px 32px -26px color-mix(in srgb, var(--color-accent-glow) 48%, transparent)',
     animation: shouldPulse ? `cta-pulse ${animationConfig.ctaPulseIntervalMs}ms ease-in-out infinite` : 'none',
   }
@@ -107,11 +138,15 @@ export default function Button({
   onMouseEnter,
   onMouseLeave,
   onPointerDown,
+  onPointerMove,
+  onFocus,
+  onBlur,
   ...props
 }) {
   const [isHovered, setIsHovered] = useState(false)
   const [ripples, setRipples] = useState([])
   const [assetLoadFailed, setAssetLoadFailed] = useState(false)
+  const [spotlight, setSpotlight] = useState({ x: 50, y: 50 })
   const { settings } = useSettings()
   const prefersReducedMotion = useReducedMotion()
   const animationConfig = useMemo(
@@ -149,7 +184,10 @@ export default function Button({
     && animationConfig.buttonRippleEnabled
     && !canRenderButtonAsset
   const hoverAnimation = canRunMicroInteractions
-    ? { y: -animationConfig.buttonHoverLiftPx }
+    ? {
+        y: -animationConfig.buttonHoverLiftPx,
+        scale: getHoverScale(variant, uiPrimitives),
+      }
     : undefined
   const tapAnimation = canRunMicroInteractions
     ? { scale: animationConfig.buttonPressScale }
@@ -163,12 +201,33 @@ export default function Button({
     canRenderButtonAsset,
     shouldPulse,
   })
+  const spotlightStrength = variant === 'ghost'
+    ? 18
+    : variant === 'secondary'
+      ? 22
+      : 34
+
+  function updateSpotlightPosition(event) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    if (!rect.width || !rect.height) {
+      return
+    }
+
+    const x = ((event.clientX - rect.left) / rect.width) * 100
+    const y = ((event.clientY - rect.top) / rect.height) * 100
+    setSpotlight({
+      x: Math.min(100, Math.max(0, x)),
+      y: Math.min(100, Math.max(0, y)),
+    })
+  }
 
   function handlePointerDownInternal(event) {
     onPointerDown?.(event)
     if (!shouldRenderRipple || event.button !== 0) {
       return
     }
+
+    updateSpotlightPosition(event)
 
     const rect = event.currentTarget.getBoundingClientRect()
     const size = Math.max(rect.width, rect.height) * 1.8
@@ -184,97 +243,80 @@ export default function Button({
     setRipples((previous) => [...previous.slice(-2), nextRipple])
   }
 
+  function handlePointerMoveInternal(event) {
+    onPointerMove?.(event)
+    if (!canRunMicroInteractions) {
+      return
+    }
+    updateSpotlightPosition(event)
+  }
+
   function removeRipple(rippleId) {
     setRipples((previous) => previous.filter((ripple) => ripple.id !== rippleId))
   }
 
-  if (href) {
-    const isExternal = /^https?:\/\//.test(href)
-    return (
-      <motion.a
-        href={href}
-        {...(isExternal ? { rel: 'noopener noreferrer', target: '_blank' } : {})}
-        className={classes}
-        aria-disabled={disabled}
-        style={buttonChromeStyle}
-        whileHover={hoverAnimation}
-        whileTap={tapAnimation}
-        onMouseEnter={(event) => {
-          setIsHovered(true)
-          onMouseEnter?.(event)
-        }}
-        onMouseLeave={(event) => {
-          setIsHovered(false)
-          onMouseLeave?.(event)
-        }}
-        onPointerDown={handlePointerDownInternal}
-        onClick={(event) => {
-          if (disabled) {
-            event.preventDefault()
-            return
-          }
-          onClick?.(event)
-        }}
-        {...props}
-      >
-        {canRenderButtonAsset && (
-          <span
-            className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]"
-            style={{ opacity: animationConfig.buttonAssetOpacity }}
-            aria-hidden="true"
-          >
-            <LoaderAssetPlayer
-              url={buttonAssetUrl}
-              fit={animationConfig.buttonAssetFit}
-              onError={() => setAssetLoadFailed(true)}
-            />
-          </span>
-        )}
-        <span className="relative z-[1] inline-flex items-center gap-2">{children}</span>
-        {shouldRenderRipple && (
-          <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" aria-hidden="true">
-            {ripples.map((ripple) => (
-              <span
-                key={ripple.id}
-                className="absolute rounded-full"
-                style={{
-                  left: `${ripple.x}px`,
-                  top: `${ripple.y}px`,
-                  width: `${ripple.size}px`,
-                  height: `${ripple.size}px`,
-                  backgroundColor: 'color-mix(in srgb, var(--color-accent-light) 46%, white)',
-                  opacity: 0.38,
-                  transform: 'translate(-50%, -50%) scale(0)',
-                  animation: 'button-ripple-expand 620ms ease-out forwards',
-                }}
-                onAnimationEnd={() => removeRipple(ripple.id)}
-              />
-            ))}
-          </span>
-        )}
-      </motion.a>
-    )
+  const sharedMotionProps = {
+    className: classes,
+    style: buttonChromeStyle,
+    whileHover: hoverAnimation,
+    whileTap: tapAnimation,
+    onMouseEnter: (event) => {
+      setIsHovered(true)
+      onMouseEnter?.(event)
+    },
+    onMouseLeave: (event) => {
+      setIsHovered(false)
+      onMouseLeave?.(event)
+    },
+    onPointerDown: handlePointerDownInternal,
+    onPointerMove: handlePointerMoveInternal,
+    onFocus: (event) => {
+      setIsHovered(true)
+      onFocus?.(event)
+    },
+    onBlur: (event) => {
+      setIsHovered(false)
+      onBlur?.(event)
+    },
+    ...props,
   }
 
-  return (
-    <motion.button
-      onClick={onClick}
-      className={classes}
-      disabled={disabled}
-      style={buttonChromeStyle}
-      whileHover={hoverAnimation}
-      whileTap={tapAnimation}
-      onMouseEnter={(event) => {
-        setIsHovered(true)
-        onMouseEnter?.(event)
-      }}
-      onMouseLeave={(event) => {
-        setIsHovered(false)
-        onMouseLeave?.(event)
-      }}
-      onPointerDown={handlePointerDownInternal}
-      {...props}
-    >
+  const ambientSpotlight = (
+    <>
+      {canRunMicroInteractions && (
+        <motion.span
+          className="pointer-events-none absolute inset-0 z-0 rounded-[inherit]"
+          animate={{
+            opacity: isHovered ? (variant === 'ghost' ? 0.22 : 0.42) : variant === 'primary' ? 0.16 : 0.08,
+            scale: isHovered ? 1 : 0.97,
+          }}
+          transition={{ duration: 0.26 * animationConfig.durationScale, ease: 'easeOut' }}
+          style={{
+            background: `radial-gradient(circle at ${spotlight.x}% ${spotlight.y}%, color-mix(in srgb, ${getSpotlightTint(variant)} ${spotlightStrength}%, transparent), transparent 64%)`,
+          }}
+          aria-hidden="true"
+        />
+      )}
+      {canRunMicroInteractions && variant !== 'ghost' && (
+        <motion.span
+          className="pointer-events-none absolute inset-y-[-28%] left-[-30%] z-0 w-[42%] skew-x-[-18deg] rounded-[40%] blur-2xl"
+          animate={{
+            x: isHovered ? '230%' : '-48%',
+            opacity: isHovered ? 0.42 : 0,
+          }}
+          transition={{ duration: 0.55 * animationConfig.durationScale, ease: 'easeOut' }}
+          style={{
+            background: `linear-gradient(120deg, transparent, ${getSweepTint(variant)}, transparent)`,
+          }}
+          aria-hidden="true"
+        />
+      )}
+    </>
+  )
+
+  const content = (
+    <>
+      {ambientSpotlight}
       {canRenderButtonAsset && (
         <span
           className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]"
@@ -288,6 +330,16 @@ export default function Button({
           />
         </span>
       )}
+      <span
+        className="pointer-events-none absolute inset-[1px] z-0 rounded-[inherit]"
+        style={{
+          border: variant === 'ghost'
+            ? 'none'
+            : '1px solid color-mix(in srgb, white 16%, transparent)',
+          opacity: variant === 'ghost' ? 0 : isHovered ? 0.52 : 0.26,
+        }}
+        aria-hidden="true"
+      />
       <span className="relative z-[1] inline-flex items-center gap-2">{children}</span>
       {shouldRenderRipple && (
         <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" aria-hidden="true">
@@ -310,6 +362,37 @@ export default function Button({
           ))}
         </span>
       )}
+    </>
+  )
+
+  if (href) {
+    const isExternal = /^https?:\/\//.test(href)
+    return (
+      <motion.a
+        href={href}
+        {...(isExternal ? { rel: 'noopener noreferrer', target: '_blank' } : {})}
+        aria-disabled={disabled}
+        onClick={(event) => {
+          if (disabled) {
+            event.preventDefault()
+            return
+          }
+          onClick?.(event)
+        }}
+        {...sharedMotionProps}
+      >
+        {content}
+      </motion.a>
+    )
+  }
+
+  return (
+    <motion.button
+      onClick={onClick}
+      disabled={disabled}
+      {...sharedMotionProps}
+    >
+      {content}
     </motion.button>
   )
 }

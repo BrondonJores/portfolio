@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion'
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion'
 import { useSettings } from '../../context/SettingsContext.jsx'
 import { getAnimationConfig } from '../../utils/animationSettings.js'
 import { getUiThemePrimitives } from '../../utils/themeSettings.js'
@@ -18,7 +18,7 @@ function buildCardChrome(uiPrimitives, isHovered) {
     : `color-mix(in srgb, var(--color-border) ${borderMix}%, transparent)`
   const shadowColor = isHovered
     ? `color-mix(in srgb, var(--color-accent-glow) ${glowMix}%, transparent)`
-    : `color-mix(in srgb, var(--color-border) 20%, transparent)`
+    : 'color-mix(in srgb, var(--color-border) 20%, transparent)'
   const backgroundImage = uiPrimitives.cardStyle === 'showcase'
     ? 'linear-gradient(140deg, color-mix(in srgb, var(--color-accent-glow) 16%, transparent), transparent 42%)'
     : 'linear-gradient(140deg, color-mix(in srgb, var(--color-accent-glow) 8%, transparent), transparent 36%)'
@@ -48,6 +48,11 @@ export default function Card({ children, className = '' }) {
   const rotateY = useMotionValue(0)
   const springRotateX = useSpring(rotateX, { stiffness: 220, damping: 20, mass: 0.35 })
   const springRotateY = useSpring(rotateY, { stiffness: 220, damping: 20, mass: 0.35 })
+  const tiltRange = Math.max(4, animationConfig.cardTiltMaxDeg)
+  const contentShiftX = useTransform(springRotateY, [-tiltRange, tiltRange], [-6, 6])
+  const contentShiftY = useTransform(springRotateX, [-tiltRange, tiltRange], [6, -6])
+  const auraShiftX = useTransform(springRotateY, [-tiltRange, tiltRange], [-14, 14])
+  const auraShiftY = useTransform(springRotateX, [-tiltRange, tiltRange], [12, -12])
 
   const canLift = animationConfig.canAnimate && animationConfig.cardHover
   const canTilt = canLift && animationConfig.cardTiltEnabled
@@ -95,7 +100,7 @@ export default function Card({ children, className = '' }) {
 
   return (
     <motion.div
-      className={`relative rounded-[var(--ui-radius-xl)] border p-[var(--ui-card-padding)] ${className}`}
+      className={`relative overflow-hidden rounded-[var(--ui-radius-xl)] border p-[var(--ui-card-padding)] ${className}`}
       style={{
         ...chromeStyle,
         transition:
@@ -105,11 +110,31 @@ export default function Card({ children, className = '' }) {
         rotateY: canTilt ? springRotateY : 0,
       }}
       whileHover={canLift ? { y: -hoverLift, scale: hoverScale } : undefined}
-      transition={{ duration: 0.22 * animationConfig.durationScale, ease: animationConfig.easePreset }}
+      transition={{ duration: 0.24 * animationConfig.durationScale, ease: [0.22, 1, 0.36, 1] }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onFocus={() => setIsHovered(true)}
+      onBlur={handleMouseLeave}
     >
+      {canLift && (
+        <motion.span
+          className="pointer-events-none absolute -right-12 top-0 z-0 h-32 w-32 rounded-full blur-3xl"
+          animate={{
+            opacity: isHovered ? 0.32 : 0.12,
+            scale: isHovered ? 1.08 : 0.86,
+          }}
+          transition={{ duration: 0.28 * animationConfig.durationScale, ease: 'easeOut' }}
+          style={{
+            x: canTilt ? auraShiftX : 0,
+            y: canTilt ? auraShiftY : 0,
+            background:
+              'radial-gradient(circle, color-mix(in srgb, var(--color-accent-glow) 86%, transparent), transparent 66%)',
+          }}
+          aria-hidden="true"
+        />
+      )}
+
       {animationConfig.cardTiltGlareEnabled && (
         <span
           className="pointer-events-none absolute inset-0 rounded-[inherit]"
@@ -121,7 +146,42 @@ export default function Card({ children, className = '' }) {
           aria-hidden="true"
         />
       )}
-      <div className="relative z-[1]">{children}</div>
+
+      <motion.span
+        className="pointer-events-none absolute inset-[1px] z-0"
+        animate={{ opacity: isHovered ? 0.88 : 0.42 }}
+        transition={{ duration: 0.22 * animationConfig.durationScale, ease: 'easeOut' }}
+        style={{
+          borderRadius: 'calc(var(--ui-radius-xl) - 1px)',
+          border: '1px solid color-mix(in srgb, white 10%, transparent)',
+        }}
+        aria-hidden="true"
+      />
+
+      <motion.span
+        className="pointer-events-none absolute inset-x-[18%] top-0 z-0 h-px"
+        animate={{
+          opacity: isHovered ? 0.9 : 0.2,
+          scaleX: isHovered ? 1 : 0.56,
+        }}
+        transition={{ duration: 0.24 * animationConfig.durationScale, ease: 'easeOut' }}
+        style={{
+          background:
+            'linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-accent-light) 74%, transparent), transparent)',
+          transformOrigin: 'center',
+        }}
+        aria-hidden="true"
+      />
+
+      <motion.div
+        className="relative z-[1]"
+        style={{
+          x: canTilt ? contentShiftX : 0,
+          y: canTilt ? contentShiftY : 0,
+        }}
+      >
+        {children}
+      </motion.div>
     </motion.div>
   )
 }

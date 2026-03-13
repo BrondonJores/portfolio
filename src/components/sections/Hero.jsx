@@ -1,5 +1,5 @@
-import { motion, useReducedMotion } from 'framer-motion'
 import { useMemo } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   ArrowDownIcon,
   BoltIcon,
@@ -97,6 +97,15 @@ export default function Hero({ homeMetrics = [] }) {
     () => buildSectionItemVariants('hero', animationConfig),
     [animationConfig]
   )
+  const loopingFloatTransition = useMemo(
+    () => ({
+      duration: 8 * animationConfig.durationScale,
+      ease: 'easeInOut',
+      repeat: Infinity,
+      repeatType: 'mirror',
+    }),
+    [animationConfig.durationScale]
+  )
 
   return (
     <section
@@ -142,20 +151,22 @@ export default function Hero({ homeMetrics = [] }) {
               transition={{ duration: revealDuration }}
               className="mb-6 flex flex-wrap items-center gap-3"
             >
-              <span
+              <motion.span
                 className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium"
                 style={{
                   color: 'var(--color-accent-light)',
                   borderColor: 'color-mix(in srgb, var(--color-accent) 62%, var(--color-border))',
                   backgroundColor: 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
                 }}
+                animate={canAnimate ? { y: [0, -2, 0] } : undefined}
+                transition={canAnimate ? loopingFloatTransition : undefined}
               >
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${canAnimate ? 'animate-pulse' : ''}`}
                   style={{ backgroundColor: 'var(--color-accent)' }}
                 />
                 {availability}
-              </span>
+              </motion.span>
               <span
                 className="inline-flex items-center gap-2 text-sm"
                 style={{ color: 'var(--color-text-secondary)' }}
@@ -183,9 +194,19 @@ export default function Hero({ homeMetrics = [] }) {
               {titleLines.map((line, index) => {
                 const isLastLine = index === titleLines.length - 1
                 return (
-                  <span key={`${line}-${index}`} className="block">
+                  <motion.span
+                    key={`${line}-${index}`}
+                    className="block"
+                    initial={canAnimate ? { opacity: 0, y: 28, filter: 'blur(10px)' } : false}
+                    animate={canAnimate ? { opacity: 1, y: 0, filter: 'blur(0px)' } : false}
+                    transition={{
+                      duration: revealDuration * 0.92,
+                      delay: canAnimate ? 0.12 + index * 0.08 : 0,
+                      ease: 'easeOut',
+                    }}
+                  >
                     {isLastLine ? <span className="gradient-text">{line}</span> : line}
-                  </span>
+                  </motion.span>
                 )
               })}
             </motion.h1>
@@ -193,7 +214,7 @@ export default function Hero({ homeMetrics = [] }) {
             <motion.div
               variants={itemVariants}
               transition={{ duration: revealDuration }}
-              className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.42fr)]"
+              className="mt-8 grid gap-6"
             >
               <p
                 className="max-w-2xl text-base leading-relaxed sm:text-lg"
@@ -201,12 +222,38 @@ export default function Hero({ homeMetrics = [] }) {
               >
                 {bio}
               </p>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                {contextRows.map((row, index) => (
+                  <motion.article
+                    key={row.label}
+                    className="rounded-[var(--ui-radius-xl)] border px-4 py-3"
+                    style={{
+                      borderColor: 'color-mix(in srgb, var(--color-border) 78%, transparent)',
+                      backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 72%, transparent)',
+                    }}
+                    whileHover={canAnimate ? { y: -4, scale: 1.01 } : undefined}
+                    transition={{
+                      duration: 0.22 * animationConfig.durationScale,
+                      delay: canAnimate ? index * 0.02 : 0,
+                      ease: 'easeOut',
+                    }}
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
+                      {row.label}
+                    </p>
+                    <p className="mt-2 text-sm font-medium leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
+                      {row.value}
+                    </p>
+                  </motion.article>
+                ))}
+              </div>
             </motion.div>
 
             <motion.div
               variants={itemVariants}
               transition={{ duration: revealDuration }}
-              className="mt-8 flex flex-col items-start gap-3 sm:flex-row"
+              className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center"
             >
               <Button variant="primary" href="#projects">
                 {heroCtaProjects}
@@ -214,6 +261,21 @@ export default function Hero({ homeMetrics = [] }) {
               <Button variant="secondary" href="#contact">
                 {heroCtaContact}
               </Button>
+              <motion.a
+                href="#projects"
+                className="inline-flex items-center gap-2 text-sm font-medium"
+                style={{ color: 'var(--color-text-secondary)' }}
+                whileHover={canAnimate ? { x: 4 } : undefined}
+                transition={{ duration: 0.22 * animationConfig.durationScale, ease: 'easeOut' }}
+              >
+                Explorer la preuve
+                <motion.span
+                  animate={canAnimate ? { y: [0, 4, 0], opacity: [0.62, 1, 0.62] } : undefined}
+                  transition={canAnimate ? { duration: 1.8 * animationConfig.durationScale, repeat: Infinity, ease: 'easeInOut' } : undefined}
+                >
+                  <ArrowDownIcon className="h-4 w-4" aria-hidden="true" />
+                </motion.span>
+              </motion.a>
             </motion.div>
 
             <motion.div
@@ -221,13 +283,19 @@ export default function Hero({ homeMetrics = [] }) {
               transition={{ duration: revealDuration }}
               className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3"
             >
-              {proofMetrics.map((metric) => (
-                <div
+              {proofMetrics.map((metric, index) => (
+                <motion.article
                   key={metric.label}
                   className="rounded-[var(--ui-radius-xl)] border px-4 py-4"
                   style={{
                     borderColor: 'color-mix(in srgb, var(--color-border) 78%, transparent)',
                     backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 76%, transparent)',
+                  }}
+                  whileHover={canAnimate ? { y: -6, scale: 1.015 } : undefined}
+                  transition={{
+                    duration: 0.24 * animationConfig.durationScale,
+                    delay: canAnimate ? index * 0.02 : 0,
+                    ease: 'easeOut',
                   }}
                 >
                   <p className="text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
@@ -241,7 +309,7 @@ export default function Hero({ homeMetrics = [] }) {
                       {metric.detail}
                     </p>
                   )}
-                </div>
+                </motion.article>
               ))}
             </motion.div>
           </div>
@@ -252,13 +320,15 @@ export default function Hero({ homeMetrics = [] }) {
             className="order-1 lg:order-2"
           >
             <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_190px]">
-              <div
+              <motion.div
                 className="relative overflow-hidden rounded-[2rem] border p-3"
                 style={{
                   borderColor: 'color-mix(in srgb, var(--color-border) 82%, transparent)',
                   backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 88%, transparent)',
                   boxShadow: '0 32px 56px -36px color-mix(in srgb, var(--color-accent-glow) 42%, transparent)',
                 }}
+                animate={canAnimate ? { y: [0, -8, 0], rotate: [0, 0.4, 0] } : undefined}
+                transition={canAnimate ? loopingFloatTransition : undefined}
               >
                 <div
                   className="absolute inset-x-0 top-0 h-32"
@@ -267,33 +337,37 @@ export default function Hero({ homeMetrics = [] }) {
                       'linear-gradient(180deg, color-mix(in srgb, var(--color-accent-glow) 36%, transparent), transparent)',
                   }}
                 />
-                <div
+                <motion.div
                   className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
                   style={{
                     borderColor: 'color-mix(in srgb, var(--color-border) 72%, transparent)',
                     backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 72%, transparent)',
                     color: 'var(--color-text-primary)',
                   }}
+                  whileHover={canAnimate ? { y: -2, scale: 1.02 } : undefined}
+                  transition={{ duration: 0.22 * animationConfig.durationScale, ease: 'easeOut' }}
                 >
                   <SparklesIcon className="h-4 w-4" style={{ color: 'var(--color-accent)' }} aria-hidden="true" />
                   {photoStatus}
-                </div>
+                </motion.div>
 
                 <div
                   className="relative overflow-hidden rounded-[1.55rem] border"
                   style={{ borderColor: 'color-mix(in srgb, var(--color-border) 70%, transparent)' }}
                 >
                   {avatarUrl ? (
-                    <img
+                    <motion.img
                       src={avatarUrl}
                       alt={photoAlt}
-                      className="w-full aspect-[4/5] object-cover"
+                      className="aspect-[4/5] w-full object-cover"
                       style={{ objectPosition: photoObjectPosition }}
                       loading="eager"
                       fetchPriority="high"
                       decoding="async"
                       width="620"
                       height="760"
+                      whileHover={canAnimate ? { scale: 1.03 } : undefined}
+                      transition={{ duration: 0.38 * animationConfig.durationScale, ease: 'easeOut' }}
                     />
                   ) : (
                     <div
@@ -309,7 +383,7 @@ export default function Hero({ homeMetrics = [] }) {
                   )}
                 </div>
 
-                <div
+                <motion.div
                   className="absolute bottom-4 left-4 right-4 rounded-[var(--ui-radius-xl)] border px-4 py-3"
                   style={{
                     borderColor: 'color-mix(in srgb, var(--color-border) 70%, transparent)',
@@ -317,6 +391,8 @@ export default function Hero({ homeMetrics = [] }) {
                     backdropFilter: 'blur(var(--ui-surface-blur))',
                     WebkitBackdropFilter: 'blur(var(--ui-surface-blur))',
                   }}
+                  whileHover={canAnimate ? { y: -3 } : undefined}
+                  transition={{ duration: 0.22 * animationConfig.durationScale, ease: 'easeOut' }}
                 >
                   <p className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
                     Stack de predilection
@@ -324,18 +400,28 @@ export default function Hero({ homeMetrics = [] }) {
                   <p className="mt-2 text-sm font-medium leading-relaxed" style={{ color: 'var(--color-text-primary)' }}>
                     {photoStack}
                   </p>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
 
               <div className="grid gap-4">
-                {sideStats.map((stat) => (
-                  <div
+                {sideStats.map((stat, index) => (
+                  <motion.div
                     key={stat.label}
                     className="rounded-[var(--ui-radius-2xl)] border px-4 py-4"
                     style={{
                       borderColor: 'color-mix(in srgb, var(--color-border) 78%, transparent)',
                       backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 88%, transparent)',
                     }}
+                    whileHover={canAnimate ? { y: -5, scale: 1.018 } : undefined}
+                    animate={canAnimate ? { y: [0, index % 2 === 0 ? -4 : -2, 0] } : undefined}
+                    transition={canAnimate
+                      ? {
+                          duration: (5.8 + index * 0.8) * animationConfig.durationScale,
+                          ease: 'easeInOut',
+                          repeat: Infinity,
+                          repeatType: 'mirror',
+                        }
+                      : undefined}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -366,7 +452,7 @@ export default function Hero({ homeMetrics = [] }) {
                     <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                       {stat.label}
                     </p>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
